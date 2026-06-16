@@ -166,20 +166,21 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
 
 %% Fig. 1 — pipeline architecture (subway, vector PDF from rsvg-convert)
 %% on the left, runtime scaling panels stacked on the right.
-\begin{figure}[htbp]
+\begin{figure}[p]
   \centering
-  \begin{minipage}[t]{0.45\linewidth}
-    \centering
-    \textbf{(a)}\par\vspace{0.2em}
-    \mcpincludegraphics[width=\linewidth,keepaspectratio]{manuscript/workflow_panel}
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.52\linewidth}
+  \textbf{(a)}\par\vspace{0.2em}
+  \mcpincludegraphics[width=0.66\linewidth,keepaspectratio]{manuscript/workflow_panel}\par
+  \vspace{0.5em}
+  \begin{minipage}[c]{0.39\linewidth}
     \centering
     \textbf{(b)}\par\vspace{0.2em}
     \mcpincludegraphics[width=\linewidth,keepaspectratio]{performance/queue_size_sweep}
-  \end{minipage}\par\vspace{0.6em}
-  \textbf{(c)}\par\vspace{0.2em}
-  \mcpincludegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{performance/parallelism_vs_wallclock}
+  \end{minipage}\hfill
+  \begin{minipage}[c]{0.59\linewidth}
+    \centering
+    \textbf{(c)}\par\vspace{0.2em}
+    \mcpincludegraphics[width=\linewidth,keepaspectratio]{performance/parallelism_vs_wallclock}
+  \end{minipage}
   \caption[Pipeline and scaling]{%
     \textbf{\quantmsdiann{} pipeline architecture and runtime scaling.}
     (\textbf{a})~Subway diagram of the \quantmsdiann{} workflow: mandatory modules as filled circles, optional/skippable modules as open circles. Per-file parallel stages (red; file preparation, preliminary calibration, individual search) run as one task per raw file, whereas
