@@ -80,18 +80,18 @@ DIA-NN \sep single-cell proteomics \sep spatial proteomics \sep phosphoproteomic
 
 \section{Introduction}
 \label{sec:introduction}
-%% --- begin (was sections/introduction.tex) ---
+%% [begin sections/introduction.tex]
 Data-independent acquisition (DIA) is now the dominant mass-spectrometry strategy for proteomics at scale, and \texttt{DIA-NN}~\cite{demichev2020} is among the most widely adopted analysis engines across timsTOF~\cite{brunner2022,meier2020}, Astral, and Orbitrap platforms. Recent benchmarks confirm \texttt{DIA-NN}'s competitiveness for single-cell DIA workflows~\cite{wang2025}, and recent releases have expanded support for plexDIA, timsTOF parallel accumulation-serial fragmentation (PASEF), and vendor-native raw-file reading.
 Despite this analytical maturity, most \texttt{DIA-NN} users run the tool as a desktop application, which limits its scalability for large datasets. Deployments on HPC and cloud infrastructure remain difficult, relying on shell scripts, bespoke directory conventions, and hand-curated sample sheets. As a result, the same raw data analysed by two laboratories, or with two \texttt{DIA-NN} releases, can yield non-overlapping quantification tables that are difficult to reconcile.
 
 Beyond per-study analysis, the value of public proteomics archives such as PRIDE Archive~\cite{perezriverol2025pride} and other ProteomeXchange partners~\cite{deutsch2026proteomexchange} lies as much in systematic reanalysis as in original deposition. In 2024 we published bigbio/quantms~\cite{dai2024quantms}, a Nextflow pipeline that standardised multi-engine DIA and DDA analyses behind a Sample and Data Relationship Format (SDRF)~\cite{dai2021sdrf} input on the nf-core framework~\cite{ewels2020nfcore}. quantms was, however, built around \texttt{DIA-NN}~1.8.1 with a fixed parameter set, and its DDA/DIA combination within the same workflow made extending DIA-specific functionality difficult. New \texttt{DIA-NN} parameters conflicted with DDA options, versions were hard-coded, sample-level acquisition parameters were not properly propagated to per-run \texttt{DIA-NN} invocations, and raw-file conversion was mandatory. Iterative reanalysis at archive scale requires a workflow that combines the reproducibility of nf-core, the sensitivity of current \texttt{DIA-NN} releases, the metadata discipline of SDRF, and a parallelisation strategy capable of processing thousands of raw files.
 
 Here, we present \quantmsdiann{}, an independent SDRF-driven Nextflow pipeline dedicated to \texttt{DIA-NN} that extends DIA-specific features beyond what the original bigbio/quantms pipeline could accommodate. While \quantmsdiann{} shares its SDRF-first design philosophy and parts of the configuration-generation tooling with quantms, its workflow, container set, and module library are developed and released independently, with container-pinned profiles for every \texttt{DIA-NN} version selectable at runtime under Docker or Singularity. Downstream, it exports a harmonised \qpx{} (Quantitative Proteomics eXchange) Parquet archive alongside the standard \texttt{DIA-NN} reports and MSstats input. We demonstrate the pipeline along three axes: ProteoBench~\cite{devreese2025proteobench} benchmarks across four DIA modalities and successive \texttt{DIA-NN} releases; independent reanalyses of public DIA deposits spanning bulk cell lines (NCI-60, ProCan), a single-cell datasets, a spatial Deep Visual Proteomics cohort, and a phosphoproteomics cohorts; and a pan-cohort of five public DIA cell-line reanalyses integrated under a single SDRF-driven invocation.
-%% --- end introduction ---
+%% [end introduction]
 
 \section{Experimental Procedures}
 \label{sec:methods}
-%% --- begin (was sections/methods.tex) ---
+%% [begin sections/methods.tex]
 \subsection{Pipeline implementation}
 \label{sec:impl}
 
@@ -100,7 +100,7 @@ Because the \texttt{DIA-NN} license restricts redistribution, only version~1.8.1
 
 \subsection{SDRF extensions for quantmsdiann}
 \quantmsdiann{} accepts SDRF~\cite{dai2021sdrf} as primary input.
-SDRF parsing is performed using the sdrf-pipelines Python package developed within the quantms project, which validates the SDRF against the proteomics-specific subset of EFO, PSI-MS, and PRIDE ontology terms and emits a normalised per-sample channel for downstream Nextflow processes. To express DIA- and \texttt{DIA-NN}-specific acquisition settings at the sample level, we extended the SDRF with additional comment columns: the MS1 and MS2 scan mass-window intervals and, for multiplexed experiments, the plexDIA channel definitions and their isotopologue labels. Because these settings are declared per sample, heterogeneous MS1/MS2 window schemes, or a plexDIA channel layout, can be mixed within a single cohort without any change to the workflow. We added a \texttt{convert-diann} command to sdrf-pipelines that reads these extended columns together with the standard fields --- enzyme, fixed and variable modifications, instrument, precursor mass tolerance, fragment mass tolerance, and missed-cleavage settings --- and writes a per-run \texttt{DIA-NN} command-line configuration; where SDRF columns are absent, \texttt{DIA-NN} defaults appropriate for the inferred instrument are applied.
+SDRF parsing is performed using the sdrf-pipelines Python package developed within the quantms project, which validates the SDRF against the proteomics-specific subset of EFO, PSI-MS, and PRIDE ontology terms and emits a normalised per-sample channel for downstream Nextflow processes. To express DIA- and \texttt{DIA-NN}-specific acquisition settings at the sample level, we extended the SDRF with additional comment columns: the MS1 and MS2 scan mass-window intervals and, for multiplexed experiments, the plexDIA channel definitions and their isotopologue labels. Because these settings are declared per sample, heterogeneous MS1/MS2 window schemes, or a plexDIA channel layout, can be mixed within a single cohort without any change to the workflow. We added a \texttt{convert-diann} command to sdrf-pipelines that reads these extended columns together with the standard fields (enzyme, fixed and variable modifications, instrument, precursor mass tolerance, fragment mass tolerance, and missed-cleavage settings) and writes a per-run \texttt{DIA-NN} command-line configuration; where SDRF columns are absent, \texttt{DIA-NN} defaults appropriate for the inferred instrument are applied.
 
 \subsection{Raw file handling and \texttt{DIA-NN} execution}
 A key advance over its predecessor quantms is that native vendor (raw) formats are first-class inputs in \quantmsdiann{}: whereas quantms converted every raw file to mzML up front, \quantmsdiann{} reads each instrument's native format directly and converts only when a particular format or \texttt{DIA-NN} version requires it. Thermo \texttt{.raw} or timsTOF (.d or .d.zip) files are read natively by \texttt{DIA-NN}~$\geq$~2.1.0; for DIA-NN versions lower than 2.1.0 conversion to mzML is performed with ThermoRawFileParser~\cite{hulstaert2020} (\texttt{--mzml\_convert}); Bruker \texttt{.d} folders are ingested natively, with compressed forms (\texttt{.d.tar}/\texttt{.zip}/\texttt{.gz}) decompressed first; and Sciex \texttt{.wiff}~/~\texttt{.wiff2} are converted to mzML with the open-source \texttt{wiffconverter} (\url{https://github.com/bigbio/wiffconverter}). Generic \texttt{.dia} and pre-converted \texttt{.mzML} inputs pass through unchanged, with optional OpenMS re-indexing (\texttt{--reindex\_mzml}).
@@ -110,13 +110,13 @@ Per-run and per-cohort quality control reports are generated by \texttt{pmultiqc
 
 \subsection{Datasets benchmarked and compute environment}
 \label{sec:datasets}
-Supplementary Note~1 (Table~S1) lists all benchmark and reanalysis datasets with their instrument, acquisition mode, and deposition year, and an SDRF prepared from the original sample metadata. They fall into four experiment classes: \emph{ProteoBench} DIA benchmarks (modules~5, 7, 9, and 10); \emph{single-cell and spatial proteomics} --- the HeLa single-cell cohorts PXD046357 (Orbitrap Astral) and PXD044991 (One-Tip), the oocyte plexDIA cohort MSV000093870, the PXD064049 spatial Deep Visual Proteomics cohort, and the PXD071075 single-cell scalability sweep; \emph{bulk cell-line panels} (PXD003539, PXD030304, PXD004701, PXD041421, and PXD017199); and \emph{phosphoproteomics} (PXD034128, PXD034623, and PXD049692).
+Supplementary Note~1 (Table~S1) lists all benchmark and reanalysis datasets with their instrument, acquisition mode, and deposition year, and an SDRF prepared from the original sample metadata. They fall into four experiment classes: \emph{ProteoBench} DIA benchmarks (modules~5, 7, 9, and 10); \emph{single-cell and spatial proteomics}, comprising the HeLa single-cell cohorts PXD046357 (Orbitrap Astral) and PXD044991 (One-Tip), the oocyte plexDIA cohort MSV000093870, the PXD064049 spatial Deep Visual Proteomics cohort, and the PXD071075 single-cell scalability sweep; \emph{bulk cell-line panels} (PXD003539, PXD030304, PXD004701, PXD041421, and PXD017199); and \emph{phosphoproteomics} (PXD034128, PXD034623, and PXD049692).
 For each cell-line reanalysis cohort, the original published quantification was downloaded from PRIDE as the comparator, with both it and the \quantmsdiann{} reanalysis thresholded at 1\% precursor-level FDR; the conservative contaminant/decoy filter and the like-for-like-threshold rule applied to the original headline counts are described in Supplementary Note~3. Runtime benchmarks were run on the EMBL-EBI HPC cluster (LSF scheduler), with per-task CPU and memory dispatched by Nextflow and memory profiled from the Nextflow trace report (\texttt{-with-trace}).
-%% --- end methods ---
+%% [end methods]
 
 \section{Results}
 \label{sec:results}
-%% --- begin (was sections/results.tex) ---
+%% [begin sections/results.tex]
 \subsection{\quantmsdiann{} pipeline architecture}
 \label{sec:architecture}
 
@@ -138,8 +138,7 @@ We then compared the time-to-finish across every dataset in this study (Fig.~\re
 \subsection{ProteoBench benchmark across \texttt{DIA-NN} versions and instruments}
 \label{sec:proteobench}
 
-To test whether \quantmsdiann{} preserves \texttt{DIA-NN}'s Desktop analytical performance under SDRF-driven orchestration, we processed every public ProteoBench DIA module through the workflow and compared the resulting identification counts against the ProteoBench public-submission snapshot (29 May 2026)~\cite{devreese2025proteobench}. Although \quantmsdiann{} supports both library-free analysis and a user-supplied spectral library, all benchmarks here were run library-free (predicting the library in-silico from the FASTA, with no externally supplied experimental library). For a like-for-like comparison we therefore restricted the community set to ProteoBench \texttt{DIA-NN} submissions that used the same predicted-from-FASTA library (\texttt{predictors\_library}~$=$~DIANN); submissions that loaded a pre-existing experimental or user-curated spectral library search a different candidate space and are excluded from the headline comparison.
-The benchmark panel covers four instrument families and acquisition modes: Orbitrap Astral 2~Th DIA (\emph{Module~7}), single-cell DIA on Orbitrap Astral (\emph{Module~9}, PXD049412), timsTOF diaPASEF (\emph{Module~5}, PXD062685), and SCIEX ZenoTOF~7600 (\emph{Module~10}, PXD070049). For each module we ran the workflow against three \texttt{DIA-NN} configurations --- the oldest supported release (1.8.1) and the current release in its academic (2.5.1) and enterprise (2.5.1-enterprise) builds --- in a single invocation, all parametrised from the same SDRF; the main figure contrasts the oldest and newest builds (1.8.1 versus 2.5.1-enterprise; Fig.~\ref{fig:proteobench}), with the full per-version breakdown across all three in Supplementary Note~5 (Fig.~S3). Identification counts are taken from the per-precursor \texttt{DIA-NN} report files. Each release is run at \texttt{DIA-NN}'s recommended run-specific precursor q-value (\texttt{--qvalue}: 1\% for 1.8.1, 5\% for the 2.5.1 builds), with a uniform 1\% global precursor q-value across configurations; we count unique precursors identified in at least one run and summarise protein groups (each at a 1\% run-specific protein-group q-value) as the per-run average and the ``complete-profile'' count quantified in \emph{every} run. The single-replicate precursor totals and per-run protein metrics apply identical thresholds to every version and are directly comparable; only the reproducibility-filtered ($\geq$3-replicate) precursor counts depend on the per-version run-specific cut-off.
+To test whether \quantmsdiann{} preserves \texttt{DIA-NN}'s Desktop analytical performance under SDRF-driven orchestration, we processed every public ProteoBench DIA module through the workflow and compared the resulting identification counts against the ProteoBench public-submission snapshot (29 May 2026)~\cite{devreese2025proteobench}. Although \quantmsdiann{} supports both library-free analysis and a user-supplied spectral library, all benchmarks here were run library-free (predicting the library in-silico from the FASTA, with no externally supplied experimental library). For a like-for-like comparison we therefore restricted the community set to ProteoBench \texttt{DIA-NN} submissions that used the same predicted-from-FASTA library (\texttt{predictors\_library}~$=$~DIANN). The benchmark panel covers four instrument families and acquisition modes: Orbitrap Astral 2~Th DIA (\emph{Module~7}), single-cell DIA on Orbitrap Astral (\emph{Module~9}, PXD049412), timsTOF diaPASEF (\emph{Module~5}, PXD062685), and SCIEX ZenoTOF~7600 (\emph{Module~10}, PXD070049). For each module we ran the workflow against three \texttt{DIA-NN} configurations, the oldest supported release (1.8.1) and the current release in its academic (2.5.1) and enterprise (2.5.1-enterprise) builds, in a single invocation, all parametrised from the same SDRF; the main figure contrasts the oldest and newest builds (1.8.1 versus 2.5.1-enterprise; Fig.~\ref{fig:proteobench}), with the full per-version breakdown across all three in Supplementary Note~5 (Fig.~S3). Identification counts are taken from the per-precursor \texttt{DIA-NN} report files. Each release is run at \texttt{DIA-NN}'s recommended run-specific precursor q-value (\texttt{--qvalue}: 1\% for 1.8.1, 5\% for the 2.5.1 builds), with a uniform 1\% global precursor q-value across configurations; we count unique precursors identified in at least one run and summarise protein groups (each at a 1\% run-specific protein-group q-value) as the per-run average and the ``complete-profile'' count quantified in \emph{every} run. The single-replicate precursor totals and per-run protein metrics apply identical thresholds to every version and are directly comparable; only the reproducibility-filtered ($\geq$3-replicate) precursor counts depend on the per-version run-specific cut-off.
 
 Precursor counts (identified in at least one run) rose from 1.8.1 to 2.5.1 on every module, by 12\% on Module~7 (116{,}771~$\to$~130{,}246), 11\% on Module~9 (41{,}756~$\to$~46{,}243), 21\% on Module~5 (97{,}149~$\to$~117{,}396), and 16\% on Module~10 (88{,}179~$\to$~102{,}457); the enterprise build adds a further 2--3\% on each module.
 Protein-group depth rose in step. Averaged per run, protein groups at 1\% FDR increased from 1.8.1 to 2.5.1 by 8--11\% (Module~7 10{,}091~$\to$~11{,}167; Module~9 7{,}157~$\to$~7{,}895; Module~5 10{,}199~$\to$~11{,}231; Module~10 8{,}788~$\to$~9{,}470), with the enterprise build a further 1--3\% higher and highest on every module. The improvement is larger for proteins quantified in \emph{every} run (complete profiles): the enterprise build gains 12--20\% over 1.8.1 (Module~7 8{,}799~$\to$~10{,}403, $+$18\%; Module~9 6{,}124~$\to$~7{,}349, $+$20\%; complete-profile panel in Supplementary Note~5).
@@ -153,9 +152,9 @@ On the two modules for which the snapshot contained predicted-library \texttt{DI
 \subsection{Single-cell DIA reanalysis improves with current \texttt{DIA-NN} releases}
 \label{sec:single-cell}
 
-To assess \quantmsdiann{} on low-input data, where library-free sensitivity and match-between-runs matter most, we reanalysed two label-free single-cell HeLa cohorts --- Orbitrap Astral single-cell (PXD046357) and One-Tip (PXD044991) --- through the workflow under \texttt{DIA-NN}~1.8.1 and the current 2.5.1-enterprise build, both parametrised from the same SDRF (Fig.~\ref{fig:single-cell}).
+To assess \quantmsdiann{} on low-input data, where library-free sensitivity and match-between-runs matter most, we reanalysed two label-free single-cell HeLa cohorts, Orbitrap Astral single-cell (PXD046357) and One-Tip (PXD044991), through the workflow under \texttt{DIA-NN}~1.8.1 and the current 2.5.1-enterprise build, both parametrised from the same SDRF (Fig.~\ref{fig:single-cell}).
 The newer build increased total identifications on both cohorts: on HeLa Astral, union precursors rose from 19{,}674 to 24{,}111 ($+23$\%) and protein groups from 3{,}903 to 4{,}574 ($+17$\%); on One-Tip, precursors rose from 11{,}618 to 16{,}534 ($+42$\%) and protein groups from 1{,}597 to 2{,}306 ($+44$\%; Fig.~\ref{fig:single-cell}a), with the gain holding per cell (Fig.~\ref{fig:single-cell}b).
-The improvement is largest in the data-completeness profile --- the number of protein groups quantified across an increasing fraction of cells (Fig.~\ref{fig:single-cell}c) --- consistent with stronger cross-run propagation, while quantitative precision and dynamic range are preserved (Fig.~\ref{fig:single-cell}d,e).
+The improvement is largest in the data-completeness profile (the number of protein groups quantified across an increasing fraction of cells; Fig.~\ref{fig:single-cell}c), consistent with stronger cross-run propagation, while quantitative precision and dynamic range are preserved (Fig.~\ref{fig:single-cell}d,e).
 As an orthogonal, multiplexed test we reanalysed the first single-cell plexDIA cohort processed through \quantmsdiann{} (MSV000093870, Galatidou \textit{et al.}~2024~\cite{galatidou2024oocyte}; mTRAQ 3-channel, Q~Exactive), quantifying 2{,}904 protein groups from the same raw data versus 2{,}122 in the original analysis ($+37$\%). It recovered 94\% of the originally reported groups (1{,}999 of 2{,}122) and a further 905 groups at comparable per-cell median depth (1{,}736 versus 1{,}784, across 107 and 97 cells), with a QC-matched per-oocyte comparison confirming equivalent single-cell depth (Pearson $r=0.98$; Fig.~\ref{fig:single-cell}f and Supplementary Note~6).
 
 \subsection{Pan-cohort reanalysis of public cell-line DIA deposits}
@@ -167,9 +166,9 @@ Across the five cohorts the reanalysis spans 12{,}845 unique UniProt accessions,
 Tissue-level coverage spans 28 pan-cancer tissue categories (Fig.~\ref{fig:pancohort}b), which maps both the cell lines contributing to each tissue and the union of unique proteins detected per tissue, led by lung, breast, and haematopoietic-and-lymphoid tissue.
 Because every count comes from a single SDRF-parameterised \quantmsdiann{} invocation, the resulting protein matrix is queryable from the published \qpx{} archive and can be filtered, joined, or re-grouped by Cellosaurus, NCIt, or Disease Ontology terms without manual harmonisation.
 Per-cohort completeness, peptide-per-protein distributions, gene-versus-accession overlap and per-cell-line missingness are provided in Supplementary Note~6 (Figs.~S4--S12), which also include an NK-cell Fe-NTA phosphoproteomics reanalysis (PXD049692; comparable phosphopeptide-backbone coverage at 1\% FDR). A spatial Deep Visual Proteomics cohort of MYCN-amplified neuroblastoma (PXD064049) was likewise reanalysed and matched the original \texttt{DIA-NN}~1.8.1 analysis at the precursor level (16{,}443 versus 16{,}518).
-%% --- end results ---
+%% [end results]
 
-%% --- begin (was sections/figures.tex) ---
+%% [begin sections/figures.tex]
 %% Figure environments for the quantmsdiann MCP manuscript.
 
 %% Fig. 1 — pipeline architecture (subway, vector PDF from rsvg-convert)
@@ -229,10 +228,10 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
     single-machine sequential runs. \quantmsdiann{} preserves
     match-between-runs by design: a preliminary pass builds a combined
     empirical library across all runs, against which each run is re-quantified.
-    (\textbf{a})~Accuracy per concentration --- measured log$_2$ fold-change for
+    (\textbf{a})~Accuracy per concentration: measured log$_2$ fold-change for
     each HYE species against the ProteoBench-expected ratio (dashed); community
     submissions as grey points.
-    (\textbf{b})~Depth versus accuracy --- precursors quantified against
+    (\textbf{b})~Depth versus accuracy: precursors quantified against
     median-$|\epsilon|$; \quantmsdiann{} (coloured) sits within the
     single-machine community cloud (grey), reaching greater depth at comparable
     accuracy from 1.8.1 to 2.5.1-enterprise.
@@ -250,15 +249,15 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
   \caption[Single-cell DIA reanalysis]{%
     \textbf{Single-cell DIA reanalysis by \quantmsdiann{}, comparing
     \texttt{DIA-NN}~1.8.1 with the current 2.5.1-enterprise build on identical
-    raw data.} Two label-free single-cell HeLa cohorts are shown --- Orbitrap
-    Astral single-cell (PXD046357) and One-Tip (PXD044991) --- alongside an
+    raw data.} Two label-free single-cell HeLa cohorts are shown, Orbitrap
+    Astral single-cell (PXD046357) and One-Tip (PXD044991), alongside an
     orthogonal multiplexed comparison.
     (\textbf{a})~Total identifications: union precursors and protein groups
     across all cells, per build.
     (\textbf{b})~Protein groups per cell (box and jittered points), showing the
     newer build lifts depth in every cell.
     (\textbf{c})~Data-completeness curve (HeLa Astral): protein groups
-    quantified in at least $N$ cells --- the match-between-runs signature, where
+    quantified in at least $N$ cells, the match-between-runs signature, where
     the right endpoint is the complete-profile count.
     (\textbf{d})~Relative rank-abundance (HeLa Astral), each run normalised to
     its most-abundant protein, showing extension into lower abundance.
@@ -293,11 +292,11 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
   }
   \label{fig:pancohort}
 \end{figure}
-%% --- end figures ---
+%% [end figures]
 
 \section{Discussion}
 \label{sec:discussion}
-%% --- begin (was sections/discussion.tex) ---
+%% [begin sections/discussion.tex]
 \quantmsdiann{} automates the path from a deposited DIA dataset to a reproducible quantification table, at a scale that supports systematic reanalysis of public DIA archives. The SDRF-first design encourages experiment annotation upstream of analysis and produces metadata that is interoperable with the wider proteomics ecosystem~\cite{dai2021sdrf}; the \qpx{} archive bundles the SDRF, harmonised quantification tables and pipeline provenance into a single Parquet container so that reanalysed results can be archived (e.g.\ on Zenodo) and re-queried alongside the original raw data. By focusing on \texttt{DIA-NN} rather than the multi-engine scope of the related bigbio/quantms pipeline~\cite{dai2024quantms}, \quantmsdiann{} achieves a leaner dependency surface and faster pipeline-level execution for the DIA-only regime, where the dominant cost is per-file \texttt{DIA-NN} invocation rather than across-engine comparison.
 
 End-to-end wall-clock is the sum of a largely fixed serial overhead (chiefly in-silico spectral-library generation from the FASTA, the single largest non-parallel step, together with cohort-level consolidation) and the per-file analysis stages, which run as independent tasks across the cluster (Fig.~\ref{fig:architecture}b) and whose elapsed time grows only sub-linearly with cohort size as files are processed in parallel waves (per-step envelopes in Supplementary Note~4, Fig.~S1). Time-to-finish is therefore dominated by the fixed overhead for small cohorts and stays within a few hours even for the largest deposits, so a small dataset is not necessarily faster than a much larger one (Fig.~\ref{fig:architecture}c); the serial overhead itself scales with the predicted-library size, growing for wide variable-modification searches such as phosphoproteomics, rather than with the number of files.
@@ -311,9 +310,9 @@ By design, \quantmsdiann{} ends at harmonised quantification, leaving batch corr
 The benchmarking work of Wang \textit{et al.}~\cite{wang2025} compared multiple search engines and rescoring strategies; \quantmsdiann{} adopts the broadly competitive \texttt{DIA-NN} engine and focuses on the orthogonal problem of orchestrating that engine reproducibly at scale.
 Similarly, earlier nf-core DIA efforts such as DIAproteomics~\cite{bichmann2021diaproteomics} and, more recently, the MHCquant2 pipeline~\cite{scheid2025mhcquant2} address analogous orchestration problems for DIA and immunopeptidomics.
 Together, these contributions extend the nf-core proteomics ecosystem to cover the major MS-based proteomics modalities behind a common SDRF-driven interface.
-%% --- end discussion ---
+%% [end discussion]
 
-%% --- begin (was sections/declarations.tex) ---
+%% [begin sections/declarations.tex]
 \section*{Data Availability}
 All datasets reanalysed in this study are publicly available through ProteoMeXchange.
 Cell-line bulk DIA reanalyses: PRIDE PXD003539 (Guo 2019, NCI-60), PXD004701 (Sun 2023), PXD030304 (ProCan-DepMapSanger), PXD017199 (Tognetti 2021), PXD041421 (Wang 2023). Spatial Deep Visual Proteomics reanalysis: PRIDE PXD064049 (MYCN-amplified neuroblastoma, diaPASEF).
@@ -359,7 +358,7 @@ All authors read and approved the final manuscript.
 \item[QPX] Quantitative Proteomics eXchange
 \item[SDRF] Sample and Data Relationship Format
 \end{description}
-%% --- end declarations ---
+%% [end declarations]
 
 \bibliographystyle{elsarticle-num}
 \bibliography{references}
