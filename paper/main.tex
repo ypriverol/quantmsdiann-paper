@@ -168,18 +168,18 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
 %% on the left, runtime scaling panels stacked on the right.
 \begin{figure}[htbp]
   \centering
-  \begin{minipage}[t]{0.57\linewidth}
+  \begin{minipage}[t]{0.45\linewidth}
     \centering
     \textbf{(a)}\par\vspace{0.2em}
     \mcpincludegraphics[width=\linewidth,keepaspectratio]{manuscript/workflow_panel}
   \end{minipage}\hfill
-  \begin{minipage}[t]{0.41\linewidth}
+  \begin{minipage}[t]{0.52\linewidth}
     \centering
     \textbf{(b)}\par\vspace{0.2em}
     \mcpincludegraphics[width=\linewidth,keepaspectratio]{performance/queue_size_sweep}
-  \end{minipage}\par\vspace{1.0em}
+  \end{minipage}\par\vspace{0.6em}
   \textbf{(c)}\par\vspace{0.2em}
-  \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{performance/parallelism_vs_wallclock}
+  \mcpincludegraphics[width=\textwidth,height=0.37\textheight,keepaspectratio]{performance/parallelism_vs_wallclock}
   \caption[Pipeline and scaling]{%
     \textbf{\quantmsdiann{} pipeline architecture and runtime scaling.}
     (\textbf{a})~Subway diagram of the \quantmsdiann{} workflow: mandatory modules as filled circles, optional/skippable modules as open circles. Per-file parallel stages (red; file preparation, preliminary calibration, individual search) run as one task per raw file, whereas
