@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="405.111163pt" height="371.844589pt" viewBox="0 0 405.111163 371.844589" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-06-16T14:58:37.905209</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.6, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 371.844589 
+L 405.111163 371.844589 
+L 405.111163 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 132.650627 280.73465 
+C 118.202125 267.430077 106.668503 251.272595 98.78006 233.285285 
+C 90.891617 215.297975 86.81844 195.868669 86.81844 176.227619 
+C 86.81844 156.586568 90.891617 137.157263 98.78006 119.169953 
+C 106.668503 101.182643 118.202125 85.025161 132.650627 71.720588 
+C 106.01427 73.301543 80.964714 85.007652 62.664305 104.426456 
+C 44.363896 123.84526 34.162514 149.544386 34.162514 176.227619 
+C 34.162514 202.910852 44.363896 228.609977 62.664305 248.028782 
+C 80.964714 267.447586 106.01427 279.153695 132.650627 280.73465 
+" clip-path="url(#pdbc30a33a5)" style="fill: #90caf9; opacity: 0.55"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 132.650627 71.720588 
+C 146.895797 70.87509 161.164569 72.951053 174.578253 77.820637 
+C 187.991936 82.69022 200.269415 90.251371 210.654626 100.038461 
+C 221.039836 109.825552 229.315132 121.633472 234.970908 134.735072 
+C 240.626684 147.836673 243.544412 161.957379 243.544412 176.227619 
+C 243.544412 190.497859 240.626684 204.618565 234.970908 217.720166 
+C 229.315132 230.821766 221.039836 242.629686 210.654626 252.416777 
+C 200.269415 262.203867 187.991936 269.765018 174.578253 274.634601 
+C 161.164569 279.504184 146.895797 281.580148 132.650627 280.73465 
+C 152.951385 299.428141 178.265828 311.807515 205.485474 316.35265 
+C 232.70512 320.897785 260.668275 317.414701 285.94121 306.331104 
+C 311.214145 295.247506 332.718249 277.036426 347.812929 253.934088 
+C 362.90761 230.831751 370.948649 203.824129 370.948649 176.227619 
+C 370.948649 148.631109 362.90761 121.623487 347.812929 98.52115 
+C 332.718249 75.418812 311.214145 57.207732 285.94121 46.124134 
+C 260.668275 35.040537 232.70512 31.557453 205.485474 36.102588 
+C 178.265828 40.647723 152.951385 53.027097 132.650627 71.720588 
+" clip-path="url(#pdbc30a33a5)" style="fill: #0072b2; opacity: 0.55"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 132.650627 280.73465 
+C 146.895797 281.580148 161.164569 279.504184 174.578253 274.634601 
+C 187.991936 269.765018 200.269415 262.203867 210.654626 252.416777 
+C 221.039836 242.629686 229.315132 230.821766 234.970908 217.720166 
+C 240.626684 204.618565 243.544412 190.497859 243.544412 176.227619 
+C 243.544412 161.957379 240.626684 147.836673 234.970908 134.735072 
+C 229.315132 121.633472 221.039836 109.825552 210.654626 100.038461 
+C 200.269415 90.251371 187.991936 82.69022 174.578253 77.820637 
+C 161.164569 72.951053 146.895797 70.87509 132.650627 71.720588 
+C 118.202125 85.025161 106.668503 101.182643 98.78006 119.169953 
+C 90.891617 137.157263 86.81844 156.586568 86.81844 176.227619 
+C 86.81844 195.868669 90.891617 215.297975 98.78006 233.285285 
+C 106.668503 251.272595 118.202125 267.430077 132.650627 280.73465 
+" clip-path="url(#pdbc30a33a5)" style="fill: #65ddff; opacity: 0.55"/>
+   </g>
+   <g id="text_1">
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(52.149071 173.381838)">594</text>
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(42.984227 184.162463)">(12.8%)</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(294.735593 173.381838)">2,446</text>
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(289.74028 184.162463)">(52.6%)</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(152.670488 173.381838)">1,607</text>
+    <text style="font-size: 10px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(147.675176 184.162463)">(34.6%)</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 11px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(77.10565 301.147151)">Walzer 2022</text>
+    <text style="font-size: 11px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(74.075494 313.108964)">(E-PROT-73)</text>
+    <text style="font-size: 11px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(91.462369 324.967651)">(n=2,201)</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 11px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(228.883544 338.547089)">quantmsdiann</text>
+    <!-- (DIA-NN, $\geq$50% of runs) -->
+    <g transform="translate(228.883544 350.475901)">
+     <text>
+      <tspan x="0" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">(</tspan>
+      <tspan x="3.663086" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">D</tspan>
+      <tspan x="11.606934" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">I</tspan>
+      <tspan x="14.663086" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">A</tspan>
+      <tspan x="22" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">-</tspan>
+      <tspan x="25.663086" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">N</tspan>
+      <tspan x="33.606934" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">N</tspan>
+      <tspan x="41.550781" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">,</tspan>
+      <tspan x="44.606934" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'"> </tspan>
+      <tspan x="61.166016" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">5</tspan>
+      <tspan x="67.283691" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">0</tspan>
+      <tspan x="73.401367" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">%</tspan>
+      <tspan x="83.182129" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'"> </tspan>
+      <tspan x="86.238281" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">o</tspan>
+      <tspan x="92.355957" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">f</tspan>
+      <tspan x="95.412109" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'"> </tspan>
+      <tspan x="98.468262" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">r</tspan>
+      <tspan x="102.131348" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">u</tspan>
+      <tspan x="108.249023" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">n</tspan>
+      <tspan x="114.366699" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">s</tspan>
+      <tspan x="119.866699" y="-0.984375" style="font-size: 11px; font-family: 'Helvetica'">)</tspan>
+      <tspan x="49.806152" y="-0.984375" style="font-size: 11px; font-family: 'DejaVu Sans'">≥</tspan>
+     </text>
+    </g>
+    <text style="font-size: 11px; font-family: 'Helvetica', 'Arial', 'DejaVu Sans', sans-serif" transform="translate(228.883544 362.351776)">(n=4,053)</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pdbc30a33a5">
+   <rect x="7.2" y="7.2" width="390.711163" height="338.055238"/>
+  </clipPath>
+ </defs>
+</svg>
