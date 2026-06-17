@@ -42,7 +42,7 @@ deposited under `quantmsdiann-benchmarks/`. Verified by HTTP HEAD:
 | ProteoBench modules — Module_7, PXD062685, PXD049412, PXD070049 (Fig 2) | ✅ live |
 | PXD071075 cluster-size sweep (Fig 1) | ✅ live |
 | NCI-60 PXD003539 (Fig 4, via `quantms-collections`) | ✅ live |
-| ProCan PXD030304 (Fig 4) — `cell-lines/PXD030304/v2_5_1/` | ✅ live |
+| ProCan PXD030304 (Fig 4) — `quantms-collections/absolute-expression-2.0/cell-lines/PXD030304/` (figure source; also mirrored at `quantmsdiann-benchmarks/cell-lines/PXD030304/v2_5_1/`) | ✅ live |
 | plexDIA MSV000093870 (Fig 3F) — `single-cell/MSV000093870/v2_5_1/` | ✅ live |
 | spatial PXD064049 (Supp) — `spatial/PXD064049/v2_5_0/` | ✅ live |
 | phospho PXD049692 / PXD034128 / PXD034623 (Supp) — `phospho/<ds>/v{2_5_1,2_5_1_enterprise}/` | ✅ live |
