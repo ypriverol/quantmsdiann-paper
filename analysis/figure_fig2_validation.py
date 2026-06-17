@@ -33,19 +33,30 @@ OUT = REPO / "analysis" / "figures" / "manuscript" / "fig2_validation.svg"
 
 
 def render(out: Path) -> Path:
+    from matplotlib.patches import Patch
+    from analysis.figure_performance_trace import INSTRUMENT_COLOURS
+
     dq = pd.read_csv(PERF / "queue_size_sweep.tsv", sep="\t")
     dp = pd.read_csv(PERF / "parallelism_data.tsv", sep="\t")
-    # Narrower + taller than a wide strip: at \textwidth the figure is downscaled
-    # less (~0.75x vs ~0.43x), so panels and fonts render markedly larger.
-    fig, ax = plt.subplots(1, 3, figsize=(9.0, 5.4),
-                           gridspec_kw={"width_ratios": [1.0, 1.3, 1.0]})
+    # Three EQUAL-width panels that each fill their cell (no forced square),
+    # so a/b/c are the same size with no whitespace gaps.
+    fig, ax = plt.subplots(1, 3, figsize=(10.5, 4.6))
     render_queue_size_sweep(dq, ax=ax[0], composite=True)
-    render_parallelism_scatter(dp, ax=ax[1], composite=True, show_legend=True, legend_ncol=5)
-    acc.draw(ax[2], compact=True)
+    render_parallelism_scatter(dp, ax=ax[1], composite=True, show_legend=False,
+                               short_labels=True)
+    acc.draw(ax[2], compact=True, square=False)
     for a, lab in zip(ax, "abc"):
-        a.text(-0.10, 1.05, f"({lab})", transform=a.transAxes, fontsize=15,
-               fontweight="bold", va="bottom", ha="right")
-    fig.tight_layout()
+        a.text(-0.06, 1.05, f"({lab})", transform=a.transAxes, fontsize=14,
+               fontweight="bold", va="bottom", ha="left")
+    # instrument legend (for panel b) as a figure-level strip at the bottom,
+    # so it does not make panel b taller than a/c.
+    insts = [i for i in dict.fromkeys(dp["instrument"]) if isinstance(i, str)]
+    handles = [Patch(facecolor=INSTRUMENT_COLOURS.get(i, "#9e9e9e"), edgecolor="#222222", label=i)
+               for i in insts]
+    fig.legend(handles=handles, loc="lower center", ncol=5, fontsize=7,
+               frameon=False, title="Instrument (panel b)", title_fontsize=7.5,
+               bbox_to_anchor=(0.5, -0.02))
+    fig.tight_layout(rect=(0, 0.13, 1, 1))
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
     plt.close(fig)

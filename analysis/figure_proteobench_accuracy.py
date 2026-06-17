@@ -70,7 +70,8 @@ def diann_community(dataset: str, threshold: int = 3) -> list[dict]:
     return out
 
 
-def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = False) -> None:
+def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = False,
+         square: bool = True) -> None:
     """Draw the accuracy concordance into `ax` (reused by the Fig 2 row)."""
     datasets = list(_COMMUNITY_COMPARATOR_DATASETS)
     rng = np.random.default_rng(0)
@@ -95,7 +96,9 @@ def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = Fa
                            edgecolors="white", linewidths=0.8, zorder=3)
     lim = [-2.7, 1.7]
     ax.plot(lim, lim, "--", color="#444444", linewidth=1.1, zorder=1)
-    ax.set_xlim(*lim); ax.set_ylim(*lim); ax.set_aspect("equal")
+    ax.set_xlim(*lim); ax.set_ylim(*lim)
+    if square:
+        ax.set_aspect("equal")
     ax.set_xlabel("Expected log$_2$ ratio (ProteoBench)", fontsize=lab)
     ax.set_ylabel("Observed log$_2$ ratio", fontsize=lab)
     if compact:
@@ -103,17 +106,17 @@ def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = Fa
     fs.despine(ax)
 
     if with_legend:
-        handles = [Line2D([0], [0], linestyle="--", color="#444444", label="Y = X (expected)"),
-                   Line2D([0], [0], marker="o", linestyle="none", ms=8, markerfacecolor=GREY,
-                          markeredgecolor="none", label="standalone DIA-NN (community, all versions)")]
+        # short labels, placed in the empty upper-left triangle (points sit on
+        # the diagonal), so the legend never overlaps the data.
+        handles = [Line2D([0], [0], linestyle="--", color="#444444", label="Y = X"),
+                   Line2D([0], [0], marker="o", linestyle="none", ms=7, markerfacecolor=GREY,
+                          markeredgecolor="none", label="standalone DIA-NN")]
         for ver in VERSIONS:
-            handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=8,
+            handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=7,
                            markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="white",
                            label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
-        handles += [Line2D([0], [0], marker=m, linestyle="none", ms=8, markerfacecolor="#888",
-                    markeredgecolor="white", label=MARKER_LABEL[d]) for d, m in MARKER.items()]
-        ax.legend(handles=handles, loc="upper left", fontsize=7 if compact else 8,
-                  frameon=False, handletextpad=0.3)
+        ax.legend(handles=handles, loc="upper left", fontsize=6.5 if compact else 8,
+                  frameon=False, handletextpad=0.3, borderaxespad=0.2, labelspacing=0.3)
 
 
 def render(out: Path, threshold: int = 3) -> Path:
