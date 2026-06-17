@@ -174,8 +174,14 @@ def draw_strip(ax, threshold: int = 3, *, compact: bool = False) -> None:
         handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=7,
                        markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="black",
                        label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
+    # marker SHAPE = which ProteoBench dataset the quantms-diann point is from
+    # (the grey community strip pools both); spell it out so the two datasets are
+    # unambiguous and not confused with the panel-b instrument-colour legend.
+    handles += [Line2D([0], [0], marker=m, linestyle="none", ms=7, markerfacecolor="white",
+                markeredgecolor="black", label=lbl) for m, lbl in
+                (("o", "Astral (Module 7)"), ("s", "timsTOF diaPASEF"))]
     ax.legend(handles=handles, loc="upper left", fontsize=6.5 if compact else 8,
-              frameon=False, handletextpad=0.3, labelspacing=0.3)
+              frameon=False, handletextpad=0.3, labelspacing=0.3, ncol=1)
 
 
 def render(out: Path, threshold: int = 3) -> Path:
