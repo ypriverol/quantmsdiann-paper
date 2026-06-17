@@ -31,6 +31,27 @@ is the canonical target filter. All "our reanalysis" counts follow:
 - counts come from the **report** (`diann_report.parquet`/`.tsv`), never the `*_matrix.tsv`
   files (those bake in a version-dependent `--matrix-spec-q` and are not comparable across versions).
 
+## Public availability (verified 2026-06-17)
+
+Reproducibility from **public** data depends on the reanalysis reports being
+deposited under `quantmsdiann-benchmarks/`. Verified by HTTP HEAD:
+
+| Dataset / figure | Public on FTP? |
+|---|---|
+| single-cell PXD046357 / PXD044991 (Fig 3) | ✅ live |
+| ProteoBench modules — Module_7, PXD062685, PXD049412, PXD070049 (Fig 2) | ✅ live |
+| PXD071075 cluster-size sweep (Fig 1) | ✅ live |
+| NCI-60 PXD003539 (Fig 4, via `quantms-collections`) | ✅ live |
+| ProCan PXD030304 (Fig 4) | ⏳ deposition pending |
+| plexDIA MSV000093870 (Fig 3F) | ⏳ deposition pending |
+| spatial PXD064049 (Supp) | ⏳ deposition pending |
+| phospho PXD049692 / PXD034128 / PXD034623 (Supp) | ⏳ deposition pending |
+
+⏳ = the figure currently reads a derived table/cache produced on the cluster;
+the underlying report must be uploaded to `quantmsdiann-benchmarks/` for a third
+party to regenerate it. **Depositing these reports is the remaining gate to full
+end-to-end reproducibility.**
+
 ## Per-figure provenance
 
 | Figure | Numbers | Source (public) | Regenerate | Status |
@@ -40,7 +61,7 @@ is the canonical target filter. All "our reanalysis" counts follow:
 | **Fig 3** single-cell | per-cell / completeness / dynamic range / CV / totals / plexDIA | `quantmsdiann-benchmarks/single-cell/{PXD046357,PXD044991_one-tip}/v{1_8_1,2_5_1_enterprise}/quant_tables/diann_report.{tsv,parquet}`; plexDIA `MSV000093870_plexDIA/` vs Galatidou 2024 matrix (`github.com/SlavovLab/single_cell_oocyte`) | **`python -m analysis.make_single_cell_tables`** then `figure_single_cell_combined` | **fully reproducible** ✅ |
 | **Fig 4** cell-line atlas | per-cohort target-only protein groups, overlaps | `data/PXD00{3539,4701},PXD030304,...` reports (from `quantms-collections`/`quantmsdiann-benchmarks`) + per-cohort report JSONs | `python -m analysis.figure_combined_cell_lines_atlas` | matrices reproducible; per-tissue/per-subtype JSONs — generator pending |
 | **Supp** phospho (PXD049692) | phosphopeptides / class-I sites, deposited vs reanalysis | our `quantmsdiann-benchmarks/.../PXD049692/.../diann_report.parquet` + deposited `*_PH_Report.tsv` | `python -m analysis.figure_phospho` | `phospho_counts.tsv` staged — generator pending |
-| **Supp** spatial (PXD064049) | target-only protein groups, deposited vs reanalysis | `quantmsdiann-benchmarks/PXD064049/quant_tables/` + original `2025/07/PXD064049/DIANN_results.zip` | `python -m analysis.figure_pxd064049_spatial_vs_quantmsdiann` | **fully reproducible** ✅ |
+| **Supp** spatial (PXD064049) | target-only protein groups, deposited vs reanalysis | `quantmsdiann-benchmarks/PXD064049-MYCN-DVP-diaPASEF/quant_tables/` + original `2025/07/PXD064049/DIANN_results.zip` | `python -m analysis.figure_pxd064049_spatial_vs_quantmsdiann` | script reads from FTP, but report ⏳ deposition pending |
 
 ## External published baselines (cited, not recomputed)
 
