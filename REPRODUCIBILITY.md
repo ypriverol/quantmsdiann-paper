@@ -74,6 +74,23 @@ Once these are live, the per-dataset generators (modeled on
 `analysis/make_single_cell_tables.py`) read them directly from the FTP — no
 hardcoded numbers. Until then, those figures read cluster-staged derived tables.
 
+### Current cluster source paths (to upload from)
+
+Under `/hps/nobackup/juan/pride/reanalysis/absolute-expression/`, version trees:
+`_v1_8_1/` = 1.8.1, no-prefix = 2.5.1 standard, `_v2_5_1_enterprise/` = enterprise.
+Each `quant_tables/` holds `diann_report.parquet` (+ `diann_report.site_report.parquet` for phospho).
+
+| Dataset | 2.5.1 standard (no-prefix) | enterprise (`_v2_5_1_enterprise/`) |
+|---|---|---|
+| ProCan PXD030304 | `cell-lines-proteomes/PXD030304/results/quant_tables/` | (same subpath under `_v2_5_1_enterprise/`) |
+| plexDIA MSV000093870 | `single-cell-proteomics/MSV000093870/results-plexDIA/quant_tables/` | ″ |
+| spatial PXD064049 | `spatial-proteomics/PXD064049/results-CHP212-MYCN-DVP-diaPASEF-carbamidomethyl/quant_tables/` | ″ |
+| phospho PXD049692 | `phospho-proteomics/PXD049692/results-NK-fibrin-IL15-phospho-diaPASEF/quant_tables/` | ″ |
+| phospho PXD034128 | `phospho-proteomics/PXD034128/results-phospho-{biological-study,highspeed-DIA}/quant_tables/` | ″ |
+| phospho PXD034623 | `phospho-proteomics/PXD034623/results-M2-Galectin1-phospho-DIA/quant_tables/` | ″ |
+
+(1.8.1 reanalyses, where they exist, are under `_v1_8_1/<same subpath>`.)
+
 ## Per-figure provenance
 
 | Figure | Numbers | Source (public) | Regenerate | Status |
