@@ -120,7 +120,11 @@ def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = Fa
                   frameon=False, handletextpad=0.3, borderaxespad=0.2, labelspacing=0.3)
 
 
-def draw_strip(ax, threshold: int = 3, *, compact: bool = False) -> None:
+SHAPE_BY_VERSION = {"v1_8_1": "o", "v2_5_1_enterprise": "^"}
+
+
+def draw_strip(ax, threshold: int = 3, *, compact: bool = False,
+               dataset_colors: dict | None = None) -> None:
     """Per-species accuracy strip+box: one group per HYE species, community runs
     as a jittered grey strip + box (every dot visible), the ProteoBench-expected
     ratio as a dashed line, quantms-diann as large markers. Shows the same
@@ -151,14 +155,20 @@ def draw_strip(ax, threshold: int = 3, *, compact: bool = False) -> None:
                 med.set(color="#9e9e9e", linewidth=1.0)
             ax.scatter(x + rng.uniform(-0.24, 0.24, len(cv)), cv, s=16, color=GREY,
                        alpha=0.6, edgecolors="white", linewidths=0.3, zorder=3)
-        for ds in datasets:
+        for di, ds in enumerate(datasets):
             qm = extract_qm_per_species_log2(ds, threshold)
             qm = qm[qm["species"] == sp]
             qm = qm[qm["version"].isin(VERSIONS)]
-            dx = -0.16 if ds == datasets[0] else 0.16
+            # colour = instrument/dataset (defined once in the figure's main
+            # instrument legend); shape = quantms-diann version.
+            colour = (dataset_colors or {}).get(ds)
+            ds_dx = -0.05 if di == 0 else 0.05
             for _, r in qm.iterrows():
-                ax.scatter(x + dx, r["mean_log2_empirical"], s=78, marker=MARKER[ds],
-                           color=_VERSION_COLORS.get(r["version"], "#d62728"),
+                ver = r["version"]
+                ver_dx = -0.13 if ver == VERSIONS[0] else 0.13
+                ax.scatter(x + ver_dx + ds_dx, r["mean_log2_empirical"], s=78,
+                           marker=SHAPE_BY_VERSION.get(ver, "o"),
+                           color=colour or _VERSION_COLORS.get(ver, "#d62728"),
                            edgecolors="black", linewidths=0.6, zorder=4)
     ax.set_xticks(range(len(order)))
     ax.set_xticklabels([f"{_SPECIES_LABEL[s]}\n(exp. {exp[s]:+g})" for s in order], fontsize=lab)
@@ -167,19 +177,16 @@ def draw_strip(ax, threshold: int = 3, *, compact: bool = False) -> None:
     if compact:
         ax.tick_params(labelsize=8)
     fs.despine(ax)
+    # Minimal key: colours (= instrument/dataset) are read from the figure's
+    # main instrument legend; here we only define the line, the community dots,
+    # and the SHAPE = quantms-diann version.
     handles = [Line2D([0], [0], linestyle="--", color="#444444", label="ProteoBench expected"),
                Line2D([0], [0], marker="o", linestyle="none", ms=7, markerfacecolor=GREY,
                       markeredgecolor="white", label="standalone DIA-NN")]
     for ver in VERSIONS:
-        handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=7,
-                       markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="black",
+        handles.append(Line2D([0], [0], marker=SHAPE_BY_VERSION.get(ver, "o"), linestyle="none",
+                       ms=7, markerfacecolor="#666666", markeredgecolor="black",
                        label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
-    # marker SHAPE = which ProteoBench dataset the quantms-diann point is from
-    # (the grey community strip pools both); spell it out so the two datasets are
-    # unambiguous and not confused with the panel-b instrument-colour legend.
-    handles += [Line2D([0], [0], marker=m, linestyle="none", ms=7, markerfacecolor="white",
-                markeredgecolor="black", label=lbl) for m, lbl in
-                (("o", "Astral (Module 7)"), ("s", "timsTOF diaPASEF"))]
     ax.legend(handles=handles, loc="upper left", fontsize=6.5 if compact else 8,
               frameon=False, handletextpad=0.3, labelspacing=0.3, ncol=1)
 

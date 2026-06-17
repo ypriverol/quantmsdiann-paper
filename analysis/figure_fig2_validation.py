@@ -44,7 +44,15 @@ def render(out: Path) -> Path:
     render_queue_size_sweep(dq, ax=ax[0], composite=True)
     render_parallelism_scatter(dp, ax=ax[1], composite=True, show_legend=False,
                                short_labels=True)
-    acc.draw_strip(ax[2], compact=True)
+    # panel c shares panel b's instrument colours (read from the bottom legend);
+    # shape encodes the quantms-diann version, so c needs no colour legend.
+    from analysis.figure_id_vs_epsilon import _COMMUNITY_COMPARATOR_DATASETS
+    ds_colors = {}
+    for ds in _COMMUNITY_COMPARATOR_DATASETS:
+        inst = dp.loc[dp["dataset"] == ds, "instrument"]
+        if len(inst):
+            ds_colors[ds] = INSTRUMENT_COLOURS.get(inst.iloc[0], "#9e9e9e")
+    acc.draw_strip(ax[2], compact=True, dataset_colors=ds_colors)
     for a, lab in zip(ax, "abc"):
         a.text(-0.06, 1.05, f"({lab})", transform=a.transAxes, fontsize=14,
                fontweight="bold", va="bottom", ha="left")
@@ -54,9 +62,9 @@ def render(out: Path) -> Path:
     handles = [Patch(facecolor=INSTRUMENT_COLOURS.get(i, "#9e9e9e"), edgecolor="#222222", label=i)
                for i in insts]
     fig.legend(handles=handles, loc="lower center", ncol=5, fontsize=7,
-               frameon=False, title="Instrument (panel b)", title_fontsize=7.5,
+               frameon=False, title="Instrument / dataset (panels b, c)", title_fontsize=7.5,
                bbox_to_anchor=(0.5, -0.02))
-    fig.tight_layout(rect=(0, 0.13, 1, 1))
+    fig.tight_layout(rect=(0, 0.13, 1, 1), w_pad=0.4)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
     plt.close(fig)
