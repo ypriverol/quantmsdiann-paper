@@ -13,7 +13,7 @@ LATEXMK   := latexmk
 BUILD_DIR := build
 
 SVGS := \
-	manuscript/fig2_proteobench_equivalence.svg \
+	manuscript/fig1d_proteobench_accuracy.svg \
 	manuscript/fig3_single_cell_combined.svg \
 	manuscript/fig4_cellline_atlas.svg \
 	performance/parallelism_vs_wallclock.svg \

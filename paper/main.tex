@@ -139,9 +139,9 @@ We then compared the time-to-finish across every dataset in this study (Fig.~\re
 \subsection{ProteoBench benchmark across \texttt{DIA-NN} versions and instruments}
 \label{sec:proteobench}
 
- To test whether \quantmsdiann{} preserves \texttt{DIA-NN}'s desktop performance under SDRF-driven orchestration and distributed runs, we processed the four public ProteoBench DIA modules (Orbitrap Astral, \emph{Module~7}; single-cell Astral, \emph{Module~9}, PXD049412; timsTOF diaPASEF, \emph{Module~5}, PXD062685; SCIEX ZenoTOF~7600, \emph{Module~10}, PXD070049) and compared the per-precursor identification counts against the ProteoBench public-submission snapshot (29 May 2026)~\cite{devreese2025proteobench}. All runs were library-free (the library predicted in-silico from the FASTA; \quantmsdiann{} also supports user-supplied libraries), so for a like-for-like comparison we kept only predicted-from-FASTA \texttt{DIA-NN} community submissions. We report the oldest supported release (1.8.1) and the current 2.5.1-enterprise build, at \texttt{DIA-NN}'s recommended per-version q-values under a uniform 1\% global precursor cut-off (Fig.~\ref{fig:proteobench}); the academic 2.5.1 build and the full per-version, per-module breakdown are in Supplementary Note~5 (Fig.~S3).
+ To test whether \quantmsdiann{} preserves \texttt{DIA-NN}'s desktop performance under SDRF-driven orchestration and distributed runs, we processed the four public ProteoBench DIA modules (Orbitrap Astral, \emph{Module~7}; single-cell Astral, \emph{Module~9}, PXD049412; timsTOF diaPASEF, \emph{Module~5}, PXD062685; SCIEX ZenoTOF~7600, \emph{Module~10}, PXD070049) and compared quantification accuracy and per-precursor identification counts against the ProteoBench public-submission snapshot (29 May 2026)~\cite{devreese2025proteobench}. All runs were library-free (the library predicted in-silico from the FASTA; \quantmsdiann{} also supports user-supplied libraries), so for a like-for-like comparison we kept only predicted-from-FASTA \texttt{DIA-NN} community submissions. We report the oldest supported release (1.8.1) and the current 2.5.1-enterprise build, at \texttt{DIA-NN}'s recommended per-version q-values under a uniform 1\% global precursor cut-off. Quantification accuracy is shown in the main text (Fig.~\ref{fig:architecture}d); the academic 2.5.1 build and the full per-version, per-module identification-depth breakdown are in Supplementary Note~5 (Fig.~S3).
 
-On the two modules with predicted-library community submissions (Module~7, $n=15$; Module~5, $n=8$; Modules~9 and~10 had none), \quantmsdiann{} recovers the expected HYE per-species log$_2$ fold-changes (Fig.~\ref{fig:proteobench}b) and falls within the community median quantification-error~$|\epsilon|$ distribution, at or below its median (Fig.~\ref{fig:proteobench}c). This holds independent of release: the 1.8.1 and 2.5.1-enterprise builds overlie one another and both sit inside the community cloud, the version-to-version shift in median~$|\epsilon|$ ($\approx$0.5--1\% in linear fold-change) being far smaller than the community spread For all the Proteobench datasets explored 2.5.1-enterprise build outperformed 1.8.1 in every benchmark, with no loss of accuracy. Precursors identified in at least one run rose by 15--23\% on all four modules (largest on the timsTOF diaPASEF module, 97{,}149~$\to$~119{,}726), per-run protein groups by 10--14\%, and proteins quantified in \emph{every} run by 12--20\% (up to $+$20\% on the single-cell Astral module, 6{,}124~$\to$~7{,}349). This uniform gain, in line with the trend the broader ProteoBench community reports across \texttt{DIA-NN} releases~\cite{devreese2025proteobench}, is what makes reanalysing public deposits with the current build worthwhile (Sections~\ref{sec:single-cell}--\ref{sec:reanalyses}).
+On the two modules with predicted-from-FASTA \texttt{DIA-NN} community submissions (Orbitrap Astral, Module~7, $n=15$; timsTOF diaPASEF, PXD062685, $n=8$), \quantmsdiann{} reproduces the expected HYE per-species log$_2$ fold-changes: across both \texttt{DIA-NN} releases its measured ratios lie on the ProteoBench-expected diagonal, together with the standalone \texttt{DIA-NN} community submissions of all versions (Fig.~\ref{fig:architecture}d). Distributed, SDRF-driven orchestration therefore does not alter quantification accuracy relative to a single-machine \texttt{DIA-NN} run. Identification depth rises monotonically with \texttt{DIA-NN} version on every module (precursors $+$15--23\%, per-run protein groups $+$10--14\%, and proteins quantified in every run $+$12--20\% from 1.8.1 to 2.5.1-enterprise; Supplementary Note~5, Fig.~S3), in line with the broader ProteoBench community trend~\cite{devreese2025proteobench} and motivating reanalysis of public deposits with the current build (Sections~\ref{sec:single-cell}--\ref{sec:reanalyses}).
 
 \subsection{Single-cell DIA reanalysis improves with current \texttt{DIA-NN} releases}
 \label{sec:single-cell}
@@ -169,71 +169,32 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
 \begin{figure}[p]
   \centering
   \textbf{(a)}\par\vspace{0.2em}
-  \mcpincludegraphics[width=0.66\linewidth,keepaspectratio]{manuscript/workflow_panel}\par
-  \vspace{0.5em}
-  \begin{minipage}[c]{0.39\linewidth}
+  \mcpincludegraphics[width=0.44\linewidth,keepaspectratio]{manuscript/workflow_panel}\par
+  \vspace{0.3em}
+  \begin{minipage}[c]{0.36\linewidth}
     \centering
     \textbf{(b)}\par\vspace{0.2em}
     \mcpincludegraphics[width=\linewidth,keepaspectratio]{performance/queue_size_sweep}
   \end{minipage}\hfill
-  \begin{minipage}[c]{0.59\linewidth}
+  \begin{minipage}[c]{0.36\linewidth}
     \centering
-    \textbf{(c)}\par\vspace{0.2em}
-    \mcpincludegraphics[width=\linewidth,keepaspectratio]{performance/parallelism_vs_wallclock}
-  \end{minipage}
-  \caption[Pipeline and scaling]{%
-    \textbf{\quantmsdiann{} pipeline architecture and runtime scaling.}
-    (\textbf{a})~Subway diagram of the \quantmsdiann{} workflow: mandatory modules as filled circles, optional/skippable modules as open circles. Per-file parallel stages (red; file preparation, preliminary calibration, individual search) run as one task per raw file, whereas
-    collective stages (green; in-silico library generation, empirical library assembly, final quantification, MSstats conversion, and
-    \texttt{pmultiqc} reporting) run once over the full cohort.
-    (\textbf{b})~Workflow wall-clock time versus the number of cluster nodes
-    (Nextflow \texttt{executor.queueSize}) on the PXD071075 single-cell
-    cohort.
-    (\textbf{c})~Wall-clock time to finish each reanalysis, one bar per
-    dataset, ordered by cohort size (number of MS data files) and coloured
-    by instrument family. In both~(\textbf{b}) and~(\textbf{c}) the reported
-    time \emph{excludes} the in-silico spectral-library prediction step
-    (\texttt{INSILICO\_LIBRARY\_GENERATION}), a one-time, cohort-independent
-    cost that can be predicted once and reused, so the bars reflect the
-    per-file quantification work. Time-to-finish stays within a few hours
-    across two orders of magnitude in file count because per-file stages are
-    parallelised across the cluster; the deeper variable-modification search
-    of the phosphoproteomics cohorts (e.g.\ PXD049692) is the main residual
-    driver of wall-clock once library prediction is set aside.
+    \textbf{(d)}\par\vspace{0.2em}
+    \mcpincludegraphics[width=\linewidth,keepaspectratio]{manuscript/fig1d_proteobench_accuracy}
+  \end{minipage}\par\vspace{0.3em}
+  \textbf{(c)}\par\vspace{0.2em}
+  \mcpincludegraphics[width=\textwidth,height=0.18\textheight,keepaspectratio]{performance/parallelism_vs_wallclock}
+  \caption[Pipeline, scaling, ProteoBench accuracy]{\footnotesize
+    \textbf{\quantmsdiann{} pipeline architecture, runtime scaling, and ProteoBench accuracy.}
+    (\textbf{a})~Workflow subway diagram: per-file parallel stages (red) run one task per raw file; collective stages (green) run once per cohort.
+    (\textbf{b})~Wall-clock versus cluster nodes (Nextflow \texttt{executor.queueSize}; PXD071075 single-cell sweep).
+    (\textbf{c})~Wall-clock to finish each reanalysis, one bar per dataset (ordered by file count, coloured by instrument); (\textbf{b}) and~(\textbf{c}) exclude the one-time in-silico library prediction.
+    (\textbf{d})~ProteoBench quantification accuracy: measured versus ProteoBench-expected HYE log$_2$ ratios for the two modules with predicted-from-FASTA \texttt{DIA-NN} community submissions (Orbitrap Astral, Module~7; timsTOF diaPASEF). \quantmsdiann{} (1.8.1 and 2.5.1-enterprise, coloured) lies on the expected diagonal with standalone \texttt{DIA-NN} of all versions (grey); per-version identification depth in Supplementary Note~5 (Fig.~S3).
   }
   \label{fig:architecture}
 \end{figure}
 
-%% Fig. 2 — ProteoBench: precursors-vs-version (compact summary) +
-%% ID-vs-accuracy scatter (community context). The per-version per-module
-%% protein-group / precursor breakdown is in Supplementary Note 5 (Fig. S3).
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\linewidth,keepaspectratio]{manuscript/fig2_proteobench_equivalence}
-  \caption[quantmsdiann reproduces single-machine ProteoBench submissions]{%
-    \textbf{Distributed \quantmsdiann{} reproduces single-machine results on
-    ProteoBench.} For the two DIA modules with public predicted-from-FASTA
-    community submissions (Orbitrap Astral, Module~7; timsTOF diaPASEF,
-    PXD062685), \quantmsdiann{} (\texttt{DIA-NN} 1.8.1 and 2.5.1-enterprise) is
-    compared against the cloud of community submissions, which are
-    single-machine sequential runs. \quantmsdiann{} preserves
-    match-between-runs by design: a preliminary pass builds a combined
-    empirical library across all runs, against which each run is re-quantified.
-    (\textbf{a})~Accuracy per concentration: measured log$_2$ fold-change for
-    each HYE species against the ProteoBench-expected ratio (dashed); community
-    submissions as grey points.
-    (\textbf{b})~Depth versus accuracy: precursors quantified against
-    median-$|\epsilon|$; \quantmsdiann{} (coloured) sits within the
-    single-machine community cloud (grey), reaching greater depth at comparable
-    accuracy from 1.8.1 to 2.5.1-enterprise.
-    Datasets without predicted-library community comparators (single-cell
-    Module~9/PXD049412; ZenoTOF Module~10/PXD070049) and the per-version
-    protein-group counts are in Supplementary Note~5.
-  }
-  \label{fig:proteobench}
-\end{figure}
 
-%% Fig. 3 — Single-cell DIA reanalysis (DIA-NN 1.8.1 vs 2.5.1-enterprise)
+%% Fig. 2 — Single-cell DIA reanalysis (DIA-NN 1.8.1 vs 2.5.1-enterprise)
 \begin{figure}[htbp]
   \centering
   \mcpincludegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{manuscript/fig3_single_cell_combined}
@@ -261,7 +222,7 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
   \label{fig:single-cell}
 \end{figure}
 
-%% Fig. 4 — Pan-cohort of five DIA reanalyses
+%% Fig. 3 — Pan-cohort of five DIA reanalyses
 \begin{figure}[htbp]
   \centering
   \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{manuscript/fig4_cellline_atlas}
@@ -292,7 +253,7 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
 
 Every reanalysis in this study completed in less than 12h on the EMBL-EBI HPC cluster, independent of cohort size: the 2{,}300-run single-cell cohort finished in 2.2~h at 300 nodes. This follows from how end-to-end wall-clock is structured, as a largely fixed serial overhead plus the per-file analysis stages. The serial overhead is dominated by in-silico spectral-library generation from the FASTA (the single largest non-parallel step), plus cohort-level consolidation. The per-file stages run as independent tasks across the cluster (Fig.~\ref{fig:architecture}b), so their elapsed time grows only sub-linearly with cohort size as files are processed in parallel waves (per-step envelopes in Supplementary Note~4, Fig.~S1). Time-to-finish is therefore dominated by the fixed overhead for small cohorts and stays within a few hours even for the largest deposits, so a small dataset is not necessarily faster than a much larger one (Fig.~\ref{fig:architecture}c); the serial overhead itself scales with the predicted-library size, growing for wide variable-modification searches such as phosphoproteomics, rather than with the number of files.
 
-Our evaluation covers three complementary aspects of \quantmsdiann{}: analytical agreement with the desktop version of \texttt{DIA-NN} (ProteoBench; Fig.~\ref{fig:proteobench}), recovery against published per-study quantifications (independent reanalyses; Figs.~\ref{fig:single-cell},~\ref{fig:pancohort}), and archive-scale throughput (pan-cohort; Fig.~\ref{fig:pancohort}). The recovery results suggest that the value of DIA reanalysis is real but time-limited (largest for deposits originally analysed with older or non-\texttt{DIA-NN} engines and shrinking toward parity for recently processed cohorts), a regime an SDRF-driven workflow is suited to address as new \texttt{DIA-NN} versions ship. The workflow already supports broader single-cell and laser-microdissected spatial acquisition modes (Fig.~\ref{fig:architecture}a, library-handling branch), and SDRFs for the Brunner~\cite{brunner2022}, Derks~\cite{derks2023}, Leduc~\cite{leduc2024}, Wang~\cite{wang2025}, Mund~\cite{mund2022} and Makhmut~\cite{makhmut2023} datasets are in preparation.
+Our evaluation covers three complementary aspects of \quantmsdiann{}: analytical agreement with the desktop version of \texttt{DIA-NN} (ProteoBench; Fig.~\ref{fig:architecture}d), recovery against published per-study quantifications (independent reanalyses; Figs.~\ref{fig:single-cell},~\ref{fig:pancohort}), and archive-scale throughput (pan-cohort; Fig.~\ref{fig:pancohort}). The recovery results suggest that the value of DIA reanalysis is real but time-limited (largest for deposits originally analysed with older or non-\texttt{DIA-NN} engines and shrinking toward parity for recently processed cohorts), a regime an SDRF-driven workflow is suited to address as new \texttt{DIA-NN} versions ship. The workflow already supports broader single-cell and laser-microdissected spatial acquisition modes (Fig.~\ref{fig:architecture}a, library-handling branch), and SDRFs for the Brunner~\cite{brunner2022}, Derks~\cite{derks2023}, Leduc~\cite{leduc2024}, Wang~\cite{wang2025}, Mund~\cite{mund2022} and Makhmut~\cite{makhmut2023} datasets are in preparation.
 
 The cross-\texttt{DIA-NN}-version reproducibility view enabled by \quantmsdiann{} is, to our knowledge, the first pipeline-level treatment of this question for \texttt{DIA-NN}. We expect this to become increasingly important as \texttt{DIA-NN} evolves: a deposited single-cell DIA dataset analysed with \diannversion{1.8} today and re-analysed with \diannversion{2.x} in two years should not produce different biological conclusions for the same data and parameters. In current practice such re-analyses are rarely performed, because the bespoke per-study scripts make them prohibitively expensive, a barrier the single-invocation audit of Section~\ref{sec:proteobench} removes. By design, \quantmsdiann{} ends at harmonised quantification, leaving batch correction, cell-type assignment, and differential-abundance analysis to downstream packages such as scp~\cite{vanderaa2023} that read its \qpx{} or MSstats output directly; in this sense it complements existing single-cell DIA workflows rather than competing with them. \quantmsdiann{} is open-source under the MIT license and is openly developed as a community effort within the nf-core and bigbio proteomics ecosystem, so that it can continue to track new \texttt{DIA-NN} releases and acquisition modes as they appear. 
 
