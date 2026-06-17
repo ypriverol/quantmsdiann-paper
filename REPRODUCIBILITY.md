@@ -52,6 +52,28 @@ the underlying report must be uploaded to `quantmsdiann-benchmarks/` for a third
 party to regenerate it. **Depositing these reports is the remaining gate to full
 end-to-end reproducibility.**
 
+## Deposition checklist (to close the ⏳ rows)
+
+To make the pending datasets reproducible from public data, upload their DIA-NN
+reports to `quantmsdiann-benchmarks/` using the **same layout as single-cell**
+(which already works), i.e. one tree per DIA-NN version, report under
+`quant_tables/`:
+
+```
+quantmsdiann-benchmarks/<class>/<dataset>/v<version>/quant_tables/diann_report.{parquet,tsv}
+```
+
+| Dataset | Suggested path | Versions | Files needed |
+|---|---|---|---|
+| ProCan PXD030304 | `cell-lines/PXD030304/v<ver>/quant_tables/` | 1_8_1, 2_5_1, 2_5_1_enterprise | `diann_report.parquet` (or `.tsv` for 1.8.1) |
+| plexDIA MSV000093870 | `single-cell/MSV000093870/v<ver>/quant_tables/` | 2_5_1, 2_5_1_enterprise | `diann_report.parquet` |
+| spatial PXD064049 | `spatial/PXD064049/v<ver>/quant_tables/` | 1_8_1, 2_5_1_enterprise | `diann_report.parquet` |
+| phospho PXD049692, PXD034128, PXD034623 | `phospho/<PXD>/v<ver>/quant_tables/` | 2_5_1, 2_5_1_enterprise | `diann_report.parquet` **and** `diann_report.site_report.parquet` (for class-I sites) |
+
+Once these are live, the per-dataset generators (modeled on
+`analysis/make_single_cell_tables.py`) read them directly from the FTP — no
+hardcoded numbers. Until then, those figures read cluster-staged derived tables.
+
 ## Per-figure provenance
 
 | Figure | Numbers | Source (public) | Regenerate | Status |
