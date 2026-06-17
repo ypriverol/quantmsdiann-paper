@@ -13,13 +13,11 @@ LATEXMK   := latexmk
 BUILD_DIR := build
 
 SVGS := \
-	manuscript/fig1d_proteobench_accuracy.svg \
+	manuscript/fig2_validation.svg \
 	manuscript/fig3_single_cell_combined.svg \
 	manuscript/fig4_cellline_atlas.svg \
-	performance/parallelism_vs_wallclock.svg \
 	performance/runtime_per_step.svg \
 	performance/resources_per_step.svg \
-	performance/queue_size_sweep.svg \
 	quantmsdiann_benchmarks/main_benchmarks_proteins.svg \
 	quantmsdiann_benchmarks/supplementary/supp_benchmarks_proteins_complete.svg \
 	PXD003539/supp_missing_values_per_run.svg \

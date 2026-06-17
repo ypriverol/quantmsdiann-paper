@@ -122,13 +122,13 @@ A user with a valid \texttt{DIA-NN} download builds the image locally from the m
 \section{Identification filtering and protein counting}
 \label{sec:supp-filter}
 
-All identification counts reported in the cell-line reanalyses and pan-cohort (main-text Figs.~2 and~3 and Figs.~S4--S12 below) are target-only under a conservative contaminant/decoy filter: any row whose \texttt{Protein.Group} field contains a token prefixed with \texttt{CONTAM\_}, \texttt{Cont\_}, \texttt{ENTRAP\_}, or \texttt{DECOY\_} is dropped before counting, including mixed groups.
+All identification counts reported in the cell-line reanalyses and pan-cohort (main-text Figs.~3 and~4 and Figs.~S4--S12 below) are target-only under a conservative contaminant/decoy filter: any row whose \texttt{Protein.Group} field contains a token prefixed with \texttt{CONTAM\_}, \texttt{Cont\_}, \texttt{ENTRAP\_}, or \texttt{DECOY\_} is dropped before counting, including mixed groups.
 Original-paper headline counts were taken from the corresponding publication's table or text without re-filtering; where the original applied a per-protein peptide threshold (for example, the ProCan-DepMapSanger paper reports both an 8{,}498 protein-group headline at Global.Q.Value~$\leq 0.01$ and a 6{,}692 count under the additional $\geq 2$ supporting-peptide rule), the like-for-like \quantmsdiann{} count is reported under the same threshold.
 
 \section{Per-process runtime and resource envelopes}
 \label{sec:supp-performance}
 
-These figures decompose the end-to-end wall-clock and resource use reported in main-text Fig.~1 by Nextflow process, derived from \texttt{trace.txt} records collected across the ProteoBench benchmark cohorts and the PXD071075 single-cell production sweep.
+These figures decompose the end-to-end wall-clock and resource use reported in main-text Fig.~2b by Nextflow process, derived from \texttt{trace.txt} records collected across the ProteoBench benchmark cohorts and the PXD071075 single-cell production sweep.
 
 \begin{figure}[htbp]
   \centering
@@ -169,7 +169,7 @@ These figures decompose the end-to-end wall-clock and resource use reported in m
 \section{ProteoBench protein-group depth across \texttt{DIA-NN} versions}
 \label{sec:supp-proteobench-proteins}
 
-The main text reports ProteoBench quantification accuracy (Fig.~1d); the
+The main text reports ProteoBench quantification accuracy (Fig.~2c); the
 identification depth behind the same runs is summarised here. Precursors
 identified in at least one run rise by 15--23\% from \texttt{DIA-NN}~1.8.1 to
 2.5.1-enterprise on all four modules (largest on timsTOF diaPASEF,
@@ -206,7 +206,7 @@ number quantified in every run (``complete profiles'', panel~b).
 \section{Per-cohort completeness and overlap (cell-line reanalyses)}
 \label{sec:supp-reanalyses}
 
-These figures complement main-text Fig.~3 with per-condition completeness, per-protein peptide counts, gene/accession overlap, and per-cell-line missingness for each reanalysed cohort.
+These figures complement main-text Fig.~4 with per-condition completeness, per-protein peptide counts, gene/accession overlap, and per-cell-line missingness for each reanalysed cohort.
 
 %% NOTE: The previous PXD003539 "genes per condition" panel sourced its
 %% original-paper comparator from Walzer 2022 (E-PROT-73) rather than from

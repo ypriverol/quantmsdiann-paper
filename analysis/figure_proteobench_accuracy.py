@@ -70,10 +70,11 @@ def diann_community(dataset: str, threshold: int = 3) -> list[dict]:
     return out
 
 
-def render(out: Path, threshold: int = 3) -> Path:
+def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = False) -> None:
+    """Draw the accuracy concordance into `ax` (reused by the Fig 2 row)."""
     datasets = list(_COMMUNITY_COMPARATOR_DATASETS)
-    fig, ax = plt.subplots(figsize=(5.4, 5.0))
     rng = np.random.default_rng(0)
+    lab = 9 if compact else None
     for ds in datasets:
         module = DATASET_TO_MODULE[ds]
         expected = SPECIES_EXPECTED_LOG2_A_vs_B.get(module, {})
@@ -95,21 +96,29 @@ def render(out: Path, threshold: int = 3) -> Path:
     lim = [-2.7, 1.7]
     ax.plot(lim, lim, "--", color="#444444", linewidth=1.1, zorder=1)
     ax.set_xlim(*lim); ax.set_ylim(*lim); ax.set_aspect("equal")
-    ax.set_xlabel("Expected log$_2$ ratio (ProteoBench)")
-    ax.set_ylabel("Observed log$_2$ ratio")
+    ax.set_xlabel("Expected log$_2$ ratio (ProteoBench)", fontsize=lab)
+    ax.set_ylabel("Observed log$_2$ ratio", fontsize=lab)
+    if compact:
+        ax.tick_params(labelsize=8)
     fs.despine(ax)
 
-    handles = [Line2D([0], [0], linestyle="--", color="#444444", label="Y = X (expected)"),
-               Line2D([0], [0], marker="o", linestyle="none", ms=8, markerfacecolor=GREY,
-                      markeredgecolor="none", label="standalone DIA-NN (community, all versions)")]
-    for ver in VERSIONS:
-        handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=8,
-                       markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="white",
-                       label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
-    handles += [Line2D([0], [0], marker=m, linestyle="none", ms=8, markerfacecolor="#888",
-                markeredgecolor="white", label=MARKER_LABEL[ds]) for ds, m in MARKER.items()]
-    ax.legend(handles=handles, loc="upper left", fontsize=7, frameon=False, handletextpad=0.3)
+    if with_legend:
+        handles = [Line2D([0], [0], linestyle="--", color="#444444", label="Y = X (expected)"),
+                   Line2D([0], [0], marker="o", linestyle="none", ms=8, markerfacecolor=GREY,
+                          markeredgecolor="none", label="standalone DIA-NN (community, all versions)")]
+        for ver in VERSIONS:
+            handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=8,
+                           markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="white",
+                           label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
+        handles += [Line2D([0], [0], marker=m, linestyle="none", ms=8, markerfacecolor="#888",
+                    markeredgecolor="white", label=MARKER_LABEL[d]) for d, m in MARKER.items()]
+        ax.legend(handles=handles, loc="upper left", fontsize=7 if compact else 8,
+                  frameon=False, handletextpad=0.3)
 
+
+def render(out: Path, threshold: int = 3) -> Path:
+    fig, ax = plt.subplots(figsize=(5.4, 5.0))
+    draw(ax, threshold)
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
