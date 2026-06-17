@@ -44,7 +44,7 @@ def render(out: Path) -> Path:
     render_queue_size_sweep(dq, ax=ax[0], composite=True)
     render_parallelism_scatter(dp, ax=ax[1], composite=True, show_legend=False,
                                short_labels=True)
-    acc.draw(ax[2], compact=True, square=False)
+    acc.draw_strip(ax[2], compact=True)
     for a, lab in zip(ax, "abc"):
         a.text(-0.06, 1.05, f"({lab})", transform=a.transAxes, fontsize=14,
                fontweight="bold", va="bottom", ha="left")

@@ -35,7 +35,8 @@ from analysis import figure_style as fs
 fs.apply_house_style()
 from analysis.figure_id_vs_epsilon import (
     DATASET_TO_MODULE, SPECIES_EXPECTED_LOG2_A_vs_B, _COMMUNITY_COMPARATOR_DATASETS,
-    _VERSION_COLORS, _VERSION_LABELS, METRICS_CACHE_DIR, extract_qm_per_species_log2,
+    _VERSION_COLORS, _VERSION_LABELS, _SPECIES_LABEL, METRICS_CACHE_DIR,
+    extract_qm_per_species_log2,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -117,6 +118,64 @@ def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = Fa
                            label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
         ax.legend(handles=handles, loc="upper left", fontsize=6.5 if compact else 8,
                   frameon=False, handletextpad=0.3, borderaxespad=0.2, labelspacing=0.3)
+
+
+def draw_strip(ax, threshold: int = 3, *, compact: bool = False) -> None:
+    """Per-species accuracy strip+box: one group per HYE species, community runs
+    as a jittered grey strip + box (every dot visible), the ProteoBench-expected
+    ratio as a dashed line, quantms-diann as large markers. Shows the same
+    accuracy/equivalence as the concordance plot but with the community dots
+    clearly spread out instead of stacked on the diagonal."""
+    datasets = list(_COMMUNITY_COMPARATOR_DATASETS)
+    exp: dict[str, float] = {}
+    for ds in datasets:
+        exp.update(SPECIES_EXPECTED_LOG2_A_vs_B.get(DATASET_TO_MODULE[ds], {}))
+    order = sorted([s for s in SPECIES if s in exp], key=lambda s: exp[s])  # ECOLI,-HUMAN,YEAST
+    lab = 8 if compact else None
+    rng = np.random.default_rng(0)
+    for x, sp in enumerate(order):
+        ax.hlines(exp[sp], x - 0.42, x + 0.42, color="#444444", linestyle="--",
+                  linewidth=1.2, zorder=1)
+        cv = []
+        for ds in datasets:
+            cv += [c.get(f"median_log2_empirical_{sp}") for c in diann_community(ds, threshold)]
+        cv = [v for v in cv if isinstance(v, (int, float)) and not np.isnan(v)]
+        if cv:
+            bp = ax.boxplot([cv], positions=[x], widths=0.62, showfliers=False,
+                            patch_artist=True, zorder=2)
+            for b in bp["boxes"]:
+                b.set(facecolor="#eeeeee", edgecolor="#9e9e9e", linewidth=0.8)
+            for w in bp["whiskers"] + bp["caps"]:
+                w.set(color="#9e9e9e", linewidth=0.8)
+            for med in bp["medians"]:
+                med.set(color="#9e9e9e", linewidth=1.0)
+            ax.scatter(x + rng.uniform(-0.24, 0.24, len(cv)), cv, s=16, color=GREY,
+                       alpha=0.6, edgecolors="white", linewidths=0.3, zorder=3)
+        for ds in datasets:
+            qm = extract_qm_per_species_log2(ds, threshold)
+            qm = qm[qm["species"] == sp]
+            qm = qm[qm["version"].isin(VERSIONS)]
+            dx = -0.16 if ds == datasets[0] else 0.16
+            for _, r in qm.iterrows():
+                ax.scatter(x + dx, r["mean_log2_empirical"], s=78, marker=MARKER[ds],
+                           color=_VERSION_COLORS.get(r["version"], "#d62728"),
+                           edgecolors="black", linewidths=0.6, zorder=4)
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels([f"{_SPECIES_LABEL[s]}\n(exp. {exp[s]:+g})" for s in order], fontsize=lab)
+    ax.set_ylabel("Observed log$_2$ ratio", fontsize=lab)
+    ax.set_xlim(-0.6, len(order) - 0.4)
+    if compact:
+        ax.tick_params(labelsize=8)
+    fs.despine(ax)
+    handles = [Line2D([0], [0], linestyle="--", color="#444444", label="ProteoBench expected"),
+               Line2D([0], [0], marker="o", linestyle="none", ms=7, markerfacecolor=GREY,
+                      markeredgecolor="white", label="standalone DIA-NN")]
+    for ver in VERSIONS:
+        handles.append(Line2D([0], [0], marker="o", linestyle="none", ms=7,
+                       markerfacecolor=_VERSION_COLORS.get(ver, "#d62728"), markeredgecolor="black",
+                       label=f"quantms-diann {_VERSION_LABELS.get(ver, ver)}"))
+    ax.legend(handles=handles, loc="upper left", fontsize=6.5 if compact else 8,
+              frameon=False, handletextpad=0.3, labelspacing=0.3)
 
 
 def render(out: Path, threshold: int = 3) -> Path:

@@ -192,14 +192,15 @@ Per-cohort completeness, peptide-per-protein distributions, gene-versus-accessio
     (\textbf{b})~Wall-clock time to finish each reanalysis, one bar per dataset,
     ordered by cohort size and coloured by instrument family; (\textbf{a}) and~(\textbf{b})
     exclude the one-time in-silico spectral-library prediction.
-    (\textbf{c})~ProteoBench quantification-accuracy concordance: measured versus
-    ProteoBench-expected HYE log$_2$ ratios for the two DIA modules with
-    predicted-from-FASTA \texttt{DIA-NN} community submissions (Orbitrap Astral,
-    Module~7; timsTOF diaPASEF). \quantmsdiann{} (\texttt{DIA-NN} 1.8.1 and
-    2.5.1-enterprise, coloured) lies on the expected diagonal together with
-    standalone \texttt{DIA-NN} community runs of all versions (grey): distributed
-    orchestration does not change quantification accuracy. Per-version, per-module
-    identification depth is in Supplementary Note~5 (Fig.~S3).
+    (\textbf{c})~ProteoBench quantification accuracy per HYE species: observed
+    log$_2$ fold-change against the ProteoBench-expected ratio (dashed) for the two
+    DIA modules with predicted-from-FASTA \texttt{DIA-NN} community submissions
+    (Orbitrap Astral, Module~7, circles; timsTOF diaPASEF, squares). Standalone
+    \texttt{DIA-NN} community runs (all versions) appear as a grey strip and box;
+    \quantmsdiann{} (\texttt{DIA-NN} 1.8.1 and 2.5.1-enterprise) falls within the
+    community distribution at every species, i.e.\ distributed orchestration does
+    not change quantification accuracy. Per-version, per-module identification
+    depth is in Supplementary Note~5 (Fig.~S3).
   }
   \label{fig:validation}
 \end{figure}
