@@ -42,15 +42,16 @@ deposited under `quantmsdiann-benchmarks/`. Verified by HTTP HEAD:
 | ProteoBench modules — Module_7, PXD062685, PXD049412, PXD070049 (Fig 2) | ✅ live |
 | PXD071075 cluster-size sweep (Fig 1) | ✅ live |
 | NCI-60 PXD003539 (Fig 4, via `quantms-collections`) | ✅ live |
-| ProCan PXD030304 (Fig 4) | ⏳ deposition pending |
-| plexDIA MSV000093870 (Fig 3F) | ⏳ deposition pending |
-| spatial PXD064049 (Supp) | ⏳ deposition pending |
-| phospho PXD049692 / PXD034128 / PXD034623 (Supp) | ⏳ deposition pending |
+| ProCan PXD030304 (Fig 4) — `cell-lines/PXD030304/v2_5_1/` | ✅ live |
+| plexDIA MSV000093870 (Fig 3F) — `single-cell/MSV000093870/v2_5_1/` | ✅ live |
+| spatial PXD064049 (Supp) — `spatial/PXD064049/v2_5_0/` | ✅ live |
+| phospho PXD049692 / PXD034128 / PXD034623 (Supp) — `phospho/<ds>/v{2_5_1,2_5_1_enterprise}/` | ✅ live |
 
-⏳ = the figure currently reads a derived table/cache produced on the cluster;
-the underlying report must be uploaded to `quantmsdiann-benchmarks/` for a third
-party to regenerate it. **Depositing these reports is the remaining gate to full
-end-to-end reproducibility.**
+All reanalysis reports are now deposited under `quantmsdiann-benchmarks/`
+(verified by HTTP HEAD). Each figure's generator pulls its report from the FTP:
+single-cell → `make_single_cell_tables.py`; phospho → `make_phospho_tables.py`;
+spatial/plexDIA → the figure scripts download directly. ProCan's per-tissue
+generator is the one remaining item.
 
 ## Deposition checklist (to close the ⏳ rows)
 
