@@ -1,6 +1,6 @@
 # Build the quantmsdiann MCP manuscript PDF and convert analysis SVGs to PDF.
 #
-# Requires: pdflatex, bibtex, and one of inkscape / rsvg-convert / cairosvg
+# Requires: latexmk (drives pdflatex + bibtex), and one of inkscape / rsvg-convert / cairosvg
 # for figure conversion.
 
 MAIN      := main

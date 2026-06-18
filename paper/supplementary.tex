@@ -111,13 +111,13 @@ PXD071075 & Orbitrap Eclipse & Single-cell & 2025 \\
 
 Every \quantmsdiann{} step runs in a versioned container (Docker, Singularity, or Apptainer). Most images are pulled automatically from public registries (BioContainers~\cite{biocontainers2017} or \texttt{ghcr.io/bigbio}); \texttt{DIA-NN} is the exception because its license restricts redistribution.
 
-Only \texttt{DIA-NN}~1.8.1 may be redistributed, so it is shipped as the default and pulled from BioContainers (\texttt{docker.io/biocontainers/diann:v1.8.1\_cv1}). Releases from 1.9 onward (1.9.2 through 2.5.0) cannot be redistributed and are therefore \emph{not} shipped as images; instead, the companion \texttt{quantms-containers} repository (\url{https://github.com/bigbio/quantms-containers}) provides one build recipe per release.
+Only \texttt{DIA-NN}~1.8.1 may be redistributed, so it is shipped as the default and pulled from BioContainers (\texttt{docker.io/biocontainers/diann:v1.8.1\_cv1}). Releases from 1.9 onward (1.9.2 through 2.5.1, including the 2.5.1-enterprise build) cannot be redistributed and are therefore \emph{not} shipped as images; instead, the companion \texttt{quantms-containers} repository (\url{https://github.com/bigbio/quantms-containers}) provides one build recipe per release.
 
 A user with a valid \texttt{DIA-NN} download builds the image locally from the matching recipe, for example:
 \begin{quote}
-\texttt{cd diann-2.5.0 \&\& docker build -t ghcr.io/bigbio/diann:2.5.0 .}
+\texttt{cd diann-2.5.1 \&\& docker build -t ghcr.io/bigbio/diann:2.5.1 .}
 \end{quote}
-(the equivalent Singularity/Apptainer \texttt{.sif} image can be built from the same recipe). For \quantmsdiann{} to select a locally built image automatically, it must be tagged with the prefix \texttt{ghcr.io/bigbio/diann:} followed by the release tag (e.g.\ \texttt{ghcr.io/bigbio/diann:2.5.0}); the workflow then resolves the container for the requested version through the corresponding \texttt{diann\_v\textit{X\_Y\_Z}} profile selected at runtime.
+(the equivalent Singularity/Apptainer \texttt{.sif} image can be built from the same recipe). For \quantmsdiann{} to select a locally built image automatically, it must be tagged with the prefix \texttt{ghcr.io/bigbio/diann:} followed by the release tag (e.g.\ \texttt{ghcr.io/bigbio/diann:2.5.1} or \texttt{ghcr.io/bigbio/diann:2.5.1-enterprise}); the workflow then resolves the container for the requested version through the corresponding \texttt{diann\_v\textit{X\_Y\_Z}} profile selected at runtime.
 
 \section{Identification filtering and protein counting}
 \label{sec:supp-filter}
@@ -171,7 +171,7 @@ These figures decompose the end-to-end wall-clock and resource use reported in m
 
 The main text reports ProteoBench quantification accuracy (Fig.~2c); the
 identification depth behind the same runs is summarised here. Precursors
-identified in at least one run rise by 15--23\% from \texttt{DIA-NN}~1.8.1 to
+identified in at least one run rise by 14--23\% from \texttt{DIA-NN}~1.8.1 to
 2.5.1-enterprise on all four modules (largest on timsTOF diaPASEF,
 97{,}149~$\to$~119{,}726); proteins quantified in every run rise by up to 20\%
 (single-cell Astral, 6{,}124~$\to$~7{,}349). Protein groups are
@@ -293,7 +293,7 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
   \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD030304/supp_proteins_per_tissue}
   \caption[PXD030304 per tissue]{%
     \textbf{PXD030304 (ProCan-DepMapSanger): protein groups per tissue.}
-    Distribution of identifications across the 949 cell lines stratified by
+    Distribution of identifications across the 947 cell lines stratified by
     tissue of origin.
   }
   \label{fig:supp-pxd030304-tissue}
@@ -304,7 +304,7 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
   \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD030304/supp_missing_values_per_run}
   \caption[PXD030304 missingness]{%
     \textbf{PXD030304: per-run missing-value fraction across the
-    949-cell-line panel.}
+    947-cell-line panel.}
   }
   \label{fig:supp-pxd030304-missing}
 \end{figure}

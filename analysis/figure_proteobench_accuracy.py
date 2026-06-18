@@ -92,7 +92,7 @@ def draw(ax, threshold: int = 3, *, with_legend: bool = True, compact: bool = Fa
             ax.scatter(x + rng.uniform(-0.05, 0.05, len(cv)), cv, s=22, color=GREY,
                        alpha=0.5, edgecolors="none", zorder=2)
             for _, r in qm[qm["species"] == sp].iterrows():
-                ax.scatter(x, r["mean_log2_empirical"], s=80, marker=MARKER[ds],
+                ax.scatter(x, r["median_log2_empirical"], s=80, marker=MARKER[ds],
                            color=_VERSION_COLORS.get(r["version"], "#d62728"),
                            edgecolors="white", linewidths=0.8, zorder=3)
     lim = [-2.7, 1.7]
@@ -166,7 +166,7 @@ def draw_strip(ax, threshold: int = 3, *, compact: bool = False,
             for _, r in qm.iterrows():
                 ver = r["version"]
                 ver_dx = -0.13 if ver == VERSIONS[0] else 0.13
-                ax.scatter(x + ver_dx + ds_dx, r["mean_log2_empirical"], s=78,
+                ax.scatter(x + ver_dx + ds_dx, r["median_log2_empirical"], s=34,
                            marker=SHAPE_BY_VERSION.get(ver, "o"),
                            color=colour or _VERSION_COLORS.get(ver, "#d62728"),
                            edgecolors="black", linewidths=0.6, zorder=4)
