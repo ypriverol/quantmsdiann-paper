@@ -15,6 +15,7 @@ BUILD_DIR := build
 SVGS := \
 	manuscript/fig2_validation.svg \
 	manuscript/fig3_single_cell_combined.svg \
+	manuscript/fig_reanalysis_improvement.svg \
 	manuscript/fig4_cellline_atlas.svg \
 	performance/runtime_per_step.svg \
 	performance/resources_per_step.svg \
