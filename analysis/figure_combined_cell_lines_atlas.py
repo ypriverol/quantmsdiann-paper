@@ -2420,9 +2420,9 @@ def main() -> int:  # pragma: no cover
     # tissue_rows. Numbers verified 2026-06-14.
     panel_a_headlines = {
         "PXD003539": DatasetHeadline(
-            4284, 6328, "Guo 2019 (OpenSWATH)", "Protein groups (>=2 peptides)"),
+            4284, 6592, "Guo 2019 (OpenSWATH)", "Protein groups (>=2 peptides)"),
         "PXD030304": DatasetHeadline(
-            6692, 8166, "ProCan 2022", "Protein groups (>=2 peptides)"),
+            6692, 8645, "ProCan 2022", "Protein groups (>=2 peptides)"),
     }
     # Panels b/c: curate to the most-represented tissues for resolution
     # (tissue_rows is pre-sorted by combined cell-line count, descending).
