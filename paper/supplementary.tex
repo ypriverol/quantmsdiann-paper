@@ -262,7 +262,9 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
 
 \begin{figure}[htbp]
   \centering
-  \mcpincludegraphics[width=\textwidth,keepaspectratio]{plexDIA/MSV000093870/main_galatidou_comparison}
+  \mcpincludegraphics[width=\textwidth,keepaspectratio]{plexDIA/MSV000093870/main_galatidou_comparison}\par
+  \vspace{0.6em}
+  \mcpincludegraphics[width=0.7\textwidth,keepaspectratio]{plexDIA/MSV000093870/main_galatidou_qc_matched}
   \caption[MSV000093870 single-cell plexDIA reanalysis]{%
     \textbf{MSV000093870 (Galatidou 2024, single-cell oocyte plexDIA):
     \quantmsdiann{} reanalysis versus the original.}
@@ -275,7 +277,10 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
     originally reported protein groups recovered (1{,}999 of 2{,}122) plus 905
     detected only by \quantmsdiann{}. (Expanding \quantmsdiann{}'s protein groups
     to all member accessions gives 3{,}552 accessions, but the overlap here is
-    computed group-to-group so both sides use the same entity.) This figure
+    computed group-to-group so both sides use the same entity.)
+    (\textbf{d})~QC-matched per-oocyte comparison: with the two analyses
+    restricted to the same 97 cells, per-cell protein-group depth is equivalent
+    (median 1{,}784 versus 1{,}748; Pearson $r=0.98$). This figure
     underpins the single-cell panel of the main reanalysis figure.
   }
   \label{fig:supp-msv093870-plexdia}
@@ -320,8 +325,8 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
     originally deposited Spectronaut directDIA report with the \quantmsdiann{}
     DIA-NN~2.5.1-enterprise reanalysis. Stripped backbones are the
     engine-independent metric, as the deposited fragment-level report carries
-    no per-site localization probability; \quantmsdiann{} recovers 26\% more
-    phosphopeptide backbones (5{,}347 vs 4{,}254).
+    no per-site localization probability; \quantmsdiann{} recovers 23\% more
+    phosphopeptide backbones (5{,}240 vs 4{,}254).
     The non-enriched PXD034623 (Galectin-1 DIA) is reanalysed for completeness
     but omitted here, as its $\sim$280 phosphopeptides are not comparable to
     the enriched cohorts.

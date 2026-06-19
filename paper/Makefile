@@ -29,6 +29,7 @@ SVGS := \
 	PXD030304/supp_missing_values_per_run.svg \
 	PXD030304/supp_proteins_per_tissue.svg \
 	plexDIA/MSV000093870/main_galatidou_comparison.svg \
+	plexDIA/MSV000093870/main_galatidou_qc_matched.svg \
 	supplementary/supp_phospho.svg
 
 PDF_TARGETS := $(addprefix $(FIG_PDF)/,$(SVGS:.svg=.pdf)) \
