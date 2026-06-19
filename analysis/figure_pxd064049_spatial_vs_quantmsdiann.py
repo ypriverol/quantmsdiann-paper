@@ -4,17 +4,16 @@ quantmsdiann (DIA-NN 2.5.1-enterprise, library-free, plain FASTA) versus the ori
 DIA-NN 1.8.1 analysis on the identical 12 DVP runs.
 
 The original analysis (PRIDE PXD064049) used DIA-NN 1.8.1 library-free with a
-plain human FASTA; quantmsdiann re-ran the same raw files with DIA-NN 2.5.1-enterprise
-against an entrapment+contaminant-augmented FASTA, which enforces an
-empirically-validated FDR. We therefore compare:
+plain human FASTA; quantmsdiann re-ran the same raw files with DIA-NN
+2.5.1-enterprise against the same plain (contaminant-only, NO entrapment)
+human FASTA, so both sides search the same space. We therefore compare:
 
-  * main_comparison.svg -- precursors and protein groups at 1% FDR. Precursors
-                           (least sensitive to the FASTA choice) are at parity
-                           (~99.5%); the quantmsdiann protein-group count is
-                           lower because its search used an entrapment-augmented
-                           FASTA. counts.tsv also records the entrapment hit
-                           rate (fraction of accepted ids mapping to entrapment
-                           sequences) as a measure of error control.
+  * main_comparison.svg -- precursors and protein groups at 1% FDR. The newer
+                           build recovers more of both (precursors 16,518 ->
+                           20,412, +24%; protein groups 2,882 -> 3,067, +6%).
+                           counts.tsv also records the entrapment hit rate
+                           (now 0, since the plain FASTA has no entrapment
+                           sequences) for audit parity with earlier runs.
 
 Run:  PYTHONPATH=. python -m analysis.figure_pxd064049_spatial_vs_quantmsdiann
 """
@@ -47,7 +46,7 @@ ORIG_COLOUR = "#9e9e9e"
 QM_COLOUR = "#1e88e5"
 
 _QB = ("https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/"
-       "quantmsdiann-benchmarks/spatial/PXD064049/v2_5_0/quant_tables")
+       "quantmsdiann-benchmarks/spatial/PXD064049/v2_5_1_enterprise/quant_tables")
 _ORIG_ZIP = ("https://ftp.pride.ebi.ac.uk/pride/data/archive/2025/07/"
              "PXD064049/DIANN_results.zip")
 
@@ -102,7 +101,7 @@ def _qm_counts_parquet() -> tuple[int, int]:
     (precursors, protein_groups). The parquet is the staged
     `cache/qm_report.parquet` from the plain-FASTA 2.5.1-enterprise rerun."""
     import pyarrow.parquet as pq
-    parq = CACHE_DIR / "qm_report.parquet"
+    parq = _download(f"{_QB}/diann_report.parquet", CACHE_DIR / "qm_report.parquet")
     cols = ["Precursor.Id", "Protein.Group", "Q.Value", "Global.Q.Value",
             "Global.PG.Q.Value", "Decoy"]
     have = set(pq.ParquetFile(parq).schema_arrow.names)

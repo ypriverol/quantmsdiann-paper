@@ -2437,6 +2437,14 @@ def main() -> int:  # pragma: no cover
         tissue_protein_rows=tissue_protein_rows_top,
     )
     print(f"  saved: {main_svg}")
+    # Also publish to the manuscript figure path used by the LaTeX build
+    # (Supplementary Fig. S13 / fig4_cellline_atlas), so a fresh checkout
+    # regenerates the included SVG directly without a manual copy.
+    import shutil
+    manuscript_svg = REPO_ROOT / "analysis" / "figures" / "manuscript" / "fig4_cellline_atlas.svg"
+    manuscript_svg.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(main_svg, manuscript_svg)
+    print(f"  saved: {manuscript_svg}")
 
     print("Writing combined counts.tsv...")
     data_dir = FIGURES_DIR / "data"

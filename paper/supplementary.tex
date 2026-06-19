@@ -31,7 +31,7 @@
 \renewcommand{\thetable}{S\arabic{table}}
 \setcounter{table}{0}
 
-%% Number the prose sections as "Supplementary Note 1, 2, ..." (figures stay S1..S12,
+%% Number the prose sections as "Supplementary Note 1, 2, ..." (figures stay S1..S13,
 %% Table S1). Each \section{...} below therefore renders as a Supplementary Note.
 \renewcommand{\thesection}{Supplementary Note~\arabic{section}}
 %% Widen the table-of-contents number box so the long "Supplementary Note N"
@@ -122,7 +122,7 @@ A user with a valid \texttt{DIA-NN} download builds the image locally from the m
 \section{Identification filtering and protein counting}
 \label{sec:supp-filter}
 
-All identification counts reported in the cell-line reanalyses and pan-cohort (main-text Figs.~3 and~4 and Figs.~S4--S12 below) are target-only under a conservative contaminant/decoy filter: any row whose \texttt{Protein.Group} field contains a token prefixed with \texttt{CONTAM\_}, \texttt{Cont\_}, \texttt{ENTRAP\_}, or \texttt{DECOY\_} is dropped before counting, including mixed groups.
+All identification counts reported in the cell-line reanalyses and pan-cohort (main-text Figs.~3 and~4 and Figs.~S4--S13 below) are target-only under a conservative contaminant/decoy filter: any row whose \texttt{Protein.Group} field contains a token prefixed with \texttt{CONTAM\_}, \texttt{Cont\_}, \texttt{ENTRAP\_}, or \texttt{DECOY\_} is dropped before counting, including mixed groups.
 Original-paper headline counts were taken from the corresponding publication's table or text without re-filtering; where the original applied a per-protein peptide threshold (for example, the ProCan-DepMapSanger paper reports both an 8{,}498 protein-group headline at Global.Q.Value~$\leq 0.01$ and a 6{,}692 count under the additional $\geq 2$ supporting-peptide rule), the like-for-like \quantmsdiann{} count is reported under the same threshold.
 
 \section{Per-process runtime and resource envelopes}
@@ -207,13 +207,6 @@ number quantified in every run (``complete profiles'', panel~b).
 \label{sec:supp-reanalyses}
 
 These figures complement main-text Fig.~4 with per-condition completeness, per-protein peptide counts, gene/accession overlap, and per-cell-line missingness for each reanalysed cohort.
-
-%% NOTE: The previous PXD003539 "genes per condition" panel sourced its
-%% original-paper comparator from Walzer 2022 (E-PROT-73) rather than from
-%% the Guo 2019 OpenSWATH analysis that the main-text PXD003539 reanalysis
-%% uses, so the panel was not on the same comparator axis as main-text
-%% Fig. 3a. The panel has been removed pending a Guo-2019-based replacement;
-%% downstream Fig. S5 numbering has shifted accordingly.
 
 \begin{figure}[htbp]
   \centering
