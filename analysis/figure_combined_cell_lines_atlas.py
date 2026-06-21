@@ -2395,12 +2395,17 @@ def main() -> int:  # pragma: no cover
     # (both sides), restricted to the two cohorts with a recomputable deposited
     # peptide matrix. Sun (PXD004701) has only raw .wiff on PRIDE, so it is
     # excluded from the COMPARISON but stays in the atlas (panels b/c) via
-    # tissue_rows. Numbers verified 2026-06-14.
+    # tissue_rows. Counts are read from the canonical reanalysis_improvement.tsv
+    # (the same source as main-text Fig 3a) -- no hardcoded numbers.
+    _ri = pd.read_csv(
+        REPO_ROOT / "analysis" / "figures" / "reanalysis" / "data"
+        / "reanalysis_improvement.tsv", sep="\t").set_index("dataset")
+    _panel_a_labels = {"PXD003539": "Guo 2019 (OpenSWATH)", "PXD030304": "ProCan 2022"}
     panel_a_headlines = {
-        "PXD003539": DatasetHeadline(
-            4284, 6592, "Guo 2019 (OpenSWATH)", "Protein groups (>=2 peptides)"),
-        "PXD030304": DatasetHeadline(
-            6692, 8645, "ProCan 2022", "Protein groups (>=2 peptides)"),
+        acc: DatasetHeadline(
+            int(_ri.loc[acc, "original"]), int(_ri.loc[acc, "reanalysis"]),
+            _panel_a_labels[acc], "Protein groups (>=2 peptides)")
+        for acc in ("PXD003539", "PXD030304")
     }
     # Panels b/c: curate to the most-represented tissues for resolution
     # (tissue_rows is pre-sorted by combined cell-line count, descending).
