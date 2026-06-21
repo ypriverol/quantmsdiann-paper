@@ -1,117 +1,140 @@
-"""Tests for analysis.count_report_ids.count_report (inline fixtures, no I/O)."""
+"""Tests for analysis.count_report_ids.count_report (inline fixtures, no I/O).
+
+Filter rule (Vadim review, 2026-06-21), enforced by these tests:
+  * per-run protein groups: PG.Q.Value only -- NO contaminant/target filter,
+    NO global filter, zeros counted.
+  * per-run / replicate precursors: Q.Value only -- NO Global.Q.Value.
+  * global protein groups: Lib.PG.Q.Value only.
+  * global precursors: Lib.Q.Value only.
+  * decoys (Decoy == 1) are dropped (FDR null model, not a "filter").
+"""
 from __future__ import annotations
 
 import pandas as pd
 
 
-def _row(run, pid, pg, q, gq, pgq, decoy=0, pgq_run=None):
+def _row(run, pid, pg, *, q=0.001, pgq=0.001, lib_q=0.001, lib_pgq=0.001,
+         decoy=0, seq=None, gq=None, pg_quantity=None):
     d = {
         "Run": run, "Precursor.Id": pid, "Protein.Group": pg,
-        "Q.Value": q, "Global.Q.Value": gq, "Global.PG.Q.Value": pgq,
-        "Decoy": decoy,
+        "Q.Value": q, "PG.Q.Value": pgq,
+        "Lib.Q.Value": lib_q, "Lib.PG.Q.Value": lib_pgq, "Decoy": decoy,
     }
-    if pgq_run is not None:
-        d["PG.Q.Value"] = pgq_run  # run-specific protein-group q-value
+    if seq is not None:
+        d["Stripped.Sequence"] = seq
+    if gq is not None:
+        d["Global.Q.Value"] = gq
+    if pg_quantity is not None:
+        d["PG.Quantity"] = pg_quantity
     return d
 
 
-def test_count_report_per_run_average_and_complete_proteins():
-    """prot_avg_tgt = mean proteins/run, prot_complete_tgt = proteins in every
-    run, both at run-specific PG.Q.Value <= 0.01, target-only."""
+def test_per_run_proteins_pgq_only_count_contaminants():
+    """Per-run protein groups filter on PG.Q.Value ONLY: contaminants are
+    counted (no target filter), and a protein in every run is 'complete'."""
     from analysis.count_report_ids import count_report
     df = pd.DataFrame([
-        # PGa: in all 3 runs -> complete
-        _row("r1", "x1", "PGa", 0.001, 0.001, 0.001, pgq_run=0.001),
-        _row("r2", "x1", "PGa", 0.001, 0.001, 0.001, pgq_run=0.001),
-        _row("r3", "x1", "PGa", 0.001, 0.001, 0.001, pgq_run=0.001),
-        # PGb: in 2 runs
-        _row("r1", "x2", "PGb", 0.001, 0.001, 0.001, pgq_run=0.001),
-        _row("r2", "x2", "PGb", 0.001, 0.001, 0.001, pgq_run=0.001),
-        # PGc: in 1 run
-        _row("r3", "x3", "PGc", 0.001, 0.001, 0.001, pgq_run=0.001),
-        # contaminant -> excluded from per-run/complete
-        _row("r1", "x4", "Cont_ALBU", 0.001, 0.001, 0.001, pgq_run=0.001),
-        # run-specific PG.Q fails -> excluded
-        _row("r2", "x5", "PGd", 0.001, 0.001, 0.001, pgq_run=0.20),
+        _row("r1", "x1", "PGa", pgq=0.001), _row("r2", "x1", "PGa", pgq=0.001),
+        _row("r1", "x4", "Cont_ALBU", pgq=0.001), _row("r2", "x4", "Cont_ALBU", pgq=0.001),
+        _row("r2", "x5", "PGd", pgq=0.20),  # fails PG.Q -> excluded
     ])
     c = count_report(df)
-    # per run: r1={PGa,PGb}=2, r2={PGa,PGb}=2, r3={PGa,PGc}=2 -> avg 2
-    assert c["prot_avg_tgt"] == 2
-    # complete (in all 3 runs): only PGa
-    assert c["prot_complete_tgt"] == 1
+    # r1={PGa,Cont_ALBU}=2, r2={PGa,Cont_ALBU}=2 -> avg 2 (contaminant counted)
+    assert c["prot_perrun_avg"] == 2
+    # complete (in both runs): PGa and Cont_ALBU
+    assert c["prot_complete"] == 2
 
 
-def test_count_report_per_run_metric_absent_without_pgq_column():
-    """When the report has no PG.Q.Value column, the per-run/complete metrics
-    fall back to 0 (older reports / fixtures) instead of erroring."""
-    from analysis.count_report_ids import count_report
-    df = pd.DataFrame([_row("r1", "x1", "PGa", 0.001, 0.001, 0.001)])
-    c = count_report(df)
-    assert c["prot_avg_tgt"] == 0
-    assert c["prot_complete_tgt"] == 0
-
-
-def test_count_report_applies_run_and_global_q_and_replicate_threshold():
+def test_per_run_proteins_count_zero_quantity():
+    """A protein group with zero PG.Quantity is still counted (no
+    positive-quantity filter is permitted on per-run protein numbers)."""
     from analysis.count_report_ids import count_report
     df = pd.DataFrame([
-        # P1: passes (run+global<=0.01) in 3 runs -> min1 and min3
-        _row("r1", "P1", "PG1", 0.005, 0.005, 0.005),
-        _row("r2", "P1", "PG1", 0.004, 0.005, 0.005),
-        _row("r3", "P1", "PG1", 0.006, 0.005, 0.005),
-        # P2: passes in only 1 run (other run fails run-q) -> min1 only
-        _row("r1", "P2", "PG2", 0.002, 0.008, 0.009),
-        _row("r2", "P2", "PG2", 0.050, 0.008, 0.009),
-        # P3: fails global q everywhere -> not counted
-        _row("r1", "P3", "PG3", 0.002, 0.050, 0.050),
-        # P4: contaminant -> in unfiltered, out of target-only
-        _row("r1", "P4", "Cont_ALBU", 0.001, 0.001, 0.001),
-        _row("r2", "P4", "Cont_ALBU", 0.001, 0.001, 0.001),
-        _row("r3", "P4", "Cont_ALBU", 0.001, 0.001, 0.001),
-        # P5: a decoy row -> dropped entirely
-        _row("r1", "P5", "PG5", 0.001, 0.001, 0.001, decoy=1),
+        _row("r1", "x1", "PGa", pgq=0.001, pg_quantity=0.0),
+        _row("r2", "x1", "PGa", pgq=0.001, pg_quantity=0.0),
     ])
     c = count_report(df)
-    # target precursors min1: P1, P2 (P3 fails global, P4 contaminant, P5 decoy)
-    assert c["prec_min1_tgt"] == 2
-    # target precursors min3: only P1
-    assert c["prec_min3_tgt"] == 1
-    # unfiltered min1 adds the contaminant P4 -> 3
-    assert c["prec_min1_unf"] == 3
-    # unfiltered min3 adds P4 (3 runs) -> P1 + P4 = 2
-    assert c["prec_min3_unf"] == 2
-    # target proteins: PG1, PG2 (PG3 fails, Cont_ excluded, decoy dropped)
-    assert c["proteins_tgt"] == 2
-    assert c["proteins_unf"] == 3  # + Cont_ALBU
+    assert c["prot_perrun_avg"] == 1
+    assert c["prot_complete"] == 1
 
 
-def test_count_report_precursor_q_affects_replicate_counting():
-    from analysis.count_report_ids import count_report
-    # P1 passes run-q at 1% in run r1 and at 3% (>1%, <=5%) in r2; global ok.
-    df = pd.DataFrame([
-        _row("r1", "P1", "PG1", 0.005, 0.005, 0.005),
-        _row("r2", "P1", "PG1", 0.030, 0.005, 0.005),
-    ])
-    # At precursor_q=0.01 P1 is identified in only r1 -> min1 yes, not >=2 runs.
-    c01 = count_report(df, precursor_q=0.01)
-    assert c01["prec_min1_tgt"] == 1
-    # At precursor_q=0.05 P1 is identified in both runs.
-    c05 = count_report(df, precursor_q=0.05)
-    assert c05["prec_min1_tgt"] == 1
-    # Difference shows up in run multiplicity: extend to 3 runs to probe min3.
-    df3 = pd.concat([df, pd.DataFrame([_row("r3", "P1", "PG1", 0.030, 0.005, 0.005)])],
-                    ignore_index=True)
-    assert count_report(df3, precursor_q=0.01)["prec_min3_tgt"] == 0  # only r1 counts
-    assert count_report(df3, precursor_q=0.05)["prec_min3_tgt"] == 1  # r1+r2+r3
-
-
-def test_count_report_protein_requires_global_pg_q():
+def test_per_run_precursors_qvalue_only_ignores_global_q():
+    """Per-run/replicate precursor counting uses Q.Value ONLY; a bad
+    Global.Q.Value must not exclude an otherwise-passing precursor."""
     from analysis.count_report_ids import count_report
     df = pd.DataFrame([
-        # precursor passes but its protein group fails global PG q -> protein
-        # not counted, precursor still counted.
-        _row("r1", "P1", "PG1", 0.001, 0.001, 0.20),
-        _row("r1", "P2", "PG2", 0.001, 0.001, 0.005),
+        _row("r1", "P1", "PG1", q=0.005, gq=0.9),
+        _row("r2", "P1", "PG1", q=0.005, gq=0.9),
+        _row("r3", "P1", "PG1", q=0.005, gq=0.9),
     ])
     c = count_report(df)
-    assert c["prec_min1_tgt"] == 2
-    assert c["proteins_tgt"] == 1  # only PG2
+    assert c["prec_min1"] == 1   # counted despite Global.Q.Value=0.9
+    assert c["prec_min3"] == 1
+
+
+def test_per_run_precursor_q_threshold_affects_replicate_counting():
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([
+        _row("r1", "P1", "PG1", q=0.005),
+        _row("r2", "P1", "PG1", q=0.030),
+        _row("r3", "P1", "PG1", q=0.030),
+    ])
+    assert count_report(df, precursor_q=0.01)["prec_min3"] == 0  # only r1 passes
+    assert count_report(df, precursor_q=0.05)["prec_min3"] == 1  # all 3 pass
+
+
+def test_global_proteins_use_lib_pg_q_only():
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([
+        _row("r1", "P1", "PG1", lib_pgq=0.005),  # global protein counted
+        _row("r1", "P2", "PG2", lib_pgq=0.05),   # fails Lib.PG.Q -> not global
+    ])
+    c = count_report(df)
+    assert c["prot_global"] == 1   # only PG1
+
+
+def test_global_precursors_use_lib_q_only():
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([
+        _row("r1", "P1", "PG1", lib_q=0.005),
+        _row("r1", "P2", "PG2", lib_q=0.05),  # fails Lib.Q -> not global
+    ])
+    c = count_report(df)
+    assert c["prec_global"] == 1   # only P1
+
+
+def test_global_counts_include_contaminants():
+    """Global numbers admit only Lib.* filters -> contaminants are counted."""
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([
+        _row("r1", "P1", "PG1", lib_q=0.001, lib_pgq=0.001),
+        _row("r1", "P2", "Cont_ALBU", lib_q=0.001, lib_pgq=0.001),
+    ])
+    c = count_report(df)
+    assert c["prec_global"] == 2   # P1 + contaminant precursor
+    assert c["prot_global"] == 2   # PG1 + Cont_ALBU
+
+
+def test_decoys_dropped_from_every_metric():
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([_row("r1", "P1", "PG1", decoy=1)])
+    c = count_report(df)
+    assert c["prec_min1"] == 0
+    assert c["prec_global"] == 0
+    assert c["prot_global"] == 0
+    assert c["prot_perrun_avg"] == 0
+    assert c["prot_complete"] == 0
+
+
+def test_two_peptide_proteins_global_rule():
+    """prot_2pep = global protein groups (Lib.PG.Q.Value) with >= 2 distinct
+    stripped peptides among Lib.Q.Value-passing precursors."""
+    from analysis.count_report_ids import count_report
+    df = pd.DataFrame([
+        _row("r1", "p1", "PG1", seq="PEPTIDEA", lib_q=0.001, lib_pgq=0.001),
+        _row("r1", "p2", "PG1", seq="PEPTIDEB", lib_q=0.001, lib_pgq=0.001),
+        _row("r1", "p3", "PG2", seq="PEPTIDEC", lib_q=0.001, lib_pgq=0.001),  # 1 peptide only
+    ])
+    c = count_report(df)
+    assert c["peptides"] == 3
+    assert c["prot_2pep"] == 1   # only PG1 has >= 2 peptides

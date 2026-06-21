@@ -3,7 +3,7 @@
 
 Three panels (all counts at 1% FDR, max_mods=2; see data/phospho/phospho_counts.tsv):
   A  Phosphopeptides  -- distinct phospho-bearing modified precursors
-     (UniMod:21 in Modified.Sequence; Q.Value & Global.Q.Value <= 0.01, targets).
+     (UniMod:21 in Modified.Sequence; Lib.Q.Value <= 0.01, no target filter).
   B  Class-I phosphosites -- localized sites from the DIA-NN site report
      (Modification == UniMod:21, localization Probability >= 0.99), unique by
      protein + residue/site.

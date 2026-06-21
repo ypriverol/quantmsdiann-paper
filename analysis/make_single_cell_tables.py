@@ -12,7 +12,6 @@ Our reanalyses (this pipeline) are published on the PRIDE FTP:
   https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/single-cell/<PXD>/<version>/quant_tables/diann_report.{parquet,tsv}
 
     PXD046357  HeLa Astral single-cell (Orbitrap Astral) -> "HeLa Astral SC"
-    PXD044991  HeLa One-Tip                               -> "HeLa One-Tip"
 
   DIA-NN versions: ``v1_8_1`` (diann_report.tsv) and ``v2_5_1_enterprise``
   (diann_report.parquet).
@@ -21,18 +20,17 @@ Pipeline:        https://github.com/bigbio/quantmsdiann
 SDRF tooling:    https://github.com/bigbio/sdrf-pipelines (convert-diann)
 Counting logic:  analysis/count_report_ids.py (canonical, reused here).
 
-Counting convention (identical to count_report_ids, the manuscript-wide method)
--------------------------------------------------------------------------------
-* protein groups: unique ``Protein.Group`` with ``Global.PG.Q.Value <= 0.01``,
-  target-only (drop any group with a CONTAM_/Cont_/ENTRAP_/DECOY_/decoy_ token);
-* precursors: distinct ``Precursor.Id`` at run-specific ``Q.Value`` (0.01 for
-  1.8.1, 0.05 for >= 2.5.x, DIA-NN's per-version ``--qvalue``) AND
-  ``Global.Q.Value <= 0.01``, target-only.
+Counting convention (Vadim filter rule; see methods.md §1)
+----------------------------------------------------------
+* totals are GLOBAL numbers: protein groups = distinct ``Protein.Group`` at
+  ``Lib.PG.Q.Value <= 0.01`` (``prot_global``); precursors = distinct
+  ``Precursor.Id`` at ``Lib.Q.Value <= 0.01`` (``prec_global``). No
+  contaminant/target filter; zeros counted.
+* the per-cell and completeness panels are PER-RUN numbers: protein groups per
+  run at ``PG.Q.Value <= 0.01`` only (no target/global filter).
 
-The per-cell and completeness panels count protein groups per run with the SAME
-``Global.PG.Q.Value <= 0.01`` target filter, so per-cell counts are a subset of
-the cross-run union (= the ``proteins`` total). Dynamic range / CV use
-``PG.MaxLFQ`` for the target groups.
+Dynamic range / CV use ``PG.MaxLFQ`` of the per-run protein groups (a
+quantitative metric, not an identification count).
 
 NOTE: this counts from the *report* (not the ``*_matrix.tsv`` files); the
 matrices bake in ``--matrix-spec-q`` at a version-dependent run q-value and are
@@ -54,7 +52,7 @@ import numpy as np
 import pandas as pd
 
 from analysis.count_report_ids import (
-    PRECURSOR_Q, DEFAULT_PRECURSOR_Q, Q_THRESHOLD, _CONTAM_RE, count_report,
+    PRECURSOR_Q, DEFAULT_PRECURSOR_Q, Q_THRESHOLD, count_report,
 )
 
 REPO = Path(__file__).resolve().parents[1]
@@ -66,15 +64,14 @@ FTP_BASE = (
     "quantmsdiann-benchmarks/single-cell"
 )
 # dataset display name -> PRIDE accession (for labels) and FTP sub-directory.
-# One-Tip lives under PXD044991_one-tip/ (PXD044991 also has a mouse-zygote run).
-ACC = {"HeLa Astral SC": "PXD046357", "HeLa One-Tip": "PXD044991"}
-FTP_DIR = {"HeLa Astral SC": "PXD046357", "HeLa One-Tip": "PXD044991_one-tip"}
+ACC = {"HeLa Astral SC": "PXD046357"}
+FTP_DIR = {"HeLa Astral SC": "PXD046357"}
 VERSIONS = ["1_8_1", "2_5_1_enterprise"]
 FLAG = "HeLa Astral SC"  # the dataset carrying the depth/completeness panels
 
 _COLS = [
-    "Run", "Precursor.Id", "Protein.Group", "Q.Value", "Global.Q.Value",
-    "Global.PG.Q.Value", "PG.Q.Value", "PG.MaxLFQ", "Decoy",
+    "Run", "Precursor.Id", "Protein.Group", "Q.Value",
+    "PG.Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value", "PG.MaxLFQ", "Decoy",
 ]
 
 
@@ -107,12 +104,12 @@ def _load(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, sep="\t", usecols=lambda c: c in _COLS, low_memory=False)
 
 
-def _target_proteins(df: pd.DataFrame) -> pd.DataFrame:
-    """Rows whose protein group passes Global.PG.Q <= 1% and the target filter."""
+def _perrun_proteins(df: pd.DataFrame) -> pd.DataFrame:
+    """Per-run protein-group rows under the Vadim rule: PG.Q.Value <= 1% only
+    (no contaminant/target filter, no global filter). Decoys dropped."""
     if "Decoy" in df.columns:
         df = df[df["Decoy"] == 0]
-    is_target = ~df["Protein.Group"].fillna("").str.contains(_CONTAM_RE)
-    return df[(df["Global.PG.Q.Value"] <= Q_THRESHOLD) & is_target]
+    return df[df["PG.Q.Value"] <= Q_THRESHOLD]
 
 
 def build() -> dict[str, pd.DataFrame]:
@@ -120,18 +117,14 @@ def build() -> dict[str, pd.DataFrame]:
     for ds, acc in ACC.items():
         for version in VERSIONS:
             df = _load(_cached_report(FTP_DIR[ds], version))
-            prot = _target_proteins(df)
+            prot = _perrun_proteins(df)
             pgrun = prot.drop_duplicates(["Run", "Protein.Group"])
-            # precursors: canonical count_report_ids prec_min1_tgt (run-specific
-            # precursor-q gated AND Global.Q <= 1%, target-only).
-            # proteins: cross-run UNION of target protein groups at
-            # Global.PG.Q <= 1% -- the protein 1% FDR count, identical to the
-            # right endpoint of the completeness panel. (count_report's
-            # proteins_tgt additionally gates on precursor-passing rows, which
-            # is a slightly smaller set; the union is the value the manuscript
-            # reports and that the completeness curve shows.)
+            # totals are GLOBAL numbers (Vadim rule): precursors -> prec_global
+            # (Lib.Q.Value), protein groups -> prot_global (Lib.PG.Q.Value).
+            # The per-cell distribution (panel A) and the completeness curve
+            # below are PER-RUN numbers (PG.Q.Value only), from `pgrun`.
             c = count_report(df, precursor_q=PRECURSOR_Q.get(f"v{version}", DEFAULT_PRECURSOR_Q))
-            totals.append((ds, version, c["prec_min1_tgt"], int(pgrun["Protein.Group"].nunique())))
+            totals.append((ds, version, c["prec_global"], c["prot_global"]))
             for run, g in pgrun.groupby("Run"):
                 per_cell.append((ds, version, int(g["Protein.Group"].nunique())))
             # completeness + CV for BOTH datasets (panels B, C now show both).

@@ -16,7 +16,7 @@ fs.apply_house_style()
 import pandas as pd
 import requests
 
-from analysis.contaminant_filter import is_target_protein_group
+from analysis.count_report_ids import count_report
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data" / "PXD003539"
@@ -109,13 +109,13 @@ class Counts:
     walzer_proteins: int
     walzer_ea_genes: int  # new
     diann_peptides: int
-    # Headline target-only protein groups (post conservative contaminant
-    # filter applied to pr_matrix.tsv unique Protein.Group rows).
+    # Headline global protein groups: Lib.PG.Q.Value <= 0.01 in the DIA-NN
+    # report (no contaminant/target filter), per methods.md §1.
     diann_proteins: int
     diann_precursors: int
     # Audit baseline: diannsummary.log "Protein groups with global
-    # q-value <= 0.01" line (unfiltered). Default keeps backwards-
-    # compatibility with callers that don't yet populate it.
+    # q-value <= 0.01" line. Default keeps backwards-compatibility with
+    # callers that don't yet populate it.
     diann_proteins_unfiltered: int = 0
 
 
@@ -250,19 +250,19 @@ def per_run_real_detection_fraction_diann_parquet(
     """Per-run fraction of distinct precursors confidently identified, read
     from the DIA-NN long-format report (`diann_report.parquet`).
 
-    For each run, counts distinct Precursor.Id values whose per-run `Q.Value`
-    is <= `qvalue_cutoff` AND whose `Global.Q.Value` is <= `global_qvalue_cutoff`.
-    The denominator is the count of distinct Precursor.Ids that pass
-    `Global.Q.Value <= global_qvalue_cutoff` anywhere in the report — the global
-    1% FDR precursor pool, which is the apples-to-apples analogue of OpenSWATH's
-    "all target rows in the requant matrix" denominator.
+    Per methods.md §1: the per-run numerator uses the per-run precursor rule
+    (`Q.Value <= qvalue_cutoff`) ONLY; the denominator is the global precursor
+    pool (`Lib.Q.Value <= global_qvalue_cutoff` anywhere in the report). No
+    `Global.Q.Value` gate, no contaminant filter, zeros counted. The global
+    pool is the apples-to-apples analogue of OpenSWATH's "all target rows in
+    the requant matrix" denominator.
 
     Why use the parquet instead of the pr_matrix? The matrix is filtered at the
     cell level by --matrix-spec-q 0.05 (spectrum-level quant FDR), not by the
     per-run identification Q.Value. To match OpenSWATH's `score <= 0.01` per-run
     criterion strictly, we have to read Q.Value from the long-format report."""
     import pyarrow.parquet as pq
-    cols = ["Run", "Precursor.Id", "Q.Value", "Global.Q.Value"]
+    cols = ["Run", "Precursor.Id", "Q.Value", "Lib.Q.Value"]
     pf = pq.ParquetFile(str(parquet_path))
     schema_names = pf.schema_arrow.names
     missing = [c for c in cols if c not in schema_names]
@@ -276,19 +276,26 @@ def per_run_real_detection_fraction_diann_parquet(
         runs = batch.column("Run").to_pylist()
         pids = batch.column("Precursor.Id").to_pylist()
         qvs = batch.column("Q.Value").to_pylist()
-        gqvs = batch.column("Global.Q.Value").to_pylist()
-        for r, p, q, g in zip(runs, pids, qvs, gqvs):
+        lqvs = batch.column("Lib.Q.Value").to_pylist()
+        for r, p, q, lq in zip(runs, pids, qvs, lqvs):
             per_run_detected.setdefault(r, set())  # register every run seen
-            if g is None or g > global_qvalue_cutoff:
-                continue
-            global_precursors.add(p)
+            # denominator: global precursor pool, Lib.Q.Value only
+            if lq is not None and lq <= global_qvalue_cutoff:
+                global_precursors.add(p)
+            # numerator: per-run identification, Q.Value only
             if q is None or q > qvalue_cutoff:
                 continue
             per_run_detected[r].add(p)
     denom = len(global_precursors)
     if denom == 0:
         return {r: 0.0 for r in per_run_detected}
-    return {r: len(s) / denom for r, s in per_run_detected.items()}
+    # Bound each per-run set to the global pool so the fraction stays in [0, 1]
+    # (a Q.Value-passing precursor that never reaches the global Lib.Q.Value
+    # pool would otherwise inflate the numerator past the denominator).
+    return {
+        r: len(s & global_precursors) / denom
+        for r, s in per_run_detected.items()
+    }
 
 
 def per_run_real_detection_fraction_openswath(
@@ -341,7 +348,12 @@ def unique_peptides_per_protein_diann(matrix_path: Path) -> dict[str, int]:
     Restricting to Proteotypic == 1 ensures we only count peptides that uniquely
     identify the protein (the natural definition of 'unique peptides per
     protein'). Multiple charge states / modforms of the same peptide collapse
-    to a single Stripped.Sequence entry."""
+    to a single Stripped.Sequence entry.
+
+    Per methods.md §1 there is NO contaminant/target filter: every quantified
+    proteotypic row counts (the matrix carries no q-value column to re-apply).
+    The >=k-unique-peptides threshold is a study-defined comparison criterion,
+    not one of the forbidden q/contaminant filters, and is kept."""
     # Stream in chunks: the ProCan pr_matrix is ~2 GB and loading it whole
     # exhausts memory. We accumulate, per Protein.Group, the set of distinct
     # proteotypic Stripped.Sequence values seen in any quantified row.
@@ -359,8 +371,7 @@ def unique_peptides_per_protein_diann(matrix_path: Path) -> dict[str, int]:
             continue
         quantified = proteotypic[proteotypic[sample_cols].notna().any(axis=1)]
         for pg, seq in zip(quantified["Protein.Group"], quantified["Stripped.Sequence"]):
-            if is_target_protein_group(pg):
-                pg_to_peps.setdefault(pg, set()).add(seq)
+            pg_to_peps.setdefault(pg, set()).add(seq)
     return {pg: len(s) for pg, s in pg_to_peps.items()}
 
 
@@ -782,30 +793,26 @@ def parse_summary_log(log_path: Path) -> int:
     )
 
 
-def count_target_protein_groups_pr_matrix(pr_matrix_path: Path) -> tuple[int, int]:
-    """Return `(unfiltered_unique_pg, target_unique_pg)` from a DIA-NN
-    `pr_matrix.tsv`. PXD003539 has no `pg_matrix.tsv` on disk, so the
-    target-only protein-group headline must be derived from the
-    pr_matrix's unique `Protein.Group` strings.
+def report_global_counts_diann(parquet_path: Path) -> dict[str, int]:
+    """Global (dataset-total) counts from the DIA-NN long-format report under
+    the methods.md §1 rule: protein groups on ``Lib.PG.Q.Value <= 0.01`` only,
+    precursors on ``Lib.Q.Value <= 0.01`` only, and ``>= 2`` distinct stripped
+    peptides per global protein group. No contaminant/target filter, no
+    positive-quantity filter; decoys (``Decoy == 1``) are dropped.
 
-    Unfiltered = the count of distinct Protein.Group strings among rows
-    quantified in at least one run (matches the historical baseline).
-    Target = the same set, restricted to Protein.Group strings whose
-    every semicolon-separated token has no
-    CONTAM_/Cont_/ENTRAP_/DECOY_/decoy_ prefix per the 2026-05-21
-    conservative-filter spec.
-    """
-    df = pd.read_csv(pr_matrix_path, sep="\t", dtype=str)
-    missing = [c for c in PR_METADATA_COLS if c not in df.columns]
-    if missing:
-        raise ValueError(
-            f"PXD003539 pr_matrix missing metadata columns: {missing}"
-        )
-    sample_cols = [c for c in df.columns if c not in PR_METADATA_COLS]
-    quantified = df[df[sample_cols].notna().any(axis=1)]
-    pg_unique = set(quantified["Protein.Group"].dropna().unique().tolist())
-    target_unique = {pg for pg in pg_unique if is_target_protein_group(pg)}
-    return (len(pg_unique), len(target_unique))
+    Reads only the columns ``count_report`` needs and returns its ``prot_global``
+    (global protein groups), ``prec_global`` (global precursors), ``peptides``
+    (distinct stripped peptides), and ``prot_2pep`` (>= 2-peptide protein
+    groups) keys."""
+    import pyarrow.parquet as pq
+    from analysis.count_report_ids import _NEEDED_COLS
+    have = set(pq.ParquetFile(parquet_path).schema_arrow.names)
+    cols = [c for c in _NEEDED_COLS if c in have]
+    df = pq.read_table(parquet_path, columns=cols).to_pandas()
+    # PXD003539 reanalysis is DIA-NN 2.5.1-enterprise -> per-run --qvalue 0.05;
+    # only the per-run Q.Value-based replicate metrics depend on it, the global
+    # Lib.* metrics used as headlines do not.
+    return count_report(df, precursor_q=0.05)
 
 
 def render_figure(
@@ -1057,15 +1064,15 @@ def write_counts_tsv(counts: Counts, tsv_path: Path) -> None:
         ("Protein groups", "Walzer 2022 (CAL + OpenSWATH, top3)",
          counts.walzer_proteins,
          "Supplementary Table S2 (PXD003539, 1% FDR, top3, unfiltered)"),
-        ("Protein groups", "quantmsdiann (DIA-NN, 1% FDR, target-only)",
+        ("Protein groups", "quantmsdiann (DIA-NN, Lib.PG.Q.Value)",
          counts.diann_proteins,
-         "pr_matrix.tsv unique Protein.Group rows (quantified, target-only); "
-         "post conservative contaminant filter "
-         "(CONTAM_/Cont_/ENTRAP_/DECOY_/decoy_ token) per 2026-05-21 spec"),
-        ("Protein groups", "quantmsdiann (DIA-NN, 1% FDR, diannsummary.log)",
+         "global rule: distinct Protein.Group at Lib.PG.Q.Value<=0.01 in "
+         "diann_report.parquet per methods.md §1; no contaminant/target "
+         "filter, no Global.PG.Q.Value gate"),
+        ("Protein groups", "quantmsdiann (DIA-NN, diannsummary.log)",
          counts.diann_proteins_unfiltered,
          "audit baseline: diannsummary.log 'Protein groups with "
-         "global q-value <= 0.01' line (unfiltered)"),
+         "global q-value <= 0.01' line"),
         ("Precursors aux", "Guo 2019 (OpenSWATH, deposited)",
          counts.guo_precursors,
          "target rows with >=1 non-NA Intensity in feature_alignment matrix"),
@@ -1122,20 +1129,15 @@ def main() -> int:  # pragma: no cover
         pr_path, PR_METADATA_COLS, unique_by="Stripped.Sequence"
     )
     diann_precursors = count_quantified_rows(pr_path, PR_METADATA_COLS)
-    # Apply conservative contaminant filter at the Protein.Group level:
-    # headline = unique target-only PGs in pr_matrix; the log value is
-    # kept as the unfiltered audit baseline.
     diann_proteins_log = parse_summary_log(log_path)
-    pg_unf, pg_target = count_target_protein_groups_pr_matrix(pr_path)
-    print(f"  pr_matrix unique Protein.Group: unfiltered={pg_unf:,}  "
-          f"target_only={pg_target:,} (audit only)")
-    # Headline protein count is REPORT-based: unique Protein.Group at
-    # Global.PG.Q.Value <= 0.01 (target), from diann_report.parquet (DIA-NN
-    # 2.5.1), precomputed and staged -- not the pr_matrix row count.
-    import json as _json
-    with open(DATA_DIR / "diann_report_protein_counts.json", encoding="utf-8") as _fh:
-        diann_proteins = int(_json.load(_fh)["target"])
-    print(f"  report protein groups (Global.PG.Q.Value<=0.01, target): {diann_proteins:,}")
+    # Headline protein count is REPORT-based and follows methods.md §1: distinct
+    # Protein.Group at Lib.PG.Q.Value <= 0.01 from diann_report.parquet (DIA-NN
+    # 2.5.1-enterprise). No contaminant/target filter, no Global.PG.Q.Value gate.
+    report_counts = report_global_counts_diann(parquet_path)
+    diann_proteins = int(report_counts["prot_global"])
+    diann_prot_2pep = int(report_counts["prot_2pep"])
+    print(f"  report protein groups (Lib.PG.Q.Value<=0.01): {diann_proteins:,}  "
+          f"(>=2 peptides: {diann_prot_2pep:,})")
 
     print("Computing Guo 2019 (OpenSWATH) counts...")
     guo_precursors, guo_peptides, guo_proteins = count_openswath_quantified(opensw_path)

@@ -46,19 +46,14 @@ from analysis import figure_style as fs
 fs.apply_house_style()
 import pandas as pd
 
-from analysis.contaminant_filter import (
-    count_target_protein_groups,
-    is_target_protein_group,
-)
+from analysis.count_matrix import PG_METADATA, count_matrix_rows
 from analysis.figure_original_vs_quantmsdiann import (
     PR_METADATA_COLS,
-    count_target_protein_groups_pr_matrix,
     normalize_cell_line,
 )
 from analysis.figure_pxd030304_procan_vs_quantmsdiann import (
     parse_procan_mapping,
 )
-from analysis.figure_pxd004701_sun_vs_quantmsdiann import BC_SUBTYPES  # noqa: F401
 from analysis.venn_protein_accessions import extract_accessions_diann
 
 
@@ -69,6 +64,10 @@ FIGURES_DIR = REPO_ROOT / "analysis" / "figures" / "combined"
 # Per-dataset input paths (all local, no downloads required).
 PXD003539_SDRF = DATA_ROOT / "PXD003539" / "PXD003539.sdrf.tsv"
 PXD003539_PR_MATRIX = DATA_ROOT / "PXD003539" / "diann_report.pr_matrix.tsv"
+# PXD003539 ships a full DIA-NN report (parquet) with q-value columns, so
+# its global protein-group headline uses the report rule
+# (Lib.PG.Q.Value <= 0.01) rather than a count matrix.
+PXD003539_REPORT_PARQUET = DATA_ROOT / "PXD003539" / "diann_report.parquet"
 PXD003539_COUNTS_TSV = REPO_ROOT / "analysis" / "figures" / "PXD003539" / "data" / "counts.tsv"
 
 PXD030304_SDRF = DATA_ROOT / "PXD030304" / "PXD030304.sdrf.tsv"
@@ -129,21 +128,26 @@ class DatasetHeadline:
     metric: str           # short metric description for tooltip / TSV
 
 
-# `diann_count` values are lazily computed via
-# `count_target_protein_groups(pg_matrix_path)` per the 2026-05-21
-# contaminant-filter spec — the headline is the post-filter target-only
-# protein-group count on the same `diann_report.pg_matrix.tsv` that the
-# per-cohort scripts use. Unfiltered companion numbers go into the audit
-# TSV (`write_combined_counts_tsv`).
-# PXD003539 has no `pg_matrix.tsv` on disk; we derive the target-only
-# count from its `pr_matrix.tsv` unique Protein.Group rows instead.
+# `diann_count` values are lazily computed under the methods.md §1 rule
+# (2026-06-21 Vadim review): NO contaminant/target filter, NO
+# positive-quantity filter (zeros counted), decoys dropped. There is now
+# a single filter-free number per cohort — the old "unfiltered vs
+# target-only" duality is gone.
 #
-# The lazy computation matters because two of these matrices are large
-# (PXD030304 pg_matrix ~200 MB, PXD003539 pr_matrix ~67 MB). The
-# `DATASET_HEADLINES` constant therefore initialises with sentinel
-# values (`diann_count=0`) and the atlas `main()` calls
-# `refresh_dataset_headlines()` to populate them from disk before
-# rendering. Tests that don't need the on-disk numbers consume
+#   * Deposited DIA-NN count matrices (*_pg_matrix.tsv, no q columns):
+#     the headline is `count_matrix_rows()` — a row counts iff it has
+#     >=1 non-empty sample value (zeros counted; no contaminant filter).
+#     This covers PXD030304 / PXD004701 / PXD017199 / PXD041421.
+#   * Reports with q-value columns: the headline is the global
+#     protein-group rule `Lib.PG.Q.Value <= 0.01` (decoys dropped). This
+#     covers PXD003539, whose only on-disk q-bearing source is
+#     `diann_report.parquet`.
+#
+# The lazy computation matters because the inputs are large (PXD030304
+# pg_matrix ~200 MB, PXD003539 parquet ~1.1 GB). The `DATASET_HEADLINES`
+# constant therefore initialises with sentinel values and the atlas
+# `main()` calls `refresh_dataset_headlines()` to populate them from disk
+# before rendering. Tests that don't need the on-disk numbers consume
 # `DATASET_HEADLINES` directly with the placeholder values, keeping
 # import time fast.
 
@@ -154,14 +158,19 @@ PXD004701_PAPER_COUNT = 6_091
 
 
 # Default placeholder values used at import time; refresh from disk via
-# `refresh_dataset_headlines()` (called in `main()`).
+# `refresh_dataset_headlines()` (called in `main()`). Each is the
+# methods.md §1 global protein-group number: count_matrix_rows() for the
+# deposited count matrices, Lib.PG.Q.Value <= 0.01 for the PXD003539
+# report. No contaminant/target filter, zeros counted.
 _DEFAULT_DIANN_COUNTS = {
-    "PXD003539": 6_927,    # diannsummary.log baseline (unfiltered)
-    "PXD030304": 9_370,    # diannsummary.log baseline (unfiltered)
-    "PXD004701": 6_296,    # paper-side fallback
-    "PXD017199": 10_572,   # diannsummary.log baseline (unfiltered)
-    "PXD041421": 9_129,    # report Global.PG.Q<=0.01, target-only (DIA-NN 2.5.1 --relaxed-prot-inf rerun)
+    "PXD003539": 7_018,    # report Lib.PG.Q.Value <= 0.01 (decoys dropped)
+    "PXD030304": 9_606,    # count_matrix_rows(pg_matrix)
+    "PXD004701": 7_961,    # count_matrix_rows(pg_matrix)
+    "PXD017199": 10_713,   # count_matrix_rows(pg_matrix)
+    "PXD041421": 9_183,    # count_matrix_rows(pg_matrix)
 }
+
+_GLOBAL_PG_METRIC = "Protein groups (global rule: matrix rows / Lib.PG.Q.Value <= 0.01; no filters)"
 
 
 DATASET_HEADLINES: dict[str, DatasetHeadline] = {
@@ -170,19 +179,19 @@ DATASET_HEADLINES: dict[str, DatasetHeadline] = {
         paper_count=PXD003539_PAPER_COUNT,
         diann_count=_DEFAULT_DIANN_COUNTS["PXD003539"],
         paper_label="Guo 2019 (OpenSWATH)",
-        metric="Protein groups (1% global FDR, target-only)",
+        metric=_GLOBAL_PG_METRIC,
     ),
     "PXD030304": DatasetHeadline(
         paper_count=PXD030304_PAPER_COUNT,
         diann_count=_DEFAULT_DIANN_COUNTS["PXD030304"],
         paper_label="ProCan 2022",
-        metric="Proteins @ Global.Q.Value <= 0.01 (target-only)",
+        metric=_GLOBAL_PG_METRIC,
     ),
     "PXD004701": DatasetHeadline(
         paper_count=PXD004701_PAPER_COUNT,
         diann_count=_DEFAULT_DIANN_COUNTS["PXD004701"],
         paper_label="Sun 2023",
-        metric="Proteins (consistency filter, target-only)",
+        metric=_GLOBAL_PG_METRIC,
     ),
     # PXD017199 — Tognetti 2021 is a mass-cytometry study; the SWATH-MS
     # data is supplementary and the paper carries no DIA-comparable
@@ -192,7 +201,7 @@ DATASET_HEADLINES: dict[str, DatasetHeadline] = {
         paper_count=0,
         diann_count=_DEFAULT_DIANN_COUNTS["PXD017199"],
         paper_label="",
-        metric="Protein groups (1% global q-value, target-only)",
+        metric=_GLOBAL_PG_METRIC,
     ),
     # PXD041421 — Wang 2023 (TIQUEST batch-effect testbed). Atlas-only
     # cohort per 2026-05-21 spec §2; no paper-side DIA headline (deposit
@@ -201,107 +210,84 @@ DATASET_HEADLINES: dict[str, DatasetHeadline] = {
         paper_count=0,
         diann_count=_DEFAULT_DIANN_COUNTS["PXD041421"],
         paper_label="",
-        metric="Protein groups (1% global q-value, target-only)",
+        metric=_GLOBAL_PG_METRIC,
     ),
 }
 
 
-# Companion unfiltered protein-group counts (for the audit TSV).
-# Populated by `refresh_dataset_headlines()` alongside the filtered
-# headline counts.
-DATASET_HEADLINES_UNFILTERED: dict[str, int] = {
-    ds: _DEFAULT_DIANN_COUNTS[ds] for ds in DATASET_HEADLINES
-}
+def _report_global_protein_groups(report_parquet: Path) -> int:
+    """Global protein-group count from a DIA-NN report parquet under the
+    methods.md §1 rule: distinct `Protein.Group` with
+    `Lib.PG.Q.Value <= 0.01`, decoys (`Decoy == 1`) dropped. No
+    contaminant/target filter, no positive-quantity filter. Returns 0 if
+    the file or required columns are absent."""
+    if not report_parquet.exists():
+        return 0
+    import pyarrow.parquet as pq
 
-
-def _compute_diann_counts(
-    pg_matrix_path: Path | None,
-    pr_matrix_path: Path | None = None,
-) -> tuple[int, int]:
-    """Return `(unfiltered, target_only)` Protein.Group counts for a
-    cohort's headline. Prefers pg_matrix.tsv; falls back to
-    pr_matrix.tsv unique Protein.Group rows when pg_matrix is absent
-    (PXD003539 case). Returns `(0, 0)` when neither file exists."""
-    if pg_matrix_path is not None and pg_matrix_path.exists():
-        return count_target_protein_groups(pg_matrix_path)
-    if pr_matrix_path is not None and pr_matrix_path.exists():
-        return count_target_protein_groups_pr_matrix(pr_matrix_path)
-    return (0, 0)
+    have = set(pq.ParquetFile(report_parquet).schema_arrow.names)
+    needed = {"Protein.Group", "Lib.PG.Q.Value"}
+    if not needed <= have:
+        return 0
+    cols = [c for c in ("Protein.Group", "Lib.PG.Q.Value", "Decoy") if c in have]
+    df = pq.read_table(report_parquet, columns=cols).to_pandas()
+    if "Decoy" in df.columns:
+        df = df[df["Decoy"] == 0]
+    return int(
+        df.loc[df["Lib.PG.Q.Value"] <= 0.01, "Protein.Group"].nunique()
+    )
 
 
 def refresh_dataset_headlines() -> None:
-    """Populate `DATASET_HEADLINES` and `DATASET_HEADLINES_UNFILTERED`
-    from the on-disk pg_matrix.tsv / pr_matrix.tsv files. Called by
-    `main()` before rendering so the headline bars reflect the
-    target-only contaminant-filtered counts (2026-05-21 spec §1.6).
+    """Populate `DATASET_HEADLINES` from the on-disk inputs under the
+    methods.md §1 global protein-group rule (2026-06-21 Vadim review):
+
+      * deposited DIA-NN count matrices (PXD030304 / PXD004701 /
+        PXD017199 / PXD041421) -> `count_matrix_rows()`: a row counts iff
+        it has >=1 non-empty sample value (zeros counted), with NO
+        contaminant/target filter;
+      * the PXD003539 report parquet -> distinct `Protein.Group` at
+        `Lib.PG.Q.Value <= 0.01`, decoys dropped.
+
+    There is a single, filter-free number per cohort — the previous
+    "unfiltered vs target-only" duality has been removed. Cohorts whose
+    input file is missing keep the import-time default (which is the same
+    rule, precomputed).
 
     Tests that don't need the from-disk numbers can either skip this
-    call (the module-load defaults are reasonable diannsummary.log
-    baselines) or call it themselves to exercise the read path."""
-    sources: dict[str, tuple[Path | None, Path | None]] = {
-        "PXD003539": (None, PXD003539_PR_MATRIX),
-        "PXD030304": (PXD030304_PG_MATRIX, None),
-        # PXD004701 headline is the consistency-filtered union (matching the
-        # per-cohort Fig. 3b), NOT the raw pg_matrix — handled separately below.
-        "PXD017199": (PXD017199_PG_MATRIX, None),
-        "PXD041421": (PXD041421_PG_MATRIX, None),
+    call (the module-load defaults are accurate) or call it themselves to
+    exercise the read path."""
+    # Deposited count matrices: count_matrix_rows, no filters.
+    matrix_sources: dict[str, Path] = {
+        "PXD030304": PXD030304_PG_MATRIX,
+        "PXD004701": PXD004701_PG_MATRIX,
+        "PXD017199": PXD017199_PG_MATRIX,
+        "PXD041421": PXD041421_PG_MATRIX,
     }
-    for ds, (pg, pr) in sources.items():
-        unf, target = _compute_diann_counts(pg, pr)
-        if target <= 0:
+    for ds, pg in matrix_sources.items():
+        if not (pg.exists() and pg.stat().st_size > 0):
             continue  # keep the import-time default if the file is missing
+        n = count_matrix_rows(pg, PG_METADATA)
+        if n <= 0:
+            continue
         h = DATASET_HEADLINES[ds]
         DATASET_HEADLINES[ds] = DatasetHeadline(
             paper_count=h.paper_count,
-            diann_count=target,
+            diann_count=n,
             paper_label=h.paper_label,
             metric=h.metric,
         )
-        DATASET_HEADLINES_UNFILTERED[ds] = unf
 
-    # PXD004701: use the consistency-filtered target-only protein-group union
-    # from the per-subtype JSON cache, so the atlas Panel A bar equals the
-    # per-cohort comparison (and the metric label "consistency filter,
-    # target-only" is truthful) rather than the looser raw pg_matrix count.
-    if PXD004701_PROTEIN_JSON.exists() and PXD004701_PROTEIN_JSON.stat().st_size > 0:
-        with open(PXD004701_PROTEIN_JSON, encoding="utf-8") as fh:
-            payload = json.load(fh)
-        pgs: set[str] = set()
-        for vs in payload.values():
-            pgs.update(v for v in vs if isinstance(v, str))
-        target_pgs = {pg for pg in pgs if is_target_protein_group(pg)}
-        if target_pgs:
-            h = DATASET_HEADLINES["PXD004701"]
-            DATASET_HEADLINES["PXD004701"] = DatasetHeadline(
-                paper_count=h.paper_count,
-                diann_count=len(target_pgs),
-                paper_label=h.paper_label,
-                metric=h.metric,
-            )
-            DATASET_HEADLINES_UNFILTERED["PXD004701"] = len(pgs)
-
-    # PXD003539: use the canonical REPORT-based target-only protein-group count
-    # (unique Protein.Group at Global.PG.Q.Value <= 0.01) from
-    # diann_report_protein_counts.json, so the atlas Panel B bar equals the
-    # per-cohort figure (figure_original_vs_quantmsdiann). The pr_matrix-derived
-    # count (~6,747) is a precursor-matrix proxy and is retained only for the
-    # Panel A accession-overlap geometry; the FDR-controlled headline is the
-    # report count (6,767). This removes the prior 6,747-vs-6,767 mismatch
-    # between the atlas and the per-cohort comparison.
-    if PXD003539_PROTEIN_JSON.exists() and PXD003539_PROTEIN_JSON.stat().st_size > 0:
-        with open(PXD003539_PROTEIN_JSON, encoding="utf-8") as fh:
-            report_target = int(json.load(fh).get("target", 0))
-        if report_target > 0:
-            h = DATASET_HEADLINES["PXD003539"]
-            DATASET_HEADLINES["PXD003539"] = DatasetHeadline(
-                paper_count=h.paper_count,
-                diann_count=report_target,
-                paper_label=h.paper_label,
-                metric=h.metric,
-            )
-            # report-consistent unfiltered baseline (diannsummary.log), matching
-            # the per-cohort counts.tsv, rather than the pr_matrix proxy.
-            DATASET_HEADLINES_UNFILTERED["PXD003539"] = _DEFAULT_DIANN_COUNTS["PXD003539"]
+    # PXD003539: report rule (Lib.PG.Q.Value <= 0.01) from the parquet.
+    n3539 = _report_global_protein_groups(PXD003539_REPORT_PARQUET)
+    if n3539 > 0:
+        h = DATASET_HEADLINES["PXD003539"]
+        DATASET_HEADLINES["PXD003539"] = DatasetHeadline(
+            paper_count=h.paper_count,
+            diann_count=n3539,
+            paper_label=h.paper_label,
+            metric=h.metric,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2100,10 +2086,13 @@ def write_combined_counts_tsv(
         if d in cellline_sets
     ]
     rows: list[tuple[str, str, int, str]] = []
-    # Panel A: up to 3 rows per dataset (paper + diann target-only +
-    # diann unfiltered). Datasets with paper_count == 0 (PXD017199 /
-    # PXD041421) write the "no paper DIA bar" row but still emit the
-    # quantmsdiann target-only + unfiltered audit rows.
+    # Panel B (headline counts): one paper row + one quantmsdiann row per
+    # dataset. The quantmsdiann number is the single methods.md §1
+    # global protein-group count (no contaminant/target filter, zeros
+    # counted): count_matrix_rows() for deposited matrices, or
+    # Lib.PG.Q.Value <= 0.01 for the PXD003539 report. Datasets with
+    # paper_count == 0 (PXD017199 / PXD041421) write the "no paper DIA
+    # bar" row but still emit the quantmsdiann row.
     for ds in ds_order:
         if ds not in headlines:
             continue
@@ -2122,23 +2111,13 @@ def write_combined_counts_tsv(
                 0,
                 h.metric,
             ))
-        # Headline post-filter row: matches the diann bar drawn in Panel A.
+        # Headline row: the filter-free number drawn in Panel B.
         rows.append((
             f"atlas_overlap | Panel B | {ds} | quantmsdiann",
-            "quantmsdiann (DIA-NN, target-only post-filter)",
+            "quantmsdiann (DIA-NN, methods.md §1 global rule, no filters)",
             h.diann_count,
             h.metric,
         ))
-        # Companion audit row: unfiltered pg_matrix / pr_matrix row count.
-        unfiltered = DATASET_HEADLINES_UNFILTERED.get(ds)
-        if unfiltered is not None and unfiltered != h.diann_count:
-            rows.append((
-                f"atlas_overlap | Panel B | {ds} | quantmsdiann",
-                "quantmsdiann (DIA-NN, unfiltered pg_matrix/pr_matrix)",
-                unfiltered,
-                f"{h.metric} — pre conservative contaminant filter "
-                "(2026-05-21 spec audit)",
-            ))
     # Cell-line UpSet (former atlas_overlap Panel B) removed: PXD030304's
     # 947 lines crowded out the inter-cohort intersections. Per-cohort
     # cell-line counts retained for audit only.
@@ -2186,7 +2165,7 @@ def write_combined_counts_tsv(
             f"cell_lines={n_cl} runs={n_runs} accessions={n_acc}",
             n_acc,
             f"{ds}: {n_cl} cell line(s) × {n_runs} MS runs → "
-            f"{n_acc:,} target-only UniProt accessions",
+            f"{n_acc:,} UniProt accessions",
         ))
     # atlas_distribution | Panel B: unique target-only accessions per
     # tissue (union across cohorts) — the headline number on the bar.
@@ -2196,8 +2175,8 @@ def write_combined_counts_tsv(
             f"atlas_distribution | Panel B | tissue proteins | {tissue}",
             "union of UniProt accessions across all contributing cohorts",
             union_size,
-            "unique target-only proteins detected in this tissue across "
-            "the atlas (post-contaminant filter)",
+            "unique proteins detected in this tissue across the atlas "
+            "(accession-overlap geometry)",
         ))
     # Per-cohort breakdown of the per-tissue protein counts (kept
     # off-figure in this audit row so reviewers can decompose the
@@ -2208,7 +2187,7 @@ def write_combined_counts_tsv(
                 f"atlas_distribution | Panel B | tissue proteins (per-cohort breakdown) | {tissue}",
                 ds,
                 by_ds.get(ds, 0),
-                "per-cohort target-only protein count for this tissue "
+                "per-cohort protein count for this tissue "
                 "(sum across cohorts double-counts proteins seen in "
                 "multiple cohorts — figure shows union)",
             ))
@@ -2283,13 +2262,12 @@ def main() -> int:  # pragma: no cover
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Refreshing DATASET_HEADLINES diann_count from pg_matrix files "
-          "(target-only contaminant filter)...")
+    print("Refreshing DATASET_HEADLINES diann_count from on-disk inputs "
+          "(methods.md §1 global rule: matrix rows / Lib.PG.Q.Value, no "
+          "filters)...")
     refresh_dataset_headlines()
     for ds, h in DATASET_HEADLINES.items():
-        unf = DATASET_HEADLINES_UNFILTERED.get(ds)
-        print(f"  {ds}: target_only={h.diann_count:,}  unfiltered={unf:,}  "
-              f"(delta {unf - h.diann_count:,})")
+        print(f"  {ds}: protein_groups={h.diann_count:,}")
 
     print("Loading cell-line sets from SDRFs...")
     cellline_sets: dict[str, set[str]] = {

@@ -181,37 +181,38 @@ def test_per_run_real_detection_fraction_openswath_uses_score(tmp_path: Path) ->
 
 
 def test_per_run_real_detection_fraction_diann_parquet(tmp_path: Path) -> None:
-    """Per-run completeness from the DIA-NN long-format report.
+    """Per-run completeness from the DIA-NN long-format report, methods.md §1.
 
     Numerator per run: distinct Precursor.Id rows with Q.Value <= 0.01 in that
-    run AND Global.Q.Value <= 0.01 (so the per-cell filter is strict 1% per-run
-    precursor FDR, matching the OpenSWATH score <= 0.01 criterion).
-    Denominator: distinct Precursor.Id with Global.Q.Value <= 0.01 anywhere."""
+    run ONLY (the per-run precursor rule; no Global.Q.Value gate), intersected
+    with the global pool.
+    Denominator (global pool): distinct Precursor.Id with Lib.Q.Value <= 0.01
+    anywhere in the report."""
     import pyarrow as pa
     import pyarrow.parquet as pq
     from analysis.figure_original_vs_quantmsdiann import (
         per_run_real_detection_fraction_diann_parquet,
     )
     table = pa.table({
-        "Run":            ["A",   "A",   "A",   "B",   "B",   "B",   "C"],
-        "Precursor.Id":   ["X2",  "Y2",  "Z2",  "X2",  "Y2",  "Z2",  "X2"],
-        "Q.Value":        [0.005, 0.02,  0.001, 0.001, 0.5,   0.005, 0.005],
-        "Global.Q.Value": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.5],
+        "Run":          ["A",   "A",   "A",   "B",   "B",   "B",   "C"],
+        "Precursor.Id": ["X2",  "Y2",  "Z2",  "X2",  "Y2",  "Z2",  "X2"],
+        "Q.Value":      [0.005, 0.02,  0.001, 0.001, 0.5,   0.005, 0.005],
+        "Lib.Q.Value":  [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.5],
     })
     p = tmp_path / "report.parquet"
     pq.write_table(table, p)
-    # Denominator: distinct Precursor.Id with Global.Q.Value <= 0.01 = {X2, Y2, Z2} = 3.
-    # Run A: X2 (0.005 OK), Z2 (0.001 OK); Y2 (0.02) fails per-run. -> 2/3
+    # Global pool: distinct Precursor.Id with Lib.Q.Value <= 0.01 = {X2, Y2, Z2}
+    # = 3 (X2 qualifies via its A/B rows; its C row Lib.Q.Value=0.5 is irrelevant
+    # once it is in the pool).
+    # Run A: X2 (Q 0.005 OK), Z2 (0.001 OK); Y2 (0.02) fails per-run. -> 2/3
     # Run B: X2 OK, Z2 OK; Y2 fails per-run. -> 2/3
-    # Run C: only X2 row, but its Global.Q.Value=0.5 means X2 is NOT in the denominator's pool
-    #        from this run's perspective... no, denominator is global. X2 IS in the pool
-    #        (it appears in runs A,B with Global=0.001). But this particular C-row has
-    #        Global=0.5 -> filtered out, so run C has 0 detections. -> 0/3
+    # Run C: X2 (Q 0.005 OK) and X2 is in the global pool -> 1/3 (the per-run
+    #        numerator no longer gates on Global.Q.Value).
     out = per_run_real_detection_fraction_diann_parquet(p)
     assert out == {
         "A": pytest.approx(2 / 3),
         "B": pytest.approx(2 / 3),
-        "C": pytest.approx(0 / 3),
+        "C": pytest.approx(1 / 3),
     }
 
 
@@ -402,12 +403,12 @@ def test_count_quantified_genes_diann_excludes_empty_rows(tmp_path: Path) -> Non
     assert count_quantified_genes_diann(matrix) == 2
 
 
-def test_counts_tsv_carries_unfiltered_and_target_rows_pxd003539(
+def test_counts_tsv_carries_lib_headline_and_log_baseline_pxd003539(
     tmp_path: Path,
 ) -> None:
-    """`write_counts_tsv` (PXD003539) writes paired rows for the
-    contaminant-filter audit (2026-05-21 spec §1.7): target-only headline
-    + unfiltered diannsummary.log baseline."""
+    """`write_counts_tsv` (PXD003539) writes the methods.md §1 headline row
+    (global protein groups at Lib.PG.Q.Value<=0.01) plus the diannsummary.log
+    baseline. No contaminant/target-only row."""
     from analysis.figure_original_vs_quantmsdiann import (
         Counts, write_counts_tsv,
     )
@@ -420,15 +421,17 @@ def test_counts_tsv_carries_unfiltered_and_target_rows_pxd003539(
         walzer_proteins=5000,
         walzer_ea_genes=2100,
         diann_peptides=70000,
-        diann_proteins=6800,             # target-only headline
+        diann_proteins=6800,             # global, Lib.PG.Q.Value
         diann_precursors=117000,
         diann_proteins_unfiltered=6927,  # diannsummary.log baseline
     )
     p = tmp_path / "counts.tsv"
     write_counts_tsv(counts, p)
     text = p.read_text(encoding="utf-8")
-    assert "quantmsdiann (DIA-NN, 1% FDR, target-only)" in text
-    assert "quantmsdiann (DIA-NN, 1% FDR, diannsummary.log)" in text
+    assert "quantmsdiann (DIA-NN, Lib.PG.Q.Value)" in text
+    assert "quantmsdiann (DIA-NN, diannsummary.log)" in text
+    # No leftover contaminant/target-only headline.
+    assert "target-only" not in text
     # Both numbers present.
     assert "6800" in text
     assert "6927" in text

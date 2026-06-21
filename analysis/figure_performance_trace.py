@@ -597,7 +597,6 @@ PERF_DATASETS: tuple[tuple[str, str, int], ...] = (
     # that were missing from the timing figure; traces from the reported runs
     # (single-cell: 2.5.1-enterprise build; cell lines: standard 2.5.x).
     ("PXD046357", "Orbitrap Astral", 12),
-    ("PXD044991", "Orbitrap Astral", 12),
     ("PXD017199", "Q Exactive", 206),
     ("PXD041421", "timsTOF Pro", 48),
 )

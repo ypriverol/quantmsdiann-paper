@@ -4,7 +4,7 @@
 Two panels of paired horizontal bars, one row per public DIA deposit:
   (a) Protein groups  — all seven deposits.
   (b) Precursors      — only the deposits whose ORIGINAL analysis was DIA-NN
-      (HeLa Astral, One-Tip, spatial DVP); "precursor" is a DIA-NN concept, so
+      (HeLa Astral, spatial DVP); "precursor" is a DIA-NN concept, so
       OpenSWATH/PCT-SWATH/protein-only originals have no comparable count.
 
 Original (grey) = deposit matrix / published headline; reanalysis (coloured by

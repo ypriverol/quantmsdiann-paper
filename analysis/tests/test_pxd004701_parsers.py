@@ -129,7 +129,7 @@ def test_bc_subtypes_partition_sums_to_76() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Streaming Sun-style consistency filter (Proteotypic + Global.Q.Value +
+# Streaming Sun-style consistency filter (Proteotypic + Lib.Q.Value +
 # >=10% of mapped runs detection)
 # ---------------------------------------------------------------------------
 
@@ -137,7 +137,7 @@ def test_proteins_per_subtype_quantmsdiann_consistency_filter_drops_rare(
     tmp_path: Path,
 ) -> None:
     """Sun-style filter applied to the long-format parquet: keep
-    proteotypic precursors with Global.Q.Value <= cutoff AND any
+    proteotypic precursors with Lib.Q.Value <= cutoff AND any
     Protein.Group detected in at least `min_detection_fraction` of
     mapped runs. Per subtype, union of surviving Protein.Group across
     runs of that subtype."""
@@ -164,7 +164,7 @@ def test_proteins_per_subtype_quantmsdiann_consistency_filter_drops_rare(
                           "P3",
                           "P4",
                           "P6"],
-        "Global.Q.Value": [0.001, 0.001, 0.001, 0.001,
+        "Lib.Q.Value": [0.001, 0.001, 0.001, 0.001,
                            0.001,
                            0.5,
                            0.001,
@@ -209,7 +209,7 @@ def test_proteins_per_subtype_consistency_filter_drops_below_threshold(
     tmp_path: Path,
 ) -> None:
     """A protein detected in <10% of mapped runs (here 0/10) is dropped
-    even if it passes Global.Q.Value and Proteotypic."""
+    even if it passes Lib.Q.Value and Proteotypic."""
     import pyarrow as pa
     import pyarrow.parquet as pq
     from analysis.figure_pxd004701_sun_vs_quantmsdiann import (
@@ -222,7 +222,7 @@ def test_proteins_per_subtype_consistency_filter_drops_below_threshold(
     table = pa.table({
         "Run": runs + ["unmapped_run"],
         "Protein.Group": ["P1"] + ["X"] * 9 + ["P2"],
-        "Global.Q.Value": [0.001] * 11,
+        "Lib.Q.Value": [0.001] * 11,
         "Proteotypic": [1] * 11,
     })
     parquet_path = tmp_path / "report.parquet"
@@ -261,7 +261,7 @@ def test_proteins_per_subtype_consistency_filter_excludes_unknown_subtype(
     table = pa.table({
         "Run": ["r1", "r2"],
         "Protein.Group": ["P1", "P1"],
-        "Global.Q.Value": [0.001, 0.001],
+        "Lib.Q.Value": [0.001, 0.001],
         "Proteotypic": [1, 1],
     })
     parquet_path = tmp_path / "report.parquet"
@@ -341,7 +341,7 @@ def test_subtype_aggregation_unions_across_runs(tmp_path: Path) -> None:
     table = pa.table({
         "Run": ["r1", "r2", "r1", "r2"],
         "Protein.Group": ["P1", "P2", "P3", "P3"],
-        "Global.Q.Value": [0.001, 0.001, 0.001, 0.001],
+        "Lib.Q.Value": [0.001, 0.001, 0.001, 0.001],
         "Proteotypic": [1, 1, 1, 1],
     })
     parquet_path = tmp_path / "report.parquet"
@@ -363,13 +363,13 @@ def test_subtype_aggregation_unions_across_runs(tmp_path: Path) -> None:
     assert out == {"TNBC": {"P1", "P2", "P3"}}
 
 
-def test_counts_tsv_carries_unfiltered_and_target_rows_pxd004701(
+def test_counts_tsv_carries_lib_and_matrix_rows_pxd004701(
     tmp_path: Path,
 ) -> None:
-    """`write_counts_tsv` writes paired rows for the contaminant filter
-    audit (2026-05-21 spec §1.7): one `quantmsdiann (DIA-NN, target-only)`
-    row carrying the post-filter headline count and one `quantmsdiann
-    (DIA-NN, unfiltered ...)` row carrying the pre-filter count."""
+    """`write_counts_tsv` writes the methods.md §1 headline rows: the
+    strict (no-consistency) global protein-group count at Lib.PG.Q.Value<=0.01,
+    the auditable count_matrix_rows pg_matrix count, the diannsummary.log
+    baseline, and the consistency-filter union. No contaminant/target-only row."""
     from analysis.figure_pxd004701_sun_vs_quantmsdiann import (
         Counts, write_counts_tsv,
     )
@@ -380,21 +380,21 @@ def test_counts_tsv_carries_unfiltered_and_target_rows_pxd004701(
         sun_peptides=90762,
         sun_tnbc=39,
         sun_non_tnbc=37,
-        quantmsdiann_proteins_strict=7600,             # target-only
+        quantmsdiann_proteins_strict=7600,             # global, Lib.PG.Q.Value
         quantmsdiann_proteins_strict_unfiltered=7746,  # diannsummary.log
-        quantmsdiann_proteins_pg_matrix_unfiltered=7700,
-        quantmsdiann_proteins_consistent=6200,
-        quantmsdiann_proteins_consistent_unfiltered=6296,
+        quantmsdiann_proteins_pg_matrix=7700,          # count_matrix_rows
+        quantmsdiann_proteins_consistent=6200,         # consistency union
         quantmsdiann_peptides=85000,
         quantmsdiann_precursors=100499,
     )
     p = tmp_path / "counts.tsv"
     write_counts_tsv(counts, p)
     text = p.read_text(encoding="utf-8")
-    # Both filter policies represented for the strict (no-consistency) headline.
-    assert "quantmsdiann (DIA-NN, target-only)" in text
-    assert "quantmsdiann (DIA-NN, unfiltered pg_matrix)" in text
+    assert "quantmsdiann (DIA-NN, Lib.PG.Q.Value)" in text
+    assert "quantmsdiann (DIA-NN, pg_matrix rows)" in text
     assert "quantmsdiann (DIA-NN, diannsummary.log)" in text
-    # And both for the consistency-filtered headline.
+    # Consistency-filter headline row present.
+    assert "quantmsdiann (DIA-NN)\t6200" in text
+    # No leftover contaminant/target-only headline.
+    assert "target-only" not in text
     assert "7600" in text and "7746" in text and "7700" in text
-    assert "6200" in text and "6296" in text

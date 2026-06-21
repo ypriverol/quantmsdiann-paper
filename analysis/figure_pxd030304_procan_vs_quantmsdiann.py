@@ -29,7 +29,7 @@ fs.apply_house_style()
 import numpy as np
 import pandas as pd
 
-from analysis.contaminant_filter import count_target_protein_groups
+from analysis.count_matrix import count_matrix_rows
 from analysis.figure_original_vs_quantmsdiann import (
     download_if_missing,
     unique_peptides_per_protein_diann,
@@ -87,10 +87,10 @@ PG_METADATA_COLS = [
 class Counts:
     procan_proteins: int                       # 8,498 (paper)
     procan_proteins_stringent: int             # 6,692 (paper)
-    quantmsdiann_proteins: int                 # post-filter pg_matrix headline
+    quantmsdiann_proteins: int                 # global PG, Lib.PG.Q.Value<=0.01
     quantmsdiann_proteins_unfiltered: int      # diannsummary.log (audit only)
-    quantmsdiann_proteins_pg_matrix_unfiltered: int  # raw pg_matrix row count
-    quantmsdiann_proteins_stringent: int       # >=2 unique peptides, computed
+    quantmsdiann_proteins_pg_matrix: int       # count_matrix_rows (no filter)
+    quantmsdiann_proteins_stringent: int       # >=2 unique peptides (Lib rule)
     quantmsdiann_precursors: int               # from diannsummary.log
 
 
@@ -120,6 +120,50 @@ def parse_diann_summary_log(log_path: Path) -> tuple[int, int]:
             "'Target precursors at 1% global q-value: N' not found in log"
         )
     return protein_groups, precursors
+
+
+def report_global_pg_lib(
+    parquet_source: str | Path,
+    *,
+    qvalue_cutoff: float = 0.01,
+    batch_size: int = 2_000_000,
+) -> int:
+    """Distinct global protein groups under methods.md §1: ``Protein.Group``
+    values with ``Lib.PG.Q.Value <= qvalue_cutoff``. Decoys (``Decoy == 1``)
+    dropped; NO contaminant/target filter, NO ``Global.PG.Q.Value`` gate.
+
+    Streams the DIA-NN long-format report with column projection on
+    (``Protein.Group``, ``Lib.PG.Q.Value``, ``Decoy``). Accepts a local Path
+    or an HTTPS URL (streamed via fsspec)."""
+    import pyarrow.parquet as pq
+
+    source = str(parquet_source)
+    if source.startswith(("http://", "https://")):
+        import fsspec
+        opener = lambda: fsspec.filesystem("https").open(source, "rb")
+    else:
+        opener = lambda: open(source, "rb")
+
+    cols = ["Protein.Group", "Lib.PG.Q.Value", "Decoy"]
+    pgs: set[str] = set()
+    with opener() as fh:
+        pf = pq.ParquetFile(fh)
+        have = set(pf.schema_arrow.names)
+        use = [c for c in cols if c in have]
+        if "Lib.PG.Q.Value" not in use or "Protein.Group" not in use:
+            raise ValueError(
+                f"report {source} missing Protein.Group/Lib.PG.Q.Value"
+            )
+        for batch in pf.iter_batches(batch_size=batch_size, columns=use):
+            pg = batch.column("Protein.Group").to_pylist()
+            q = batch.column("Lib.PG.Q.Value").to_pylist()
+            dec = (batch.column("Decoy").to_pylist()
+                   if "Decoy" in use else [0] * len(pg))
+            for g, v, d in zip(pg, q, dec):
+                if d == 1 or v is None or v > qvalue_cutoff:
+                    continue
+                pgs.add(g)
+    return len(pgs)
 
 
 # ---------------------------------------------------------------------------
@@ -279,14 +323,16 @@ def proteins_per_tissue_quantmsdiann_procan_filter(
     """ProCan-style filter applied to quantmsdiann's long-format report.
 
     For each ProCan tissue, the set of Protein.Group values that have any
-    proteotypic precursor passing Global.Q.Value <= `qvalue_cutoff` in at
-    least one MS run mapped to that tissue. Matches Gonçalves et al. 2022
-    Methods ("filtered to retain only precursors from proteotypic peptides
-    with Global.Q.Value <= 0.01") — global-FDR-only, no per-cell quant FDR.
+    proteotypic precursor passing Lib.Q.Value <= `qvalue_cutoff` (the
+    methods.md §1 global precursor rule; NO Global.Q.Value gate, NO
+    contaminant/target filter) in at least one MS run mapped to that tissue.
+    This keeps Gonçalves et al. 2022's study-defined comparison criterion
+    (proteotypic peptides, per-tissue union) while using the admissible
+    Lib.Q.Value cut-off.
 
     `parquet_source` is either a local Path or an HTTPS URL. For the URL
     case we stream the parquet via fsspec's HTTPFileSystem with column
-    projection on (`Run`, `Protein.Group`, `Global.Q.Value`, `Proteotypic`);
+    projection on (`Run`, `Protein.Group`, `Lib.Q.Value`, `Proteotypic`);
     only those columns' chunks transit the wire so the 33 GB file never
     needs to be staged locally."""
     import pyarrow.parquet as pq
@@ -302,7 +348,7 @@ def proteins_per_tissue_quantmsdiann_procan_filter(
     cl_to_tissue = parse_procan_mapping(procan_mapping_path)
 
     out: dict[str, set[str]] = {}
-    cols = ["Run", "Protein.Group", "Global.Q.Value", "Proteotypic"]
+    cols = ["Run", "Protein.Group", "Lib.Q.Value", "Proteotypic"]
     source = str(parquet_source)
     if source.startswith(("http://", "https://")):
         import fsspec
@@ -316,10 +362,10 @@ def proteins_per_tissue_quantmsdiann_procan_filter(
         for batch in pf.iter_batches(batch_size=batch_size, columns=cols):
             runs = batch.column("Run").to_pylist()
             pgs = batch.column("Protein.Group").to_pylist()
-            gqv = batch.column("Global.Q.Value").to_pylist()
+            lqv = batch.column("Lib.Q.Value").to_pylist()
             prot = batch.column("Proteotypic").to_pylist()
-            for r, pg, g, p in zip(runs, pgs, gqv, prot):
-                if p != 1 or g is None or g > qvalue_cutoff:
+            for r, pg, q, p in zip(runs, pgs, lqv, prot):
+                if p != 1 or q is None or q > qvalue_cutoff:
                     continue
                 cell = sdrf_no_ext.get(r)
                 if cell is None:
@@ -640,22 +686,23 @@ def write_counts_tsv(
         ("Protein groups (>=2 peptides)", "ProCan-DepMapSanger 2022 (stringent)",
          counts.procan_proteins_stringent,
          "6,692 proteins with >=2 supporting peptides (paper, Results)"),
-        ("Protein groups", "quantmsdiann (DIA-NN, 1% FDR, target-only)",
+        ("Protein groups", "quantmsdiann (DIA-NN, Lib.PG.Q.Value)",
          counts.quantmsdiann_proteins,
-         "post-filter: pg_matrix.tsv rows whose Protein.Group has no "
-         "CONTAM_/Cont_/ENTRAP_/DECOY_/decoy_ token (conservative filter, "
-         "2026-05-21 spec)"),
-        ("Protein groups", "quantmsdiann (DIA-NN, 1% FDR, unfiltered pg_matrix)",
-         counts.quantmsdiann_proteins_pg_matrix_unfiltered,
-         "raw row count of diann_report.pg_matrix.tsv, pre-filter; includes "
-         "CONTAM_/ENTRAP_/DECOY_ rows"),
-        ("Protein groups", "quantmsdiann (DIA-NN, 1% FDR, diannsummary.log)",
+         "global rule: distinct Protein.Group at Lib.PG.Q.Value<=0.01 in "
+         "diann_report.parquet per methods.md §1; no contaminant/target "
+         "filter, no Global.PG.Q.Value gate"),
+        ("Protein groups", "quantmsdiann (DIA-NN, pg_matrix rows)",
+         counts.quantmsdiann_proteins_pg_matrix,
+         "count_matrix_rows on diann_report.pg_matrix.tsv (>=1 non-empty "
+         "sample; zeros counted; no filter) per methods.md §1"),
+        ("Protein groups", "quantmsdiann (DIA-NN, diannsummary.log)",
          counts.quantmsdiann_proteins_unfiltered,
          "audit baseline: diannsummary.log 'Protein groups with global "
-         "q-value <= 0.01' line (unfiltered)"),
-        ("Protein groups (>=2 peptides)", "quantmsdiann (DIA-NN, 1% FDR)",
+         "q-value <= 0.01' line"),
+        ("Protein groups (>=2 peptides)", "quantmsdiann (DIA-NN, Lib rule)",
          counts.quantmsdiann_proteins_stringent,
-         ">=2 unique Stripped.Sequence per Protein.Group (proteotypic) in pr_matrix.tsv"),
+         ">=2 distinct Stripped.Sequence per global Protein.Group "
+         "(Lib.PG.Q.Value<=0.01 / Lib.Q.Value<=0.01), no contaminant filter"),
         ("Precursors", "quantmsdiann (DIA-NN, 1% FDR)",
          counts.quantmsdiann_precursors,
          "from diannsummary.log (Target precursors at 1% global q-value)"),
@@ -683,9 +730,9 @@ def write_counts_tsv(
         )
         note_diann = (
             "per-tissue union of Protein.Group from diann_report.parquet "
-            "filtered to Proteotypic == 1 AND Global.Q.Value <= 0.01 "
-            "(ProCan's filter applied to the long-format report; no "
-            "per-cell quant FDR)"
+            "filtered to Proteotypic == 1 AND Lib.Q.Value <= 0.01 "
+            "(methods.md §1 global precursor rule; no Global.Q.Value gate, "
+            "no contaminant filter; no per-cell quant FDR)"
         )
         for t in tissues:
             rows.append((f"Per-tissue proteins | {t}",
@@ -732,27 +779,29 @@ def main() -> int:  # pragma: no cover
     pg_log, prec = parse_diann_summary_log(log_path)
     print(f"  protein groups (log, unfiltered): {pg_log:,}  precursors: {prec:,}")
 
-    print("Counting pg_matrix.tsv protein-group rows (audit only)...")
-    pg_unf, pg_target = count_target_protein_groups(pg_path)
-    print(f"  pg_matrix rows: unfiltered={pg_unf:,}  target_only={pg_target:,}")
+    print("Counting pg_matrix.tsv quantified rows (count_matrix_rows, no filter)...")
+    pg_matrix_rows = count_matrix_rows(pg_path, PG_METADATA_COLS)
+    print(f"  pg_matrix quantified rows: {pg_matrix_rows:,}")
 
     # Headline protein count and the >=2-peptide count come from the DIA-NN
-    # REPORT (Global.PG.Q.Value <= 0.01 / >=2 unique Stripped.Sequence per
-    # Protein.Group), precomputed on the cluster from the 40 GB report.parquet
-    # and staged. This is the count comparable to ProCan's 8,498 (proteotypic,
-    # Global.Q.Value <= 0.01); the pg_matrix row count is kept only as an audit.
-    report_proteins = int(_rep["proteins_global_tgt"])
-    diann_stringent = int(_rep["stringent_tgt"])
-    print(f"  report protein groups (Global.PG.Q.Value<=0.01, target): {report_proteins:,}")
-    print(f"  report >=2-peptide protein groups (target): {diann_stringent:,}")
+    # REPORT under methods.md §1: global protein groups at Lib.PG.Q.Value <=
+    # 0.01, and >=2 distinct Stripped.Sequence per global protein group
+    # (Lib.PG.Q.Value / Lib.Q.Value). No contaminant/target filter, no
+    # Global.PG.Q.Value gate. Precomputed and staged as a small JSON
+    # (regenerated by recompute_reanalysis_pg_counts.py). This is the count
+    # comparable to ProCan's 8,498; the pg_matrix row count is an audit only.
+    report_proteins = int(_rep["prot_global"])
+    diann_stringent = int(_rep["prot_2pep"])
+    print(f"  report protein groups (Lib.PG.Q.Value<=0.01): {report_proteins:,}")
+    print(f"  report >=2-peptide protein groups (Lib rule): {diann_stringent:,}")
 
     counts = Counts(
         procan_proteins=PROCAN_PROTEINS,
         procan_proteins_stringent=PROCAN_PROTEINS_STRINGENT,
-        # Headline = report-based protein count at 1% global PG FDR (target).
+        # Headline = report-based global protein count at Lib.PG.Q.Value<=0.01.
         quantmsdiann_proteins=report_proteins,
-        quantmsdiann_proteins_unfiltered=int(_rep["proteins_global_unf"]),
-        quantmsdiann_proteins_pg_matrix_unfiltered=pg_unf,
+        quantmsdiann_proteins_unfiltered=pg_log,
+        quantmsdiann_proteins_pg_matrix=pg_matrix_rows,
         quantmsdiann_proteins_stringent=diann_stringent,
         quantmsdiann_precursors=prec,
     )

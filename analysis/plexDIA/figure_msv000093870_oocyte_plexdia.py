@@ -34,7 +34,6 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from analysis.contaminant_filter import is_target_protein_group
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 FIGURES_DIR = REPO_ROOT / "analysis" / "figures" / "plexDIA" / "MSV000093870"
@@ -54,7 +53,7 @@ CHANNEL_LABELS = {"0": "mTRAQ-0", "4": "mTRAQ-4", "8": "mTRAQ-8"}
 # Columns needed for channel-confident identification counting.
 REPORT_COLUMNS = [
     "Run", "Channel", "Protein.Group", "Protein.Ids", "Precursor.Id", "Decoy",
-    "Q.Value", "Channel.Q.Value", "Translated.Q.Value", "Precursor.Quantity",
+    "Channel.Q.Value", "PG.Q.Value",
 ]
 
 
@@ -71,45 +70,42 @@ def _cached_report() -> Path:
 
 
 def load_channel_confident(report_path: Path) -> pd.DataFrame:
-    """Channel-confident, target-only precursor rows.
+    """Decoy-dropped per-channel precursor rows for per-cell counting.
 
-    This reproduces how DIA-NN builds its per-channel protein/precursor
-    expression matrices in plexDIA mode: a precursor is counted in a channel
-    when the run-level ``Q.Value`` and the channel-specific ``Channel.Q.Value``
-    both clear 1% FDR, with a positive channel quantity. Target-only under the
-    shared conservative contaminant/decoy filter.
-
-    Note: we deliberately do NOT additionally gate on ``Translated.Q.Value``.
-    That q-value scores the MBR/translation step specifically; requiring it for
-    every precursor (including ones detected directly in the channel) is
-    over-conservative for identification counting and depresses per-cell
-    counts by ~7% without a corresponding FDR justification. ``Channel.Q.Value``
-    is the threshold DIA-NN itself applies when assembling the channel
-    matrices (``--matrix-qvalue 0.01``).
+    Filter rule (Vadim review, 2026-06-21): per-cell (= per Run x Channel)
+    numbers admit only the per-run q-values, and nothing else. In plexDIA the
+    *channel* is the per-run unit (a single cell = one channel of one run), so
+    the per-cell precursor q-value is ``Channel.Q.Value`` (the channel-level
+    analog of ``Q.Value``; run-level ``Q.Value`` passes a precursor in all
+    channels and is not a per-cell number). Per-cell protein groups use
+    ``PG.Q.Value``. We drop the previous positive-quantity filter (zero
+    quantities are counted) and the contaminant/target filter. Decoys
+    (``Decoy == 1``) are dropped. The cut-offs are applied in
+    :func:`per_cell_counts`.
     """
     df = pq.read_table(report_path, columns=REPORT_COLUMNS).to_pandas()
     df["Channel"] = df["Channel"].astype(str)
-    confident = df[
-        (df["Decoy"] == 0)
-        & (df["Q.Value"] <= 0.01)
-        & (df["Channel.Q.Value"] <= 0.01)
-        & (df["Precursor.Quantity"] > 0)
-    ].copy()
-    confident = confident[confident["Protein.Group"].map(is_target_protein_group)]
-    return confident
+    if "Decoy" in df.columns:
+        df = df[df["Decoy"] == 0]
+    return df.copy()
 
 
 def per_cell_counts(confident: pd.DataFrame) -> pd.DataFrame:
-    """One row per single cell = (Run, Channel): precursor and protein counts."""
-    return (
-        confident.groupby(["Run", "Channel"])
-        .agg(
-            precursors=("Precursor.Id", "nunique"),
-            proteins=("Protein.Group", "nunique"),
-        )
-        .reset_index()
-        .sort_values(["Channel", "Run"])
+    """One row per single cell = (Run, Channel): precursors (Channel.Q.Value
+    <= 1%) and protein groups (PG.Q.Value <= 1%), per the Vadim per-run rule
+    (the channel is the per-run unit in plexDIA)."""
+    prec = (
+        confident[confident["Channel.Q.Value"] <= 0.01]
+        .groupby(["Run", "Channel"])["Precursor.Id"].nunique()
+        .rename("precursors")
     )
+    prot = (
+        confident[confident["PG.Q.Value"] <= 0.01]
+        .groupby(["Run", "Channel"])["Protein.Group"].nunique()
+        .rename("proteins")
+    )
+    cells = pd.concat([prec, prot], axis=1).fillna(0).astype(int).reset_index()
+    return cells.sort_values(["Channel", "Run"])
 
 
 def render_per_cell_figure(cells: pd.DataFrame, svg_path: Path) -> None:

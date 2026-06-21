@@ -8,12 +8,18 @@ plain human FASTA; quantmsdiann re-ran the same raw files with DIA-NN
 2.5.1-enterprise against the same plain (contaminant-only, NO entrapment)
 human FASTA, so both sides search the same space. We therefore compare:
 
-  * main_comparison.svg -- precursors and protein groups at 1% FDR. The newer
-                           build recovers more of both (precursors 16,518 ->
-                           20,412, +24%; protein groups 2,882 -> 3,067, +6%).
-                           counts.tsv also records the entrapment hit rate
-                           (now 0, since the plain FASTA has no entrapment
-                           sequences) for audit parity with earlier runs.
+  * main_comparison.svg -- precursors and protein groups. Both sides ship only
+                           DIA-NN ``*_pr_matrix.tsv`` / ``*_pg_matrix.tsv``
+                           (already q-filtered count matrices, no q-value
+                           columns), so each number is the reproducible count
+                           of quantified matrix ROWS: a row counts if it has
+                           >= 1 non-empty quantity, with NO contaminant/target
+                           filter and zeros counted (methods.md §1). The newer
+                           build recovers more of both (precursors 17,287 ->
+                           20,705; protein groups 2,947 -> 3,099). counts.tsv
+                           also records the entrapment hit rate (now 0, since
+                           the plain FASTA has no entrapment sequences) for
+                           audit parity with earlier runs.
 
 Run:  PYTHONPATH=. python -m analysis.figure_pxd064049_spatial_vs_quantmsdiann
 """
@@ -32,10 +38,11 @@ from analysis import figure_style as fs
 fs.apply_house_style()
 import pandas as pd
 
-from analysis.contaminant_filter import (
-    is_target_protein_group,
-    count_target_precursors,
-    count_target_protein_groups,
+from analysis.contaminant_filter import is_target_protein_group
+from analysis.count_matrix import (
+    PG_METADATA,
+    PR_METADATA,
+    count_matrix_rows,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -89,30 +96,6 @@ def _entrapment_hit_rate(matrix_path: Path) -> tuple[int, int, float]:
     entrap = int(pgs.str.contains("ENTRAP_").sum())
     target = int(pgs.map(is_target_protein_group).sum())
     return entrap, target, (100.0 * entrap / target if target else 0.0)
-
-
-def _qm_counts_parquet() -> tuple[int, int]:
-    """Count quantmsdiann precursors + protein groups from the DIA-NN report
-    PARQUET (not the pg/pr matrices), matching the canonical
-    `count_report_ids` logic Vadim specified: run-specific Q.Value <= 0.05
-    (DIA-NN 2.5.1 recommended per-version q-value), global precursor q <= 0.01,
-    protein groups counted at Global.PG.Q.Value <= 0.01, decoys dropped,
-    target-only (contaminant/entrapment prefixes excluded). Returns
-    (precursors, protein_groups). The parquet is the staged
-    `cache/qm_report.parquet` from the plain-FASTA 2.5.1-enterprise rerun."""
-    import pyarrow.parquet as pq
-    parq = _download(f"{_QB}/diann_report.parquet", CACHE_DIR / "qm_report.parquet")
-    cols = ["Precursor.Id", "Protein.Group", "Q.Value", "Global.Q.Value",
-            "Global.PG.Q.Value", "Decoy"]
-    have = set(pq.ParquetFile(parq).schema_arrow.names)
-    df = pd.read_parquet(parq, columns=[c for c in cols if c in have])
-    if "Decoy" in df.columns:
-        df = df[df["Decoy"] == 0]
-    df = df[(df["Q.Value"] <= 0.05) & (df["Global.Q.Value"] <= 0.01)]
-    df = df[df["Protein.Group"].astype(str).map(is_target_protein_group)]
-    prec = int(df["Precursor.Id"].nunique())
-    pg = int(df[df["Global.PG.Q.Value"] <= 0.01]["Protein.Group"].nunique())
-    return prec, pg
 
 
 def render_main_comparison(or_pr: int, qm_pr: int, or_pg: int, qm_pg: int,
@@ -170,12 +153,14 @@ def _save(fig, svg_path: Path) -> None:
 def main() -> int:  # pragma: no cover
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # quantmsdiann side: count from the report PARQUET (Vadim's rule), not the
-    # matrices. Original (deposited DIA-NN 1.8.1) only ships matrices, so it
-    # stays matrix-counted (its own reported output).
-    qm_pr_t, qm_pg_t = _qm_counts_parquet()
-    or_pr_t = count_target_precursors(_orig_matrix("pr"))[1]
-    or_pg_t = count_target_protein_groups(_orig_matrix("pg"))[1]
+    # Both sides ship only DIA-NN pr/pg matrices (already q-filtered count
+    # matrices, no q-value columns), so every number is the reproducible count
+    # of quantified matrix rows under the methods.md §1 rule: >= 1 non-empty
+    # quantity, no contaminant/target filter, zeros counted, decoys absent.
+    qm_pr_t = count_matrix_rows(_qm_matrix("pr"), PR_METADATA)
+    qm_pg_t = count_matrix_rows(_qm_matrix("pg"), PG_METADATA)
+    or_pr_t = count_matrix_rows(_orig_matrix("pr"), PR_METADATA)
+    or_pg_t = count_matrix_rows(_orig_matrix("pg"), PG_METADATA)
     pr_entrap, _, pr_hit = _entrapment_hit_rate(_qm_matrix("pr"))
     pg_entrap, _, pg_hit = _entrapment_hit_rate(_qm_matrix("pg"))
 

@@ -29,10 +29,7 @@ from analysis import figure_style as fs
 fs.apply_house_style()
 import pandas as pd
 
-from analysis.contaminant_filter import (
-    count_target_protein_groups,
-    is_target_protein_group,
-)
+from analysis.count_matrix import count_matrix_rows
 from analysis.figure_pxd030304_procan_vs_quantmsdiann import (
     PG_METADATA_COLS,
     PR_METADATA_COLS,
@@ -185,16 +182,16 @@ class Counts:
     sun_peptides: int                       # 90,762 (paper)
     sun_tnbc: int                           # 39 (paper)
     sun_non_tnbc: int                       # 37 (paper)
-    # Headline = post-filter pg_matrix protein group count (target-only)
+    # Headline = global protein groups at Lib.PG.Q.Value <= 0.01 in the DIA-NN
+    # report (methods.md §1; no contaminant filter, no Global.PG.Q.Value gate).
     quantmsdiann_proteins_strict: int
     # Audit: diannsummary.log "Protein groups with global q-value <= 0.01"
     quantmsdiann_proteins_strict_unfiltered: int
-    # Audit: pg_matrix.tsv raw row count pre-filter
-    quantmsdiann_proteins_pg_matrix_unfiltered: int
-    quantmsdiann_proteins_consistent: int   # post-consistency-filter union (filtered)
-    quantmsdiann_proteins_consistent_unfiltered: int  # consistency union pre-filter
+    # Audit: pg_matrix.tsv quantified-row count (count_matrix_rows, no filter)
+    quantmsdiann_proteins_pg_matrix: int
+    quantmsdiann_proteins_consistent: int   # consistency-filter union (Lib.Q.Value rule)
     quantmsdiann_peptides: int              # unique Stripped.Sequence
-    quantmsdiann_precursors: int            # 100,499 (diannsummary.log)
+    quantmsdiann_precursors: int            # diannsummary.log target precursors
 
 
 # ---------------------------------------------------------------------------
@@ -272,9 +269,10 @@ def proteins_per_subtype_quantmsdiann_consistency_filter(
     report.
 
     Stage 1 (FDR): keep precursor rows where `Proteotypic == 1` AND
-    `Global.Q.Value <= qvalue_cutoff` AND whose `Run` maps to one of the
-    SDRF cell lines (those rows form the "mapped run space"; runs outside
-    this set are ignored entirely).
+    `Lib.Q.Value <= qvalue_cutoff` (the methods.md §1 global precursor rule;
+    NO Global.Q.Value gate, NO contaminant/target filter) AND whose `Run` maps
+    to one of the SDRF cell lines (those rows form the "mapped run space"; runs
+    outside this set are ignored entirely).
 
     Stage 2 (consistency): for each Protein.Group surviving stage 1,
     compute its mapped-run detection fraction (# distinct mapped runs in
@@ -288,7 +286,7 @@ def proteins_per_subtype_quantmsdiann_consistency_filter(
     (they still count toward the consistency-filter denominator).
 
     Streams the parquet via fsspec's HTTPFileSystem with column projection
-    on (`Run`, `Protein.Group`, `Global.Q.Value`, `Proteotypic`) when given
+    on (`Run`, `Protein.Group`, `Lib.Q.Value`, `Proteotypic`) when given
     an HTTPS URL; only those columns' chunks transit the wire."""
     import pyarrow.parquet as pq
 
@@ -309,7 +307,7 @@ def proteins_per_subtype_quantmsdiann_consistency_filter(
     # mapped. We need per-pg run-set sizes for stage 2 and per-run pg sets
     # for stage 3, so we keep run-set-per-pg as the canonical store.
     pg_to_run_set: dict[str, set[str]] = {}
-    cols = ["Run", "Protein.Group", "Global.Q.Value", "Proteotypic"]
+    cols = ["Run", "Protein.Group", "Lib.Q.Value", "Proteotypic"]
     source = str(parquet_source)
     if source.startswith(("http://", "https://")):
         import fsspec
@@ -323,10 +321,10 @@ def proteins_per_subtype_quantmsdiann_consistency_filter(
         for batch in pf.iter_batches(batch_size=batch_size, columns=cols):
             runs = batch.column("Run").to_pylist()
             pgs = batch.column("Protein.Group").to_pylist()
-            gqv = batch.column("Global.Q.Value").to_pylist()
+            lqv = batch.column("Lib.Q.Value").to_pylist()
             prot = batch.column("Proteotypic").to_pylist()
-            for r, pg, g, p in zip(runs, pgs, gqv, prot):
-                if p != 1 or g is None or g > qvalue_cutoff:
+            for r, pg, q, p in zip(runs, pgs, lqv, prot):
+                if p != 1 or q is None or q > qvalue_cutoff:
                     continue
                 if r not in sdrf_no_ext:
                     continue
@@ -600,33 +598,29 @@ def write_counts_tsv(
          "6,091 SwissProt proteins; proteotypic, Global.Q.Value<=0.01, "
          ">=10% detection across samples (paper, Methods)"),
         ("Protein groups (consistency filter)",
-         "quantmsdiann (DIA-NN, target-only)",
+         "quantmsdiann (DIA-NN)",
          counts.quantmsdiann_proteins_consistent,
-         "post-consistency-filter union; conservative contaminant filter "
-         "(CONTAM_/Cont_/ENTRAP_/DECOY_/decoy_) applied at Protein.Group "
-         "level per 2026-05-21 spec"),
-        ("Protein groups (consistency filter)",
-         "quantmsdiann (DIA-NN, unfiltered)",
-         counts.quantmsdiann_proteins_consistent_unfiltered,
-         "audit baseline: same consistency-filter union BEFORE the "
-         "contaminant filter; includes CONTAM_/ENTRAP_ rows"),
+         "consistency-filter union (Proteotypic==1 AND Lib.Q.Value<=0.01, "
+         ">=10% detection across mapped runs) per methods.md §1; NO "
+         "contaminant/target filter, NO Global.Q.Value gate"),
         ("Protein groups (1% FDR, no consistency)", "Sun et al. 2023 (paper pre-filter)",
          counts.sun_proteins_raw,
          "8,952 proteins identified pre-consistency-filter (paper, Methods)"),
         ("Protein groups (1% FDR, no consistency)",
-         "quantmsdiann (DIA-NN, target-only)",
+         "quantmsdiann (DIA-NN, Lib.PG.Q.Value)",
          counts.quantmsdiann_proteins_strict,
-         "report-based: unique Protein.Group at Global.PG.Q.Value<=0.01 in "
-         "diann_report.parquet (DIA-NN 2.5.1, --qvalue 0.05), contaminant/"
-         "entrapment/decoy stripped; comparable to Sun's 8,952"),
+         "report-based: distinct Protein.Group at Lib.PG.Q.Value<=0.01 in "
+         "diann_report.parquet (DIA-NN 2.5.1) per methods.md §1; no "
+         "contaminant filter; comparable to Sun's 8,952"),
         ("Protein groups (1% FDR, no consistency)",
-         "quantmsdiann (DIA-NN, unfiltered pg_matrix)",
-         counts.quantmsdiann_proteins_pg_matrix_unfiltered,
-         "raw row count of diann_report.pg_matrix.tsv, pre-filter"),
+         "quantmsdiann (DIA-NN, pg_matrix rows)",
+         counts.quantmsdiann_proteins_pg_matrix,
+         "count_matrix_rows on diann_report.pg_matrix.tsv (>=1 non-empty "
+         "sample; zeros counted; no filter) per methods.md §1"),
         ("Protein groups (1% FDR, no consistency)",
          "quantmsdiann (DIA-NN, diannsummary.log)",
          counts.quantmsdiann_proteins_strict_unfiltered,
-         "audit baseline: diannsummary.log unfiltered headline"),
+         "audit baseline: diannsummary.log headline"),
         ("Proteotypic peptides", "Sun et al. 2023 (paper headline)",
          counts.sun_peptides,
          "90,762 proteotypic peptides under the same consistency filter "
@@ -712,29 +706,26 @@ def main() -> int:  # pragma: no cover
     pg_log, prec = parse_diann_summary_log(log_path)
     print(f"  protein groups (log, unfiltered): {pg_log:,}  precursors: {prec:,}")
 
-    print("Counting pg_matrix.tsv protein-group rows (unfiltered + target-only)...")
-    pg_unf, pg_target = count_target_protein_groups(pg_path)
-    print(f"  pg_matrix rows: unfiltered={pg_unf:,}  target_only={pg_target:,} "
-          f"(delta {pg_unf - pg_target:,})")
+    print("Counting pg_matrix.tsv quantified rows (count_matrix_rows, no filter)...")
+    pg_matrix_rows = count_matrix_rows(pg_path, PG_METADATA_COLS)
+    print(f"  pg_matrix quantified rows: {pg_matrix_rows:,}")
 
     print("Counting unique proteotypic peptides in pr_matrix.tsv...")
     pep = unique_peptides_quantified(pr_path)
     print(f"  unique Stripped.Sequence: {pep:,}")
 
-    # Report-based protein-group count at 1% GLOBAL protein-group q-value
-    # (Global.PG.Q.Value <= 0.01), precomputed on the cluster from the
-    # diann_report.parquet (DIA-NN 2.5.1, --qvalue 0.05) and staged. This is
-    # the count that is methodologically comparable to Sun et al.'s 8,952
-    # ("strict 1% FDR, no consistency filter"); the pg_matrix row count
-    # understates it because the matrix applies the additional
-    # --matrix-qvalue / --matrix-spec-q passes.
+    # Report-based protein-group count at the global rule (Lib.PG.Q.Value <=
+    # 0.01) from diann_report.parquet (DIA-NN 2.5.1), per methods.md §1: no
+    # contaminant/target filter, no Global.PG.Q.Value gate. Precomputed and
+    # staged as a small JSON (regenerated by recompute_reanalysis_pg_counts.py);
+    # this is the count methodologically comparable to Sun et al.'s 8,952
+    # ("strict 1% FDR, no consistency filter"). The pg_matrix row count
+    # understates it because the matrix applies the extra --matrix-* passes.
     import json as _json
     with open(DATA_DIR / "diann_report_protein_counts.json", encoding="utf-8") as _fh:
         _rep_prot = _json.load(_fh)
-    report_proteins_target = int(_rep_prot["target"])
-    report_proteins_unfiltered = int(_rep_prot["unfiltered"])
-    print(f"  report protein groups (Global.PG.Q.Value<=0.01): "
-          f"target={report_proteins_target:,} unfiltered={report_proteins_unfiltered:,}")
+    report_proteins = int(_rep_prot["prot_global"])
+    print(f"  report protein groups (Lib.PG.Q.Value<=0.01): {report_proteins:,}")
 
     print("Computing per-subtype consistency-filtered protein sets "
           "(streaming parquet)...")
@@ -746,19 +737,11 @@ def main() -> int:  # pragma: no cover
         sdrf_path,
         BC_SUBTYPES,
     )
-    diann_proteins_consistent_unf = set()
     diann_proteins_consistent = set()
     for s, pgs in diann_per_subtype.items():
-        diann_proteins_consistent_unf.update(pgs)
-        # Apply the conservative contaminant filter at the Protein.Group
-        # level (consistent with extract_accessions_diann's policy).
-        diann_proteins_consistent.update(
-            pg_str for pg_str in pgs if is_target_protein_group(pg_str)
-        )
+        diann_proteins_consistent.update(pgs)
         print(f"  {s:<14s} {len(pgs):>6,}")
-    print(f"  union across subtypes (unfiltered): "
-          f"{len(diann_proteins_consistent_unf):,}")
-    print(f"  union across subtypes (target_only): "
+    print(f"  union across subtypes (Lib.Q.Value rule, no contaminant filter): "
           f"{len(diann_proteins_consistent):,}")
 
     counts = Counts(
@@ -767,16 +750,13 @@ def main() -> int:  # pragma: no cover
         sun_peptides=SUN_PEPTIDES,
         sun_tnbc=SUN_TNBC,
         sun_non_tnbc=SUN_NON_TNBC,
-        # Strict (no-consistency) count is the REPORT-based protein-group count
-        # at 1% global PG q-value (target-only), comparable to Sun's 8,952 --
-        # NOT the pg_matrix row count (kept below as an audit field).
-        quantmsdiann_proteins_strict=report_proteins_target,
-        quantmsdiann_proteins_strict_unfiltered=report_proteins_unfiltered,
-        quantmsdiann_proteins_pg_matrix_unfiltered=pg_unf,
+        # Strict (no-consistency) count is the REPORT-based global protein-group
+        # count at Lib.PG.Q.Value <= 0.01, comparable to Sun's 8,952. The
+        # pg_matrix row count is kept below as an audit field.
+        quantmsdiann_proteins_strict=report_proteins,
+        quantmsdiann_proteins_strict_unfiltered=pg_log,
+        quantmsdiann_proteins_pg_matrix=pg_matrix_rows,
         quantmsdiann_proteins_consistent=len(diann_proteins_consistent),
-        quantmsdiann_proteins_consistent_unfiltered=(
-            len(diann_proteins_consistent_unf)
-        ),
         quantmsdiann_peptides=pep,
         quantmsdiann_precursors=prec,
     )

@@ -15,10 +15,10 @@ for DIA-NN ``v2_5_1`` and ``v2_5_1_enterprise``.
 
 Pipeline: https://github.com/bigbio/quantmsdiann
 
-Definitions (1% FDR, target-only)
----------------------------------
-* phosphopeptides: distinct ``Modified.Sequence`` carrying ``UniMod:21`` with
-  ``Q.Value <= 0.01`` and ``Global.Q.Value <= 0.01`` (target protein groups);
+Definitions (Vadim filter rule; see methods.md §1)
+--------------------------------------------------
+* phosphopeptides: distinct ``Modified.Sequence`` carrying ``UniMod:21`` at the
+  global precursor rule ``Lib.Q.Value <= 0.01`` (no contaminant/target filter);
 * sites_all: phospho sites from the DIA-NN site report (``Modification``
   contains ``UniMod:21``), unique by ``(Protein, Site)``;
 * sites_classI: the same restricted to localization ``Probability >= 0.99``.
@@ -35,7 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from analysis.count_report_ids import _CONTAM_RE, Q_THRESHOLD
+from analysis.count_report_ids import Q_THRESHOLD
 
 REPO = Path(__file__).resolve().parents[1]
 OUT_DIR = REPO / "data" / "phospho"
@@ -74,10 +74,10 @@ def _count(ftp_dir: str, version: str) -> tuple[int, int, int]:
     import pyarrow.parquet as pq
     rep = _cached(ftp_dir, version, "diann_report.parquet")
     r = pq.read_table(rep, columns=[
-        "Modified.Sequence", "Q.Value", "Global.Q.Value", "Protein.Group",
+        "Modified.Sequence", "Lib.Q.Value", "Protein.Group",
     ]).to_pandas()
-    is_target = ~r["Protein.Group"].fillna("").str.contains(_CONTAM_RE)
-    r = r[(r["Q.Value"] <= Q_THRESHOLD) & (r["Global.Q.Value"] <= Q_THRESHOLD) & is_target]
+    # Global precursor rule (Vadim): Lib.Q.Value only, no other filter.
+    r = r[r["Lib.Q.Value"] <= Q_THRESHOLD]
     phosphopeptides = r.loc[
         r["Modified.Sequence"].str.contains(PHOSPHO, na=False), "Modified.Sequence"
     ].nunique()

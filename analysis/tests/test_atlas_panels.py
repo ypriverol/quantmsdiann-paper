@@ -434,27 +434,32 @@ def test_set_region_sizes_n5_uses_all_five_key() -> None:
     assert sum(out.values()) == len(union)
 
 
-def test_dataset_headlines_diann_counts_now_target_only(
+def test_dataset_headlines_diann_counts_use_matrix_rows_no_filter(
     tmp_path: Path, monkeypatch
 ) -> None:
     """`refresh_dataset_headlines()` populates the `DATASET_HEADLINES`
-    diann_count with the target-only protein-group count, computed via
-    `count_target_protein_groups` on the on-disk pg_matrix.tsv. Synthetic
-    pg_matrix fixture: 2 target rows + 1 contam row -> headline = 2."""
+    diann_count from a deposited count matrix via `count_matrix_rows`
+    under the methods.md §1 rule: NO contaminant/target filter (CONTAM_
+    rows ARE counted), zeros counted, a row counts iff it has >=1
+    non-empty sample value. Synthetic pg_matrix fixture: 3 rows with
+    quantities (incl. a CONTAM_ row and a literal-0 row) + 1 fully-empty
+    row -> headline = 3."""
     from analysis import figure_combined_cell_lines_atlas as atlas
 
-    # Synthetic pg_matrix file (1 sample column required for shape parity).
+    # Synthetic pg_matrix file (2 sample columns). Row 4 is fully empty
+    # across the sample columns and must NOT be counted; the literal-0
+    # and CONTAM_ rows MUST be counted (no contaminant filter).
     pg = tmp_path / "pg_matrix.tsv"
     pg.write_text(
         "Protein.Group\tProtein.Names\tGenes\tFirst.Protein.Description\t"
-        "N.Sequences\tN.Proteotypic.Sequences\tRun_A.d\n"
-        "P00001\tn1\tG1\td\t1\t1\t100\n"
-        "P00002\tn2\tG2\td\t1\t1\t200\n"
-        "CONTAM_P00003\tn3\tG3\td\t1\t1\t300\n"
+        "N.Sequences\tN.Proteotypic.Sequences\tRun_A.d\tRun_B.d\n"
+        "P00001\tn1\tG1\td\t1\t1\t100\t200\n"
+        "P00002\tn2\tG2\td\t1\t1\t0\t\n"          # literal 0 counts
+        "CONTAM_P00003\tn3\tG3\td\t1\t1\t300\t\n"  # contaminant counts (no filter)
+        "P00004\tn4\tG4\td\t1\t1\t\t\n"            # fully empty -> not counted
     )
-    # Snapshot the originals so we can restore.
+    # Snapshot the original so we can restore.
     orig_headlines = atlas.DATASET_HEADLINES["PXD041421"]
-    orig_unf = atlas.DATASET_HEADLINES_UNFILTERED.get("PXD041421")
     try:
         # Point only the PXD041421 pg_matrix at the synthetic file; the
         # other 4 cohorts continue to resolve to their on-disk paths and
@@ -462,13 +467,10 @@ def test_dataset_headlines_diann_counts_now_target_only(
         monkeypatch.setattr(atlas, "PXD041421_PG_MATRIX", pg)
         atlas.refresh_dataset_headlines()
         h = atlas.DATASET_HEADLINES["PXD041421"]
-        assert h.diann_count == 2  # 2 target rows, CONTAM dropped
-        assert atlas.DATASET_HEADLINES_UNFILTERED["PXD041421"] == 3
+        assert h.diann_count == 3  # 3 quantified rows; CONTAM kept, zero kept
     finally:
         # Restore so subsequent tests see the original headline.
         atlas.DATASET_HEADLINES["PXD041421"] = orig_headlines
-        if orig_unf is not None:
-            atlas.DATASET_HEADLINES_UNFILTERED["PXD041421"] = orig_unf
 
 
 def test_render_atlas_falls_back_when_runs_metadata_missing(tmp_path: Path) -> None:

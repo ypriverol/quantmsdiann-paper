@@ -86,8 +86,9 @@ def test_proteins_per_tissue_quantmsdiann_procan_filter_global_fdr(
     tmp_path: Path,
 ) -> None:
     """ProCan-style filter applied to quantmsdiann's long-format parquet:
-    Proteotypic == 1 AND Global.Q.Value <= 0.01 (no per-cell quant FDR).
-    Per tissue, union of Protein.Group across runs of that tissue."""
+    Proteotypic == 1 AND Lib.Q.Value <= 0.01 (methods.md §1 global precursor
+    rule; no Global.Q.Value gate, no per-cell quant FDR). Per tissue, union of
+    Protein.Group across runs of that tissue."""
     import pyarrow as pa
     import pyarrow.parquet as pq
     from analysis.figure_pxd030304_procan_vs_quantmsdiann import (
@@ -98,9 +99,10 @@ def test_proteins_per_tissue_quantmsdiann_procan_filter_global_fdr(
     parquet_table = pa.table({
         "Run": ["run_a", "run_a", "run_b", "run_c", "run_a", "run_c"],
         "Protein.Group": ["P1", "P2", "P1", "P3", "P4", "P5"],
-        "Global.Q.Value": [0.001, 0.5,   0.005, 0.001, 0.001, 0.05],
+        "Lib.Q.Value":   [0.001, 0.5,   0.005, 0.001, 0.001, 0.05],
         "Proteotypic":   [1,     1,     1,     1,     0,     1],
-        # Per-cell Q.Value left out — proves we don't read or filter on it.
+        # Per-cell Q.Value / Global.Q.Value left out — proves we filter only on
+        # Lib.Q.Value (the admissible global precursor cut-off).
     })
     parquet_path = tmp_path / "report.parquet"
     pq.write_table(parquet_table, parquet_path)
@@ -122,8 +124,8 @@ def test_proteins_per_tissue_quantmsdiann_procan_filter_global_fdr(
     out = proteins_per_tissue_quantmsdiann_procan_filter(
         parquet_path, sdrf_p, map_p, batch_size=2,
     )
-    # P2 dropped (Global.Q.Value 0.5 > 0.01). P4 dropped (Proteotypic == 0).
-    # P5 dropped (Global.Q.Value 0.05 > 0.01).
+    # P2 dropped (Lib.Q.Value 0.5 > 0.01). P4 dropped (Proteotypic == 0).
+    # P5 dropped (Lib.Q.Value 0.05 > 0.01).
     # P1: in run_a (BC-1) and run_b (BC-1) -> leukemia. P3: in run_c -> colorectal.
     assert out == {
         "Haematopoietic and Lymphoid": {"P1"},
@@ -294,12 +296,13 @@ def test_quantmsdiann_per_run_completeness_from_pg_matrix(tmp_path: Path) -> Non
     }
 
 
-def test_counts_tsv_carries_unfiltered_and_target_rows_pxd030304(
+def test_counts_tsv_carries_lib_and_matrix_rows_pxd030304(
     tmp_path: Path,
 ) -> None:
-    """`write_counts_tsv` writes paired rows for the contaminant-filter
-    audit (2026-05-21 spec §1.7): the headline `target-only` row plus
-    the unfiltered pg_matrix and diannsummary.log baseline rows."""
+    """`write_counts_tsv` writes the methods.md §1 headline row
+    (global protein groups at Lib.PG.Q.Value<=0.01) plus the auditable
+    count_matrix_rows and diannsummary.log baseline rows. No contaminant /
+    target-only row."""
     from analysis.figure_pxd030304_procan_vs_quantmsdiann import (
         Counts, write_counts_tsv,
     )
@@ -307,17 +310,19 @@ def test_counts_tsv_carries_unfiltered_and_target_rows_pxd030304(
     counts = Counts(
         procan_proteins=8498,
         procan_proteins_stringent=6692,
-        quantmsdiann_proteins=9050,                       # target-only
-        quantmsdiann_proteins_unfiltered=9370,            # diannsummary.log
-        quantmsdiann_proteins_pg_matrix_unfiltered=9251,  # pg_matrix raw row count
+        quantmsdiann_proteins=9050,                # global, Lib.PG.Q.Value
+        quantmsdiann_proteins_unfiltered=9370,     # diannsummary.log
+        quantmsdiann_proteins_pg_matrix=9251,      # count_matrix_rows
         quantmsdiann_proteins_stringent=8149,
         quantmsdiann_precursors=153644,
     )
     p = tmp_path / "counts.tsv"
     write_counts_tsv(counts, p)
     text = p.read_text(encoding="utf-8")
-    assert "quantmsdiann (DIA-NN, 1% FDR, target-only)" in text
-    assert "quantmsdiann (DIA-NN, 1% FDR, unfiltered pg_matrix)" in text
-    assert "quantmsdiann (DIA-NN, 1% FDR, diannsummary.log)" in text
+    assert "quantmsdiann (DIA-NN, Lib.PG.Q.Value)" in text
+    assert "quantmsdiann (DIA-NN, pg_matrix rows)" in text
+    assert "quantmsdiann (DIA-NN, diannsummary.log)" in text
+    # No leftover contaminant/target-only headline.
+    assert "target-only" not in text
     # All three numbers present.
     assert "9050" in text and "9370" in text and "9251" in text

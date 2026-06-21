@@ -778,23 +778,22 @@ def load_report_counts() -> dict[tuple[str, str], dict]:
     The matrices bake in `--matrix-spec-q` (0.05 run-specific) and, because the
     pipeline sets `--qvalue` to 0.01 for v1.8.1 but 0.05 for v2.5.1/enterprise,
     matrix row counts are filtered at *different* run-specific q-values per
-    version and are therefore not comparable. These counts instead apply a
-    uniform run AND global q-value <= 0.01 to every version, counting unique
-    `Precursor.Id` (min1 / min3 = identified in >=1 / >=3 runs) and unique
-    `Protein.Group` at global PG q <= 0.01. Target-only drops
-    contaminant/entrapment/decoy groups; the unfiltered companion is kept for
-    the audit TSV. Computed once on the cluster (where the multi-GB reports
-    live) and staged at data/quantmsdiann_benchmarks/report_counts.tsv. Keyed
-    by (dataset, version)."""
+    version and are therefore not comparable. These counts instead follow the
+    Vadim filter rule (see analysis.count_report_ids): global totals on
+    `Lib.Q.Value` / `Lib.PG.Q.Value` (`prec_global` / `prot_global`),
+    replicate precursors on `Q.Value` (`prec_min1` / `prec_min3`), and per-run
+    protein groups on `PG.Q.Value` (`prot_perrun_avg` / `prot_complete`). No
+    contaminant/target filter. Recomputed from the public FTP reports by
+    analysis.recompute_report_counts and staged at
+    data/quantmsdiann_benchmarks/report_counts.tsv. Keyed by (dataset, version)."""
     df = pd.read_csv(REPORT_COUNTS_PATH, sep="\t",
                      dtype={"dataset": str, "version": str})
     out: dict[tuple[str, str], dict] = {}
     for _, r in df.iterrows():
         out[(r["dataset"], r["version"])] = {
             k: int(r[k]) for k in (
-                "prec_min1_tgt", "prec_min1_unf", "prec_min3_tgt",
-                "prec_min3_unf", "proteins_tgt", "proteins_unf",
-                "prot_avg_tgt", "prot_complete_tgt",
+                "prec_min1", "prec_min3", "prec_global", "prot_global",
+                "prot_perrun_avg", "prot_complete",
             )
         }
     return out
@@ -806,20 +805,20 @@ def main() -> int:  # pragma: no cover
     SUPP_DIR.mkdir(parents=True, exist_ok=True)
     FIG_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # quantmsdiann rows for the headline main panels. Counts come from the
-    # DIA-NN *report* (not the *_matrix.tsv files) at a uniform run+global
-    # q <= 0.01 across all versions (see load_report_counts), target-only.
-    # Each row is (dataset, version, precursors_min1, proteins).
+    # quantmsdiann rows for the headline main panels, under the Vadim filter
+    # rule (see load_report_counts). Dataset TOTALS are global numbers:
+    # precursors -> prec_global (Lib.Q.Value), proteins -> prot_global
+    # (Lib.PG.Q.Value). Replicate precursors -> prec_min3 (Q.Value). Per-run
+    # protein panels -> prot_perrun_avg / prot_complete (PG.Q.Value). There is
+    # no contaminant/target filter, so the "unfiltered" companion equals the
+    # value (kept only so the audit TSV schema is stable).
+    # Each row is (dataset, version, precursors_total, proteins_total).
     quantmsdiann_rows: list[tuple[str, str, int, int]] = []
-    # Parallel ≥3-replicate quantmsdiann counts (target-only).
     quantmsdiann_rows_min3: list[tuple[str, str, int, int]] = []
-    # Companion unfiltered rows for the audit TSV (line counts before the
-    # contaminant / entrapment / decoy filter). Per 2026-05-21 spec.
     quantmsdiann_rows_unfiltered: list[tuple[str, str, int, int]] = []
     quantmsdiann_rows_min3_unfiltered: list[tuple[str, str, int, int]] = []
-    # Per-run-average and complete-profile protein rows (DIA-NN author's metric,
-    # run-specific PG.Q <= 1%): these drive the version-comparison protein panels.
-    # The union `proteins` above feeds only the auditable counts TSV.
+    # Per-run-average and complete-profile protein rows (PG.Q.Value only):
+    # these drive the version-comparison protein panels.
     quantmsdiann_rows_protavg: list[tuple[str, str, int, int]] = []
     quantmsdiann_rows_complete: list[tuple[str, str, int, int]] = []
     report_counts = load_report_counts()
@@ -830,32 +829,31 @@ def main() -> int:  # pragma: no cover
                 print(f"WARN: no report_counts for {dataset}/{version}",
                       file=sys.stderr)
                 continue
-            precursors, precursors_unf = c["prec_min1_tgt"], c["prec_min1_unf"]
-            precursors_min3, precursors_min3_unf = (
-                c["prec_min3_tgt"], c["prec_min3_unf"])
-            proteins, proteins_unf = c["proteins_tgt"], c["proteins_unf"]
+            precursors = c["prec_global"]        # global total (Lib.Q.Value)
+            precursors_min3 = c["prec_min3"]     # >=3-run replicate (Q.Value)
+            proteins = c["prot_global"]          # global total (Lib.PG.Q.Value)
             quantmsdiann_rows.append((dataset, version, precursors, proteins))
             quantmsdiann_rows_min3.append(
                 (dataset, version, precursors_min3, proteins)
             )
+            # No target filter -> unfiltered == value.
             quantmsdiann_rows_unfiltered.append(
-                (dataset, version, precursors_unf, proteins_unf)
+                (dataset, version, precursors, proteins)
             )
             quantmsdiann_rows_min3_unfiltered.append(
-                (dataset, version, precursors_min3_unf, proteins_unf)
+                (dataset, version, precursors_min3, proteins)
             )
             quantmsdiann_rows_protavg.append(
-                (dataset, version, precursors, c["prot_avg_tgt"])
+                (dataset, version, precursors, c["prot_perrun_avg"])
             )
             quantmsdiann_rows_complete.append(
-                (dataset, version, precursors, c["prot_complete_tgt"])
+                (dataset, version, precursors, c["prot_complete"])
             )
-            print(f"{dataset} {version}: precursors_min1={precursors:,} "
-                  f"(unfiltered={precursors_unf:,})  "
-                  f"precursors_min3={precursors_min3:,} "
-                  f"(unfiltered={precursors_min3_unf:,})  "
-                  f"proteins={proteins:,} (unfiltered={proteins_unf:,})  "
-                  f"[report, run+global q<=0.01]")
+            print(f"{dataset} {version}: precursors_global={precursors:,}  "
+                  f"precursors_min3={precursors_min3:,}  "
+                  f"proteins_global={proteins:,}  "
+                  f"prot_perrun_avg={c['prot_perrun_avg']:,}  "
+                  f"[report, Vadim rule]")
 
     proteobench_rows: dict[str, list[tuple[str, str, int, str]]] = {}
     proteobench_rows_min3: dict[str, list[tuple[str, str, int, str]]] = {}
