@@ -1180,7 +1180,7 @@ def render_resources_boxplot(
     )
     ax_rss.boxplot(
         rss_data, vert=False, widths=0.62,
-        labels=steps, showfliers=False, **_box_kw,
+        tick_labels=steps, showfliers=False, **_box_kw,
     )
     ax_rss.set_xlabel("Peak RSS per task (GB)", fontsize=10)
     # Peak RSS spans ~0.1-500 GB (4 orders of magnitude across glue vs DIA-NN
@@ -1209,7 +1209,7 @@ def render_resources_boxplot(
 
     ax_cpu.boxplot(
         cpu_data, vert=False, widths=0.62,
-        labels=steps, showfliers=False, **_box_kw,
+        tick_labels=steps, showfliers=False, **_box_kw,
     )
     ax_cpu.set_xlabel("Threading efficiency (%)", fontsize=10)
     # 100 % reference: full saturation of the 12-thread allocation.
