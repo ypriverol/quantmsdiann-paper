@@ -36,8 +36,9 @@ A dataset TOTAL (union across runs) is a **global** number, so headline "total
 precursors / protein groups" use `Lib.Q.Value` / `Lib.PG.Q.Value`. Per-cell and
 per-run distributions, and >=3-run replicate counts, use `Q.Value` / `PG.Q.Value`.
 
-Canonical implementation: [`analysis/count_report_ids.py`](analysis/count_report_ids.py)
-(`count_report`). Emitted keys: `prec_min1`, `prec_min3` (Q.Value replicate), `prec_global`
+Canonical implementation: the `count_report` function in
+[`scripts/rebuild.py`](scripts/rebuild.py) (formerly `analysis/count_report_ids.py`).
+Emitted keys: `prec_min1`, `prec_min3` (Q.Value replicate), `prec_global`
 (Lib.Q.Value), `prot_global` (Lib.PG.Q.Value), `prot_perrun_avg`, `prot_complete`
 (PG.Q.Value), `peptides`, `prot_2pep` (global rule).
 
@@ -139,6 +140,13 @@ and the HeLa low-input dilution series in the same deposit are not used.)_
 ---
 
 ## 3. Script inventory + data flow
+
+**All analysis logic now lives in ONE self-contained script, `scripts/rebuild.py`**
+(the former `analysis/*.py` modules were inlined into it; each is now a named
+stage, listed by `python -m scripts.rebuild --list`). The rows below name the
+former module / the in-`rebuild.py` function for provenance; there are no
+separate `analysis/*.py` files anymore (only `analysis/figures/` outputs and
+`analysis/requirements.txt` remain).
 
 Flow: **FTP report -> counter -> figure-data TSV -> figure SVG -> (rsvg) PDF -> manuscript**.
 
