@@ -3,21 +3,13 @@
 Each of the four ProteoBench benchmark datasets has been processed through
 quantmsdiann across DIA-NN versions (1.8.1, 2.5.1, 2.5.1-enterprise). This script:
 
-- Pulls each version's `diann_report.{pr,pg}_matrix.tsv` from PRIDE FTP
-  (cached on disk).
-- Counts data rows = precursors / protein groups quantified at 1% FDR
-  with the matrix-level filter that is identical to ProteoBench's
-  `nr_prec` definition.
+- Reads the quantmsdiann headline counts from `report_counts.tsv` (produced by
+  the `report_counts` stage of scripts/rebuild.py under the methods.md §1 rule:
+  global totals at Lib.PG.Q.Value / Lib.Q.Value, per-run at PG.Q.Value /
+  Q.Value; no contaminant/target filter, zeros counted).
 - Fetches public ProteoBench submissions for the matching module from the
   Proteobench/Results_quant_ion_DIA_<module> repo (cached on disk).
-- Renders two paper-ready figure sets and an auditable counts.tsv.
-
-We count matrix rows rather than `diannsummary.log` headline numbers because
-the log format is not uniform across DIA-NN versions: 1.8.1 doesn't print
-the "Protein groups with global q-value <= 0.01" line and 2.1.0-2.3.2 don't
-print the "Target precursors at 1% global q-value" line. Matrix row counts
-are well-defined across all versions and match how ProteoBench computes
-nr_prec from the same pr_matrix.tsv.
+- Renders the paper-ready figure sets and an auditable counts.tsv.
 
 ProteoBench ion-level modules report precursors only — there is no protein
 count in their public datapoints, so the head-to-head supp is precursors
@@ -39,7 +31,6 @@ fs.apply_house_style()
 import pandas as pd
 import requests
 
-from analysis.contaminant_filter import is_target_protein_group
 from analysis.figure_original_vs_quantmsdiann import (
     download_if_missing,
     SUMMARY_LOG_PROTEIN_LINE_RE,
@@ -119,41 +110,6 @@ def parse_diann_summary_log(log_path: Path) -> tuple[int, int]:
             "'Target precursors at 1% global q-value: N' not found in log"
         )
     return protein_groups, precursors
-
-
-def count_matrix_data_rows(matrix_path: Path) -> int:
-    """Count data rows in a TSV (lines minus the header). Used for both
-    pr_matrix.tsv (one row per precursor at 1% precursor+pg FDR) and
-    pg_matrix.tsv (one row per protein group). Streams the file so we
-    never load multi-MB matrices into memory."""
-    n = 0
-    with open(matrix_path, "rb") as fh:
-        for _ in fh:
-            n += 1
-    # The matrix always has at least a header row; subtract it. Treat an
-    # empty file as 0 data rows rather than -1.
-    return max(0, n - 1)
-
-
-def count_matrix_data_rows_split(matrix_path: Path) -> tuple[int, int]:
-    """Return `(unfiltered_rows, target_only_rows)` from a DIA-NN
-    pr_matrix.tsv / pg_matrix.tsv. Target-only drops rows whose
-    `Protein.Group` carries a contaminant / entrapment / decoy prefix
-    (see `analysis.contaminant_filter.is_target_protein_group`).
-
-    Used by the benchmark counts: the headline number consumed by
-    figures is the target-only count; the unfiltered count is kept in
-    the audit TSV for reviewer comparison."""
-    unfiltered = count_matrix_data_rows(matrix_path)
-    try:
-        df = pd.read_csv(
-            matrix_path, sep="\t", usecols=["Protein.Group"], dtype=str,
-        )
-    except (FileNotFoundError, OSError, ValueError):
-        return (unfiltered, unfiltered)
-    pgs = df["Protein.Group"].dropna()
-    target = int(pgs.map(is_target_protein_group).sum())
-    return (unfiltered, target)
 
 
 LIBRARY_KIND_EMPIRICAL = "empirical"
@@ -305,65 +261,6 @@ def parse_proteobench_datapoints_at_threshold(
         else:
             kind = LIBRARY_KIND_OTHER_TOOL
         yield str(software), str(version), int(nr_prec), kind
-
-
-def count_pr_matrix_min_replicates(
-    matrix_path: Path,
-    min_replicates: int,
-) -> int:
-    """Count precursors in a DIA-NN pr_matrix.tsv that have a non-NA
-    intensity in AT LEAST `min_replicates` of the per-run sample columns.
-
-    Sample columns are every column past the standard DIA-NN metadata block
-    (everything that is not one of the well-known metadata column names).
-    The four ProteoBench DIA pr_matrix.tsv files always have exactly six
-    sample columns (Condition_A_REP1..3 + Condition_B_REP1..3), so a
-    `min_replicates == 3` count matches Robbe's "≥3 replicate observations"
-    bucket for the head-to-head supp figure.
-
-    Returns the **target-only** count (rows whose Protein.Group passes
-    `analysis.contaminant_filter.is_target_protein_group`). Callers that
-    need the unfiltered baseline as well should use
-    `count_pr_matrix_min_replicates_split`.
-    """
-    _unf, target = count_pr_matrix_min_replicates_split(
-        matrix_path, min_replicates
-    )
-    return target
-
-
-def count_pr_matrix_min_replicates_split(
-    matrix_path: Path,
-    min_replicates: int,
-) -> tuple[int, int]:
-    """Return `(unfiltered, target_only)` precursor counts at the
-    ≥`min_replicates` threshold. Target-only drops rows whose
-    Protein.Group carries a contaminant / entrapment / decoy prefix
-    (`Cont_`, `CONTAM_`, `ENTRAP_`, `DECOY_`, `decoy_`) per the
-    2026-05-21 conservative-filter spec.
-
-    Used by the benchmark headline-count writers so the audit TSV can
-    record both numbers and reviewers can verify the ~1 % contamination
-    drop predicted by the spec."""
-    metadata = {
-        "Protein.Group", "Protein.Ids", "Protein.Names", "Genes",
-        "First.Protein.Description", "Proteotypic", "Stripped.Sequence",
-        "Modified.Sequence", "Precursor.Charge", "Precursor.Id",
-    }
-    df = pd.read_csv(matrix_path, sep="\t", dtype=str)
-    sample_cols = [c for c in df.columns if c not in metadata]
-    if not sample_cols:
-        return (0, 0)
-    non_na = df[sample_cols].notna().sum(axis=1)
-    passes = non_na >= min_replicates
-    unfiltered = int(passes.sum())
-    if "Protein.Group" not in df.columns:
-        return (unfiltered, unfiltered)
-    target_mask = passes & df["Protein.Group"].map(
-        lambda v: is_target_protein_group(v) if isinstance(v, str) else False
-    )
-    target = int(target_mask.sum())
-    return (unfiltered, target)
 
 
 def normalise_software_name(name: str) -> str:
@@ -784,7 +681,7 @@ def load_report_counts() -> dict[tuple[str, str], dict]:
     replicate precursors on `Q.Value` (`prec_min1` / `prec_min3`), and per-run
     protein groups on `PG.Q.Value` (`prot_perrun_avg` / `prot_complete`). No
     contaminant/target filter. Recomputed from the public FTP reports by
-    analysis.recompute_report_counts and staged at
+    the rebuild `report_counts` stage and staged at
     data/quantmsdiann_benchmarks/report_counts.tsv. Keyed by (dataset, version)."""
     df = pd.read_csv(REPORT_COUNTS_PATH, sep="\t",
                      dtype={"dataset": str, "version": str})

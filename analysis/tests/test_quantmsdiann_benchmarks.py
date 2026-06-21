@@ -58,45 +58,6 @@ def test_parse_diann_summary_log_missing_precursor_line_raises(
 
 
 # ---------------------------------------------------------------------------
-# Matrix row counter (precursor + protein-group counts across DIA-NN versions)
-# ---------------------------------------------------------------------------
-
-def test_count_matrix_data_rows_subtracts_header(tmp_path: Path) -> None:
-    """The pr/pg matrix row count is the headline number used uniformly
-    across DIA-NN 1.8.1 ... 2.5.0 because the summary-log format is not
-    consistent between versions."""
-    from analysis.figure_quantmsdiann_benchmarks_vs_proteobench import (
-        count_matrix_data_rows,
-    )
-    p = tmp_path / "pr.tsv"
-    p.write_text(
-        "Protein.Group\tStripped.Sequence\trun1.raw\n"
-        "Q1\tAAAR\t1.0\n"
-        "Q2\tBBBR\t2.0\n"
-        "Q3\tCCCR\t\n"
-    )
-    assert count_matrix_data_rows(p) == 3
-
-
-def test_count_matrix_data_rows_empty_file(tmp_path: Path) -> None:
-    from analysis.figure_quantmsdiann_benchmarks_vs_proteobench import (
-        count_matrix_data_rows,
-    )
-    p = tmp_path / "empty.tsv"
-    p.write_text("")
-    assert count_matrix_data_rows(p) == 0
-
-
-def test_count_matrix_data_rows_header_only(tmp_path: Path) -> None:
-    from analysis.figure_quantmsdiann_benchmarks_vs_proteobench import (
-        count_matrix_data_rows,
-    )
-    p = tmp_path / "header.tsv"
-    p.write_text("Protein.Group\trun1.raw\n")
-    assert count_matrix_data_rows(p) == 0
-
-
-# ---------------------------------------------------------------------------
 # Dataset -> ProteoBench module mapping
 # ---------------------------------------------------------------------------
 
@@ -354,60 +315,6 @@ def test_parse_proteobench_datapoints_at_threshold_skips_missing_buckets(
         ("DIA-NN", "2.3.0", 95000),
         ("AlphaDIA", "1.10", 70000),
     ]
-
-
-# ---------------------------------------------------------------------------
-# pr_matrix ≥N-replicate counter
-# ---------------------------------------------------------------------------
-
-def test_count_pr_matrix_min_replicates_counts_non_na_threshold(
-    tmp_path: Path,
-) -> None:
-    """The ≥3-replicate count is precursors with non-NA intensity in at least
-    3 of the 6 ProteoBench sample columns. Mirrors how ProteoBench's per-
-    bucket `nr_prec` is defined."""
-    from analysis.figure_quantmsdiann_benchmarks_vs_proteobench import (
-        count_pr_matrix_min_replicates,
-    )
-    p = tmp_path / "pr_matrix.tsv"
-    # 4 precursors, 6 sample columns ("Condition_A_REP1..3", "B_REP1..3").
-    # P1: 6/6  (passes ≥3 and ≥6)
-    # P2: 3/6  (passes ≥3, not ≥6)
-    # P3: 2/6  (fails ≥3)
-    # P4: 0/6  (fails everything; row exists but is unquantified)
-    p.write_text(
-        "Protein.Group\tStripped.Sequence\tPrecursor.Id\t"
-        "A_REP1\tA_REP2\tA_REP3\tB_REP1\tB_REP2\tB_REP3\n"
-        "Q1\tAAAR\tAAAR_2\t1.0\t1.0\t1.0\t1.0\t1.0\t1.0\n"
-        "Q2\tBBBR\tBBBR_2\t1.0\t\t1.0\t\t1.0\t\n"
-        "Q3\tCCCR\tCCCR_2\t1.0\t1.0\t\t\t\t\n"
-        "Q4\tDDDR\tDDDR_2\t\t\t\t\t\t\n"
-    )
-    assert count_pr_matrix_min_replicates(p, 1) == 3  # P1, P2, P3
-    assert count_pr_matrix_min_replicates(p, 3) == 2  # P1, P2
-    assert count_pr_matrix_min_replicates(p, 6) == 1  # P1
-
-
-def test_count_pr_matrix_min_replicates_strips_metadata_columns(
-    tmp_path: Path,
-) -> None:
-    """The matrix carries up to 10 DIA-NN metadata columns (Protein.Group,
-    Genes, ...). The counter must only look at sample columns, otherwise
-    a string-valued 'Genes' column would always count as 'non-NA' and
-    inflate the ≥N tally."""
-    from analysis.figure_quantmsdiann_benchmarks_vs_proteobench import (
-        count_pr_matrix_min_replicates,
-    )
-    p = tmp_path / "pr_matrix.tsv"
-    p.write_text(
-        "Protein.Group\tProtein.Ids\tProtein.Names\tGenes\t"
-        "First.Protein.Description\tProteotypic\tStripped.Sequence\t"
-        "Modified.Sequence\tPrecursor.Charge\tPrecursor.Id\t"
-        "A_REP1\tA_REP2\tA_REP3\tB_REP1\tB_REP2\tB_REP3\n"
-        # Metadata fully populated, samples empty -> should NOT count.
-        "Q1\tQ1\tName\tGENE1\tdesc\tTrue\tAAAR\tAAAR\t2\tAAAR_2\t\t\t\t\t\t\n"
-    )
-    assert count_pr_matrix_min_replicates(p, 1) == 0
 
 
 def test_consolidate_proteobench_datapoints_writes_list(

@@ -32,10 +32,96 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
-# Stage = (name, module, description). Order matters: data prep before figures.
-DATA_PREP: list[tuple[str, str, str]] = [
-    ("report_counts", "analysis.recompute_report_counts",
+_BENCH_FTP = ("https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/"
+              "proteomes/quantmsdiann-benchmarks/proteobench")
+_CELLLINES_FTP = ("https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/"
+                  "proteomes/quantmsdiann-benchmarks/cell-lines")
+
+
+def recompute_report_counts() -> int:
+    """Download each ProteoBench cohort's DIA-NN report from the public PRIDE
+    FTP and recount under the methods.md §1 rule -> report_counts.tsv. The
+    counting primitive lives in analysis.count_report_ids.count_report."""
+    import pandas as pd
+    from analysis.count_report_ids import (
+        DATASET_MODULES, VERSIONS, PRECURSOR_Q, DEFAULT_PRECURSOR_Q,
+        _load_report, count_report,
+    )
+    from analysis.figure_original_vs_quantmsdiann import download_if_missing
+    root = REPO / "data" / "quantmsdiann_benchmarks"
+    cols = ["dataset", "version", "prec_min1", "prec_min3", "prec_global",
+            "prot_global", "prot_perrun_avg", "prot_complete", "peptides", "prot_2pep"]
+    rows = []
+    for dataset in DATASET_MODULES:
+        for version in VERSIONS:
+            qt = root / dataset / version / "quant_tables"
+            parquet, tsv = qt / "diann_report.parquet", qt / "diann_report.tsv"
+            if not ((parquet.exists() and parquet.stat().st_size)
+                    or (tsv.exists() and tsv.stat().st_size)):
+                fn = "diann_report.tsv" if version == "v1_8_1" else "diann_report.parquet"
+                download_if_missing(f"{_BENCH_FTP}/{dataset}/{version}/quant_tables/{fn}", qt / fn)
+            c = count_report(_load_report(qt),
+                             precursor_q=PRECURSOR_Q.get(version, DEFAULT_PRECURSOR_Q))
+            c.update(dataset=dataset, version=version)
+            rows.append(c)
+            print(f"  {dataset} {version}: prec_global={c['prec_global']:,} "
+                  f"prot_global={c['prot_global']:,}", flush=True)
+    pd.DataFrame(rows)[cols].to_csv(root / "report_counts.tsv", sep="\t", index=False)
+    print(f"  wrote {root / 'report_counts.tsv'}", flush=True)
+    return 0
+
+
+def recompute_reanalysis_pg_counts() -> int:
+    """Stream each bulk cell-line cohort's report from the FTP and write the
+    per-cohort diann_report_protein_counts.json (prot_global at Lib.PG.Q.Value,
+    prot_2pep at Lib.Q.Value) under methods.md §1. Decoys dropped, nothing else
+    filtered. Consumed by the PXD004701 / PXD030304 figure scripts."""
+    import collections
+    import json
+    import pyarrow.parquet as pq
+    import fsspec
+    reports = {
+        "PXD004701": f"{_CELLLINES_FTP}/PXD004701/v2_5_1/quant_tables/diann_report.parquet",
+        "PXD030304": f"{_CELLLINES_FTP}/PXD030304/v2_5_1/quant_tables/diann_report.parquet",
+    }
+    cols = ["Protein.Group", "Stripped.Sequence", "Lib.Q.Value", "Lib.PG.Q.Value", "Decoy"]
+    for acc, url in reports.items():
+        lib_pg: set = set()
+        peps_pg: dict = collections.defaultdict(set)
+        with fsspec.filesystem("https").open(url, "rb") as fh:
+            pf = pq.ParquetFile(fh)
+            use = [c for c in cols if c in set(pf.schema_arrow.names)]
+            for batch in pf.iter_batches(batch_size=2_000_000, columns=use):
+                d = batch.to_pydict()
+                n = len(d["Protein.Group"])
+                dec = d.get("Decoy", [0] * n)
+                for i in range(n):
+                    if dec[i] == 1:
+                        continue
+                    lpg, pg = d["Lib.PG.Q.Value"][i], d["Protein.Group"][i]
+                    if lpg is not None and lpg <= 0.01:
+                        lib_pg.add(pg)
+                        lq = d["Lib.Q.Value"][i]
+                        if lq is not None and lq <= 0.01:
+                            peps_pg[pg].add(d["Stripped.Sequence"][i])
+        counts = {"prot_global": len(lib_pg),
+                  "prot_2pep": sum(1 for s in peps_pg.values() if len(s) >= 2)}
+        out = REPO / "data" / acc / "diann_report_protein_counts.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(counts))
+        print(f"  {acc}: prot_global={counts['prot_global']:,} "
+              f"prot_2pep={counts['prot_2pep']:,} -> {out}", flush=True)
+    return 0
+
+
+# Stage = (name, target, description). target is a module name (run as
+# `python -m <module>`) or an in-process callable (the inlined recompute steps).
+# Order matters: data prep before figures.
+DATA_PREP = [
+    ("report_counts", recompute_report_counts,
      "Download FTP reports, recount under the filter rule -> report_counts.tsv"),
+    ("reanalysis_pg_counts", recompute_reanalysis_pg_counts,
+     "Recount bulk-cohort report protein groups (Lib rule) -> per-cohort JSON caches"),
     ("single_cell_tables", "analysis.make_single_cell_tables",
      "Per-cell / completeness / CV tables for the single-cell figure"),
     ("phospho_tables", "analysis.make_phospho_tables",
@@ -45,6 +131,8 @@ DATA_PREP: list[tuple[str, str, str]] = [
 FIGURES: list[tuple[str, str, str]] = [
     ("benchmarks", "analysis.figure_quantmsdiann_benchmarks_vs_proteobench",
      "Fig 2 — ProteoBench benchmark panels + counts.tsv"),
+    ("queue_sweep", "analysis.figure_queue_size_sweep",
+     "queue_size_sweep.tsv (consumed by the Fig 2 validation composite)"),
     ("fig2_validation", "analysis.figure_fig2_validation",
      "Fig 2 validation composite"),
     ("id_vs_epsilon", "analysis.figure_id_vs_epsilon",
@@ -73,8 +161,6 @@ FIGURES: list[tuple[str, str, str]] = [
      "Phosphoproteomics supplementary figure"),
     ("venn", "analysis.venn_protein_accessions",
      "Protein-accession overlap (supplementary)"),
-    ("queue_sweep", "analysis.figure_queue_size_sweep",
-     "Fig 1 queue-size sweep"),
     ("performance_trace", "analysis.figure_performance_trace",
      "Per-step runtime + resources (runtime_per_step.svg, resources_per_step.svg)"),
     ("mdc_cluster_runtime", "analysis.figure_mdc_cluster_runtime",
@@ -105,10 +191,21 @@ def print_list() -> None:
     print("\nPDFs: paper/Makefile -> figures, pdf, supplementary")
 
 
-def run_stage(name: str, module: str) -> tuple[str, bool, float]:
-    print(f"\n=== [{name}] python -m {module} ===", flush=True)
+def run_stage(name: str, target) -> tuple[str, bool, float]:
+    """Run one stage. `target` is either a module name (executed as
+    `python -m <module>` in a subprocess) or an in-process callable returning
+    an int return code (the inlined recompute steps)."""
     t0 = time.time()
-    rc = subprocess.run([sys.executable, "-m", module], cwd=REPO).returncode
+    if callable(target):
+        print(f"\n=== [{name}] (in-process) ===", flush=True)
+        try:
+            rc = int(target() or 0)
+        except Exception as exc:  # keep the run going; report as a failed stage
+            print(f"  ERROR: {exc}", flush=True)
+            rc = 1
+    else:
+        print(f"\n=== [{name}] python -m {target} ===", flush=True)
+        rc = subprocess.run([sys.executable, "-m", target], cwd=REPO).returncode
     dt = time.time() - t0
     ok = rc == 0
     print(f"=== [{name}] {'OK' if ok else 'FAILED (rc=%d)' % rc} in {dt:.0f}s ===",

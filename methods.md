@@ -143,7 +143,7 @@ Flow: **FTP report -> counter -> figure-data TSV -> figure SVG -> (rsvg) PDF -> 
 
 | Script | Produces | Filter path |
 |---|---|---|
-| `analysis/recompute_report_counts.py` | `data/quantmsdiann_benchmarks/report_counts.tsv` | downloads FTP reports, runs `count_report` |
+| `scripts/rebuild.py` `recompute_report_counts()` | `data/quantmsdiann_benchmarks/report_counts.tsv` | downloads FTP reports, runs `count_report` (rebuild `report_counts` stage) |
 | `analysis/count_report_ids.py` | counting primitive (`count_report`) | the §1 rule |
 | `analysis/figure_quantmsdiann_benchmarks_vs_proteobench.py` | Fig 2 benchmark panels, `counts.tsv` | reads `report_counts.tsv` |
 | `analysis/figure_reanalysis_improvement.py` | reanalysis-recovery figure | original matrix vs reanalysis report |
@@ -158,7 +158,7 @@ Flow: **FTP report -> counter -> figure-data TSV -> figure SVG -> (rsvg) PDF -> 
 | `analysis/figure_combined_cell_lines_atlas.py` | pan-cohort (Fig S13) | needs numpy<2 env |
 | `analysis/figure_phospho.py` / `make_phospho_tables.py` | phospho supp | `Lib.Q.Value`; site Prob>=0.99 |
 | `analysis/figure_queue_size_sweep.py`, `figure_performance_trace.py`, `figure_mdc_cluster_runtime.py` | Fig 1 / performance | runtime + resource traces |
-| `analysis/recompute_reanalysis_pg_counts.py` | per-cohort `diann_report_protein_counts.json` caches (Lib rule) | regenerator for the bulk-cohort figure inputs |
+| `scripts/rebuild.py` `recompute_reanalysis_pg_counts()` | per-cohort `diann_report_protein_counts.json` caches (Lib rule) | rebuild `reanalysis_pg_counts` stage; inputs for the bulk-cohort figures |
 | `analysis/venn_protein_accessions.py` | accession-overlap inputs | per-cohort |
 | `paper/Makefile` | SVG->PDF + `main`/`supplementary` PDFs | rsvg-convert |
 
