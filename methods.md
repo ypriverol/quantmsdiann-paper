@@ -122,6 +122,7 @@ All reanalysis reports are on the public PRIDE FTP under
 | PXD062685 | diaPASEF | ProteoBench M5 benchmark | 1.8.1 / 2.5.1 / 2.5.1-ent |
 | PXD070049 | ZenoTOF | ProteoBench M10 benchmark | 1.8.1 / 2.5.1 / 2.5.1-ent |
 | PXD046357 | single-cell HeLa Astral | reanalysis | 1.8.1 / 2.5.1-ent |
+| PXD049412 | single-cell A549/H460 (Astral) | reanalysis (146 single cells; 20x/40x A549 library runs excluded; blanks/HeLa-dilution/HYE not used) | 1.8.1 / 2.5.1-ent |
 | MSV000093870 | oocyte plexDIA | reanalysis | 2.5.0 |
 | PXD003539 | NCI-60 bulk | reanalysis | 2.5.x |
 | PXD030304 | ProCan bulk | reanalysis | 2.5.x |
@@ -130,8 +131,10 @@ All reanalysis reports are on the public PRIDE FTP under
 | PXD049692 / PXD034128 / PXD034623 | phospho | reanalysis (supp) | 2.5.1 / -ent |
 
 _(PXD044991 "One-Tip" has been removed from the manuscript — see the design
-spec. PXD049412 single cells (A549/H460) are a planned reanalysis: the deposited
-data here is only the ProteoBench HYE subset.)_
+spec. PXD049412 is a mixed deposit: its ProteoBench M9 HYE subset feeds the
+benchmark (Fig 2), and its A549/H460 single cells (146 cells + 20x/40x A549
+library runs) were reanalysed for the single-cell figure (Fig 4); the 50 blanks
+and the HeLa low-input dilution series in the same deposit are not used.)_
 
 ---
 

@@ -64,8 +64,8 @@ FTP_BASE = (
     "quantmsdiann-benchmarks/single-cell"
 )
 # dataset display name -> PRIDE accession (for labels) and FTP sub-directory.
-ACC = {"HeLa Astral SC": "PXD046357"}
-FTP_DIR = {"HeLa Astral SC": "PXD046357"}
+ACC = {"HeLa Astral SC": "PXD046357", "A549/H460 SC": "PXD049412"}
+FTP_DIR = {"HeLa Astral SC": "PXD046357", "A549/H460 SC": "PXD049412"}
 VERSIONS = ["1_8_1", "2_5_1_enterprise"]
 FLAG = "HeLa Astral SC"  # the dataset carrying the depth/completeness panels
 
@@ -117,6 +117,9 @@ def build() -> dict[str, pd.DataFrame]:
     for ds, acc in ACC.items():
         for version in VERSIONS:
             df = _load(_cached_report(FTP_DIR[ds], version))
+            # PXD049412 single cells only: drop the 20x/40x A549 carrier (library)
+            # runs from per-cell and total counts (no-op for cohorts without them).
+            df = df[~df["Run"].astype(str).str.contains("20xSC|40xSC", case=False, regex=True)]
             prot = _perrun_proteins(df)
             pgrun = prot.drop_duplicates(["Run", "Protein.Group"])
             # totals are GLOBAL numbers (Vadim rule): precursors -> prec_global

@@ -1,17 +1,20 @@
 #!/usr/bin/env python
-"""Single-cell reanalysis figure - DIA-NN 1.8.1 vs 2.5.1 Enterprise (HeLa Astral,
-PXD046357). 2x2 layout:
+"""Single-cell reanalysis figure - DIA-NN 1.8.1 vs 2.5.1 Enterprise, two
+label-free single-cell cohorts: HeLa Astral (PXD046357) and A549/H460
+(PXD049412; the 20x/40x A549 library runs are excluded from per-cell counts).
+2x2 layout:
   A  (top, spanning) total precursors + total protein groups + per-cell protein
-     groups (box + jitter), 1.8.1 vs 2.5.1-enterprise, with per-build %change.
-  B  Data-completeness curve (protein groups quantified in >= N cells), y from 0.
-  C  CV across cells -- quantitative precision.
+     groups (box + jitter), both cohorts x build, with per-build %change.
+  B  Data-completeness curve (HeLa Astral flagship; >= N cells), y from 0.
+  C  CV across cells -- quantitative precision (both cohorts; Astral solid,
+     A549/H460 dashed).
 
 Data provenance
 ---------------
 All numbers are derived from the deposited DIA-NN reports by
 ``analysis/make_single_cell_tables.py`` (run it to (re)generate the inputs):
   * mv_{per_cell,completeness,rank_abundance,cv}.tsv and sc_totals.tsv
-    <- PRIDE FTP quantmsdiann-benchmarks/single-cell/PXD046357/
+    <- PRIDE FTP quantmsdiann-benchmarks/single-cell/{PXD046357,PXD049412}/
        v{1_8_1,2_5_1_enterprise}/quant_tables/diann_report.{tsv,parquet}
        (our reanalysis; counting via analysis/count_report_ids.py under the
        methods.md filter rule: per-cell PG.Q.Value, totals Lib.*).
@@ -43,19 +46,22 @@ OUT = REPO / "analysis" / "figures" / "manuscript" / "fig3_single_cell_combined.
 VERS = ["1_8_1", "2_5_1_enterprise"]
 VLAB = {"1_8_1": "1.8.1", "2_5_1_enterprise": "2.5.1 Enterprise"}
 VCOL = {v: fs.VERSION_COLORS[v] for v in VERS}
-ACC = {"HeLa Astral SC": "PXD046357"}
+ACC = {"HeLa Astral SC": "PXD046357", "A549/H460 SC": "PXD049412"}
 # accession by the short panel label used in the merged panel
-ACC_SHORT = {"Astral": "PXD046357"}
-DS_STYLE = {"HeLa Astral SC": "-"}
+ACC_SHORT = {"Astral": "PXD046357", "A549/H460": "PXD049412"}
+DS_STYLE = {"HeLa Astral SC": "-", "A549/H460 SC": "--"}
+FLAG = "HeLa Astral SC"  # cohort carrying the data-completeness panel
 
 
 def _completeness(ax):
+    # Flagship cohort only (HeLa Astral): the two cohorts have very different
+    # cell counts (12 vs ~146), so a shared "in >= N cells" axis would distort.
     df = pd.read_csv(D / "mv_completeness.tsv", sep="\t")
-    for ds in df["dataset"].unique():
-        for v in VERS:
-            s = df[(df["dataset"] == ds) & (df["version"] == v)].sort_values("min_cells")
-            ax.plot(s["min_cells"], s["n_proteins"], linestyle=DS_STYLE.get(ds, "-"),
-                    marker="o", ms=3.5, lw=1.8, color=VCOL[v])
+    df = df[df["dataset"] == FLAG]
+    for v in VERS:
+        s = df[df["version"] == v].sort_values("min_cells")
+        ax.plot(s["min_cells"], s["n_proteins"], linestyle="-",
+                marker="o", ms=3.5, lw=1.8, color=VCOL[v])
     ax.set_xlabel("quantified in ≥ N cells"); ax.set_ylabel("protein groups")
     ax.set_ylim(bottom=0)
     ax.set_title("Data completeness")
@@ -81,7 +87,7 @@ def _cv(ax):
 # Total counts (report-based, target-only): precursors and protein groups,
 # 1.8.1 -> 2.5.1 Enterprise, read from the generated sc_totals.tsv (no hardcoding;
 # see analysis/make_single_cell_tables.py).
-_SHORT = {"HeLa Astral SC": "Astral"}
+_SHORT = {"HeLa Astral SC": "Astral", "A549/H460 SC": "A549/H460"}
 
 
 def _load_totals() -> dict:
@@ -93,10 +99,10 @@ def _load_totals() -> dict:
             m: (int(gv.loc["1_8_1", m]), int(gv.loc["2_5_1_enterprise", m]))
             for m in ("precursors", "proteins")
         }
-    return {k: out[k] for k in ("Astral",) if k in out}
+    return {k: out[k] for k in ("Astral", "A549/H460") if k in out}
 
 
-_FULL = {"Astral": "HeLa Astral SC"}
+_FULL = {"Astral": "HeLa Astral SC", "A549/H460": "A549/H460 SC"}
 
 
 def _merged(ax):
@@ -122,7 +128,7 @@ def _merged(ax):
             ax.bar(xp, hp, bw, color=VCOL[v], edgecolor="white", linewidth=0.6)
             if v != "1_8_1":
                 lo = TOTALS[d]["precursors"][0]
-                ax.annotate(f"+{round(100*(hp-lo)/lo)}%", (xp, hp), textcoords="offset points",
+                ax.annotate(f"{round(100*(hp-lo)/lo):+d}%", (xp, hp), textcoords="offset points",
                             xytext=(0, 3), ha="center", va="bottom", fontsize=9, fontweight="bold", color=VCOL[v])
             # (ii) protein groups total — right axis
             xt = prot_x[d] + (k - 0.5) * bw
@@ -130,7 +136,7 @@ def _merged(ax):
             ax2.bar(xt, hg, bw, color=VCOL[v], edgecolor="white", linewidth=0.6)
             if v != "1_8_1":
                 lo = TOTALS[d]["proteins"][0]
-                ax2.annotate(f"+{round(100*(hg-lo)/lo)}%", (xt, hg), textcoords="offset points",
+                ax2.annotate(f"{round(100*(hg-lo)/lo):+d}%", (xt, hg), textcoords="offset points",
                              xytext=(0, 3), ha="center", va="bottom", fontsize=9, fontweight="bold", color=VCOL[v])
             # (iii) per-cell protein groups — right axis (box + jitter)
             xc = cell_x[d] + (k - 0.5) * bw
@@ -146,7 +152,10 @@ def _merged(ax):
     ax.set_xticklabels([f"{ACC_SHORT.get(d, d)}\n({d})" for d in dsx] * 3, fontsize=8.5)
     ax.set_xlim(-0.7, cell_x[dsx[-1]] + 0.7)
     ax.set_ylabel("precursors"); ax2.set_ylabel("protein groups")
-    ax.set_ylim(0, 27000); ax2.set_ylim(0, 5400)
+    prec_max = max(TOTALS[d]["precursors"][i] for d in dsx for i in (0, 1))
+    prot_max = max(TOTALS[d]["proteins"][i] for d in dsx for i in (0, 1))
+    cell_max = float(percell[percell["dataset"].isin([_FULL[d] for d in dsx])]["pg_count"].max())
+    ax.set_ylim(0, prec_max * 1.15); ax2.set_ylim(0, max(prot_max, cell_max) * 1.12)
     fs.kfmt_axis(ax.yaxis); fs.kfmt_axis(ax2.yaxis)
     ax.set_title("Total identifications and per-cell protein groups")
     for xs, lab in ((prec_x, "precursors\n(total)"), (prot_x, "protein groups\n(total)"),
@@ -169,8 +178,9 @@ def render(out: Path) -> Path:
     _merged(ax_merged); _completeness(ax_comp); _cv(ax_cv)
     handles = [Line2D([0], [0], color=VCOL[v], marker="o", linewidth=2, markersize=8,
                label=f"DIA-NN {VLAB[v]}") for v in VERS]
-    handles += [Line2D([0], [0], color="#555555", linestyle="-", linewidth=2, label="PXD046357 (HeLa Astral)")]
-    fig.legend(handles=handles, loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.01), fontsize=11)
+    handles += [Line2D([0], [0], color="#555555", linestyle="-", linewidth=2, label="PXD046357 (HeLa Astral)"),
+                Line2D([0], [0], color="#555555", linestyle="--", linewidth=2, label="PXD049412 (A549/H460)")]
+    fig.legend(handles=handles, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.01), fontsize=11)
     for a, lab in zip([ax_merged, ax_comp, ax_cv], "ABC"):
         a.text(-0.06, 1.05, lab, transform=a.transAxes, fontsize=17, fontweight="bold", va="bottom", ha="right")
     fig.tight_layout(rect=(0, 0, 1, 0.95), h_pad=2.6, w_pad=2.2)
