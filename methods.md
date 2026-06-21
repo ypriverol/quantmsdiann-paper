@@ -37,9 +37,7 @@ precursors / protein groups" use `Lib.Q.Value` / `Lib.PG.Q.Value`. Per-cell and
 per-run distributions, and >=3-run replicate counts, use `Q.Value` / `PG.Q.Value`.
 
 Canonical implementation: [`analysis/count_report_ids.py`](analysis/count_report_ids.py)
-(`count_report`), unit-tested in
-[`analysis/tests/test_count_report_ids.py`](analysis/tests/test_count_report_ids.py).
-Emitted keys: `prec_min1`, `prec_min3` (Q.Value replicate), `prec_global`
+(`count_report`). Emitted keys: `prec_min1`, `prec_min3` (Q.Value replicate), `prec_global`
 (Lib.Q.Value), `prot_global` (Lib.PG.Q.Value), `prot_perrun_avg`, `prot_complete`
 (PG.Q.Value), `peptides`, `prot_2pep` (global rule).
 
