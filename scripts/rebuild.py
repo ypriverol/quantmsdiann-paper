@@ -6593,7 +6593,13 @@ def _cv(ax):
     bins = np.linspace(0, 1.5, 46)
     for ds in df['dataset'].unique():
         for v in VERS:
-            cv = df[(df['dataset'] == ds) & (df['version'] == v)]['cv'].clip(0, 1.5)
+            # Show the distribution on [0, 1.5]; the long high-CV tail of the
+            # A549/H460 cohort is dropped from the view (NOT clipped into the
+            # last bin, which would create a spurious spike at 1.5). density
+            # re-normalises over the in-range values, so the curve shapes stay
+            # comparable across cohorts.
+            cv = df[(df['dataset'] == ds) & (df['version'] == v)]['cv']
+            cv = cv[(cv >= 0) & (cv <= 1.5)]
             ax.hist(cv, bins=bins, density=True, histtype='step', linewidth=1.5, color=_figure_single_cell_combined__VCOL[v], linestyle=DS_STYLE.get(ds, '-'))
     ax.set_xlabel('CV across cells')
     ax.set_ylabel('density')

@@ -211,7 +211,35 @@ The same recovery extends beyond bulk cell lines to other acquisition modes: an 
 \end{figure}
 
 
-%% Fig. 3 — Reanalysis recovers more than the original deposits (main message)
+%% Fig. 3 — Single-cell DIA reanalysis (DIA-NN 1.8.1 vs 2.5.1-enterprise)
+\begin{figure}[htbp]
+  \centering
+  \mcpincludegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{manuscript/fig3_single_cell_combined}
+  \caption[Single-cell DIA reanalysis]{%
+    \textbf{Single-cell DIA reanalysis by \quantmsdiann{}, comparing
+    \texttt{DIA-NN}~1.8.1 with the current 2.5.1-enterprise build on identical
+    raw data.} Two label-free Orbitrap Astral single-cell cohorts are shown:
+    HeLa (PXD046357) and a larger A549/H460 cohort of 146 single cells
+    (PXD049412; the 20x/40x A549 library runs are excluded from per-cell counts).
+    (\textbf{a})~Total identifications and per-cell depth, per build, for both
+    cohorts: total precursors (left axis) and total protein groups together with
+    the per-cell protein-group distribution (box and jittered points; right
+    axis); the per-build percentage change is annotated. The A549/H460 cohort
+    reaches comparable per-cell depth on many more cells, but its total
+    protein-group count is already saturated (so the version effect is
+    concentrated in precursor depth).
+    (\textbf{b})~Data-completeness curve for the HeLa Astral flagship: protein
+    groups quantified in at least $N$ cells, the match-between-runs signature,
+    where the right endpoint is the complete-profile count.
+    (\textbf{c})~Distribution of per-protein coefficient of variation across
+    cells for both cohorts (HeLa solid, A549/H460 dashed), summarising
+    quantitative precision (axis truncated at CV~$=1.5$); the larger A549/H460
+    cohort shows the expected higher cell-to-cell variability.
+  }
+  \label{fig:single-cell}
+\end{figure}
+
+%% Fig. 4 — Reanalysis recovers more than the original deposits
 \begin{figure}[htbp]
   \centering
   \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{manuscript/fig_reanalysis_improvement}
@@ -235,34 +263,6 @@ The same recovery extends beyond bulk cell lines to other acquisition modes: an 
     coverage) is in Supplementary Fig.~S13.
   }
   \label{fig:reanalysis}
-\end{figure}
-
-%% Fig. 4 — Single-cell DIA reanalysis (DIA-NN 1.8.1 vs 2.5.1-enterprise)
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{manuscript/fig3_single_cell_combined}
-  \caption[Single-cell DIA reanalysis]{%
-    \textbf{Single-cell DIA reanalysis by \quantmsdiann{}, comparing
-    \texttt{DIA-NN}~1.8.1 with the current 2.5.1-enterprise build on identical
-    raw data.} Two label-free Orbitrap Astral single-cell cohorts are shown:
-    HeLa (PXD046357) and a larger A549/H460 cohort of 146 single cells
-    (PXD049412; the 20x/40x A549 library runs are excluded from per-cell counts).
-    (\textbf{a})~Total identifications and per-cell depth, per build, for both
-    cohorts: total precursors (left axis) and total protein groups together with
-    the per-cell protein-group distribution (box and jittered points; right
-    axis); the per-build percentage change is annotated. The A549/H460 cohort
-    reaches comparable per-cell depth on many more cells, but its total
-    protein-group count is already saturated (so the version effect is
-    concentrated in precursor depth).
-    (\textbf{b})~Data-completeness curve for the HeLa Astral flagship: protein
-    groups quantified in at least $N$ cells, the match-between-runs signature,
-    where the right endpoint is the complete-profile count.
-    (\textbf{c})~Distribution of per-protein coefficient of variation across
-    cells for both cohorts (HeLa solid, A549/H460 dashed), summarising
-    quantitative precision; the larger A549/H460 cohort shows the expected
-    higher cell-to-cell variability.
-  }
-  \label{fig:single-cell}
 \end{figure}
 %% [end figures]
 
