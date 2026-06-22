@@ -48,9 +48,9 @@ A single cell = one channel of one run. The per-cell precursor q-value is
 therefore `Channel.Q.Value` (the channel-level analog of `Q.Value`; run-level
 `Q.Value` passes a precursor in all 3 channels and is not a per-cell number).
 Per-cell protein groups use `PG.Q.Value`. No quantity/contaminant filter.
-Implemented in
-[`analysis/plexDIA/figure_msv000093870_oocyte_plexdia.py`](analysis/plexDIA/figure_msv000093870_oocyte_plexdia.py)
-(`load_channel_confident` / `per_cell_counts`).
+Implemented in [`scripts/rebuild.py`](scripts/rebuild.py) (the `plexdia_per_cell`
+stage; functions `load_channel_confident` / `per_cell_counts`, formerly
+`analysis/plexDIA/figure_msv000093870_oocyte_plexdia.py`).
 **Open flag for Vadim:** with `Channel.Q.Value` only, median precursors/cell is
 ~15.9k (proteins/cell ~1.47k) for these deep oocyte cells; this may warrant an
 additional run-level `Q.Value <= 0.01` gate — pending confirmation.
@@ -141,34 +141,44 @@ and the HeLa low-input dilution series in the same deposit are not used.)_
 
 ## 3. Script inventory + data flow
 
-**All analysis logic now lives in ONE self-contained script, `scripts/rebuild.py`**
-(the former `analysis/*.py` modules were inlined into it; each is a named stage,
-listed by `python -m scripts.rebuild --list`). The rows below name the former
-module for provenance; there are no separate `analysis/*.py` files anymore (only
-`analysis/figures/` outputs + `analysis/requirements.txt` remain).
+**All analysis logic lives in ONE self-contained script, `scripts/rebuild.py`.**
+The former `analysis/*.py` modules were inlined into it; each is now a named
+**stage** (run a subset with `--only <stage>`, see them all with
+`python -m scripts.rebuild --list`). There are no separate `analysis/*.py`
+files anymore -- only `analysis/figures/` outputs + `analysis/requirements.txt`
+remain. The counting primitive `count_report` (the §1 rule) is a function
+inside the script, shared by every counting stage.
 
-Flow: **FTP report -> counter -> figure-data TSV -> figure SVG -> (rsvg) PDF -> manuscript**.
+Flow: **FTP report -> `count_report` -> figure-data TSV -> figure SVG -> (rsvg) PDF -> manuscript**.
 
-| Script | Produces | Filter path |
-|---|---|---|
-| `scripts/rebuild.py` `recompute_report_counts()` | `data/quantmsdiann_benchmarks/report_counts.tsv` | downloads FTP reports, runs `count_report` (rebuild `report_counts` stage) |
-| `analysis/count_report_ids.py` | counting primitive (`count_report`) | the §1 rule |
-| `analysis/figure_quantmsdiann_benchmarks_vs_proteobench.py` | Fig 2 benchmark panels, `counts.tsv` | reads `report_counts.tsv` |
-| `analysis/figure_reanalysis_improvement.py` | reanalysis-recovery figure | original matrix vs reanalysis report |
-| `analysis/figure_single_cell_combined.py` | single-cell figure | `make_single_cell_tables` outputs |
-| `analysis/make_single_cell_tables.py` | `data/single_cell/mv_*.tsv`, `sc_totals.tsv` | per-cell `PG.Q.Value`; totals global |
-| `analysis/plexDIA/figure_msv000093870_oocyte_plexdia.py` | plexDIA per-cell figure | `Channel.Q.Value` / `PG.Q.Value` |
-| `analysis/plexDIA/figure_msv000093870_galatidou_vs_quantmsdiann.py` | plexDIA vs published | same per-cell counter |
-| `analysis/figure_original_vs_quantmsdiann.py` | PXD003539 panels | matrix vs report |
-| `analysis/figure_pxd004701_sun_vs_quantmsdiann.py` | PXD004701 panels | matrix vs report |
-| `analysis/figure_pxd030304_procan_vs_quantmsdiann.py` | PXD030304 panels | streams 2GB matrix |
-| `analysis/figure_pxd064049_spatial_vs_quantmsdiann.py` | spatial DVP panels | matrix-based (see spec Goal 5) |
-| `analysis/figure_combined_cell_lines_atlas.py` | pan-cohort (Fig S13) | needs numpy<2 env |
-| `analysis/figure_phospho.py` / `make_phospho_tables.py` | phospho supp | `Lib.Q.Value`; site Prob>=0.99 |
-| `analysis/figure_queue_size_sweep.py`, `figure_performance_trace.py`, `figure_mdc_cluster_runtime.py` | Fig 1 / performance | runtime + resource traces |
-| `scripts/rebuild.py` `recompute_reanalysis_pg_counts()` | per-cohort `diann_report_protein_counts.json` caches (Lib rule) | rebuild `reanalysis_pg_counts` stage; inputs for the bulk-cohort figures |
-| `analysis/venn_protein_accessions.py` | accession-overlap inputs | per-cohort |
-| `paper/Makefile` | SVG->PDF + `main`/`supplementary` PDFs | rsvg-convert |
+The stages below are listed in dependency order (data prep first, then figures,
+then the numbers aggregator); `--list` prints the same registry live.
+
+| Stage (`--only`) | Group | Produces | Filter path |
+|---|---|---|---|
+| `report_counts` | data | `data/quantmsdiann_benchmarks/report_counts.tsv` | downloads FTP reports, runs `count_report` |
+| `reanalysis_pg_counts` | data | per-cohort `diann_report_protein_counts.json` caches | Lib rule; inputs for the bulk-cohort figures |
+| `single_cell_tables` | data | `data/single_cell/mv_*.tsv`, `sc_totals.tsv` | per-cell `PG.Q.Value`; totals global |
+| `phospho_tables` | data | phosphopeptide / phosphosite tables | `Lib.Q.Value`; site Prob>=0.99 |
+| `benchmarks` | fig | Fig 2 benchmark panels, `counts.tsv` | reads `report_counts.tsv` |
+| `queue_sweep` | fig | `queue_size_sweep.tsv` (feeds `fig2_validation`) | runtime trace |
+| `fig2_validation` | fig | Fig 2 validation composite | composes sweep + accuracy |
+| `id_vs_epsilon` | fig | ProteoBench id-vs-epsilon panel | reads `report_counts.tsv` |
+| `proteobench_accuracy` | fig | ProteoBench accuracy panels | HYE fold-changes |
+| `reanalysis_improvement` | fig | reanalysis-recovery figure | original matrix vs reanalysis report |
+| `single_cell_combined` | fig | single-cell figure | `single_cell_tables` outputs |
+| `plexdia_per_cell` | fig | plexDIA per-cell depth (MSV000093870) | `Channel.Q.Value` / `PG.Q.Value` |
+| `plexdia_vs_galatidou` | fig | plexDIA deposited vs quantmsdiann | same per-cell counter |
+| `pxd003539` | fig | PXD003539 (NCI-60) panels | matrix vs report |
+| `pxd004701` | fig | PXD004701 (Sun) panels | matrix vs report |
+| `pxd030304` | fig | PXD030304 (ProCan) panels | streams a 2GB matrix |
+| `pxd064049_spatial` | fig | spatial DVP panels | matrix-based (see spec Goal 5) |
+| `atlas` | fig | pan-cohort (Fig S13) | needs numpy<2 env |
+| `phospho` | fig | phosphoproteomics supp figure | `Lib.Q.Value`; site Prob>=0.99 |
+| `venn` | fig | protein-accession overlap (supp) | per-cohort |
+| `performance_trace`, `mdc_cluster_runtime` | fig | Fig 1 / performance traces | runtime + resource traces |
+| `paper_numbers` | num | `data/paper_numbers.tsv` + `paper/generated_numbers.tex` | aggregates ALL manuscript numbers |
+| `paper/Makefile` | pdf | SVG->PDF + `main`/`supplementary` PDFs | rsvg-convert |
 
 The orchestrator [`scripts/rebuild.py`](scripts/rebuild.py) runs all of the
 above in dependency order; `--list` prints this table from the live stage
