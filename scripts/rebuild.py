@@ -6841,7 +6841,12 @@ _COLS = ['Run', 'Precursor.Id', 'Protein.Group', 'Q.Value', 'PG.Q.Value', 'Lib.Q
 
 def _report_url(ftp_dir: str, version: str) -> str:
     ext = 'tsv' if version == '1_8_1' else 'parquet'
-    return f'{_make_single_cell_tables__FTP_BASE}/{ftp_dir}/v{version}/quant_tables/diann_report.{ext}'
+    base = _make_single_cell_tables__FTP_BASE
+    # PXD049412 single cells were deposited at quantmsdiann-benchmarks/PXD049412/
+    # (directly), not under the single-cell/ subtree like PXD046357.
+    if ftp_dir == 'PXD049412':
+        base = base.rsplit('/single-cell', 1)[0]
+    return f'{base}/{ftp_dir}/v{version}/quant_tables/diann_report.{ext}'
 
 def _make_single_cell_tables___cached_report(ftp_dir: str, version: str) -> Path:
     """Download the deposited DIA-NN report once and cache it on disk."""
