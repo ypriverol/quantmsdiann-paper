@@ -394,40 +394,6 @@ def strip_known_prefix(token: str) -> str:
     passed the filter. Idempotent."""
     return _STRIP_PREFIX_RE.sub('', token)
 
-def count_target_protein_groups(pg_matrix_path: Path) -> tuple[int, int]:
-    """Return `(unfiltered_count, target_count)` from a DIA-NN
-    `pg_matrix.tsv`-style file. The unfiltered count is the total
-    distinct `Protein.Group` rows (one row per group). The target
-    count drops rows whose Protein.Group fails `is_target_protein_group`.
-
-    Used by the per-cohort headline writers to record both numbers in
-    the audit TSV. Defensively handles missing `Protein.Group`
-    columns (returns (0, 0))."""
-    import pandas as pd
-    try:
-        df = pd.read_csv(pg_matrix_path, sep='\t', usecols=['Protein.Group'], dtype=str)
-    except (FileNotFoundError, OSError, ValueError):
-        return (0, 0)
-    pgs = df['Protein.Group'].dropna()
-    unfiltered = int(len(pgs))
-    target = int(pgs.map(is_target_protein_group).sum())
-    return (unfiltered, target)
-
-def count_target_precursors(pr_matrix_path: Path) -> tuple[int, int]:
-    """Return `(unfiltered_count, target_count)` from a DIA-NN
-    `pr_matrix.tsv`-style file. Counts precursor rows; the target
-    count drops rows whose Protein.Group fails `is_target_protein_group`.
-    """
-    import pandas as pd
-    try:
-        df = pd.read_csv(pr_matrix_path, sep='\t', usecols=['Protein.Group'], dtype=str)
-    except (FileNotFoundError, OSError, ValueError):
-        return (0, 0)
-    pgs = df['Protein.Group'].dropna()
-    unfiltered = int(len(pgs))
-    target = int(pgs.map(is_target_protein_group).sum())
-    return (unfiltered, target)
-
 
 # ======================================================================
 # inlined from analysis/count_matrix.py
