@@ -472,8 +472,9 @@ positive-quantity filter, zeros counted):
 
   * Per-run numbers (within a single run / cell):
       - protein groups: `PG.Q.Value <= 0.01` only.
-      - precursors:     `Q.Value <= precursor_q` only (run-specific `--qvalue`:
-        0.01 for 1.8.1, 0.05 for >= 2.5.0, DIA-NN's per-version operating point).
+      - precursors:     `Q.Value <= 0.01` only (flat, all versions, per
+        methods.md §1; the matrices' baked per-version `--matrix-spec-q` does
+        not apply to the report-side count, which is gated at 0.01 throughout).
   * Global numbers (dataset union / totals):
       - protein groups: `Lib.PG.Q.Value <= 0.01` only.
       - precursors:     `Lib.Q.Value <= 0.01` only.
@@ -505,7 +506,7 @@ import sys
 from pathlib import Path
 import pandas as pd
 Q_THRESHOLD = 0.01
-PRECURSOR_Q = {'v1_8_1': 0.01, 'v2_5_1': 0.05, 'v2_5_1_enterprise': 0.05}
+PRECURSOR_Q = {'v1_8_1': 0.01, 'v2_5_1': 0.01, 'v2_5_1_enterprise': 0.01}
 DEFAULT_PRECURSOR_Q = 0.01
 _NEEDED_COLS = ['Run', 'Precursor.Id', 'Protein.Group', 'Stripped.Sequence', 'Q.Value', 'PG.Q.Value', 'Lib.Q.Value', 'Lib.PG.Q.Value', 'Decoy']
 DATASET_MODULES = ('ProteoBench_Module_7', 'PXD049412', 'PXD062685', 'PXD070049')
@@ -543,7 +544,18 @@ def count_report(df: pd.DataFrame, precursor_q: float=DEFAULT_PRECURSOR_Q) -> di
         prec_global = int(df.loc[df['Lib.Q.Value'] <= Q_THRESHOLD, 'Precursor.Id'].nunique())
     prot_global = 0
     if 'Lib.PG.Q.Value' in df.columns:
-        prot_global = int(df.loc[df['Lib.PG.Q.Value'] <= Q_THRESHOLD, 'Protein.Group'].nunique())
+        global_pgs = df.loc[df['Lib.PG.Q.Value'] <= Q_THRESHOLD, 'Protein.Group'].dropna().unique()
+        prot_global = int(len(global_pgs))
+        # methods.md §4 protein-inference sanity check: among unique global
+        # protein groups at 1% q-value, no more than 1.2% may carry multiple
+        # accessions (';' in Protein.Group). Exceeding it signals inflated
+        # inference (e.g. DIA-NN 1.8.1 without --relaxed-prot-inf) and is flagged.
+        if len(global_pgs):
+            multi_frac = 100.0 * sum(';' in str(pg) for pg in global_pgs) / len(global_pgs)
+            if multi_frac > 1.2:
+                print(f"WARNING [methods.md §4]: {multi_frac:.2f}% of global protein "
+                      f"groups are multi-accession (>1.2% cap) — possible inference "
+                      f"inflation; counts may not be comparable.", file=sys.stderr)
     prot_perrun_avg = prot_complete = 0
     if 'PG.Q.Value' in df.columns:
         n_runs = df['Run'].nunique()
@@ -3577,7 +3589,7 @@ def report_global_counts_diann(parquet_path: Path) -> dict[str, int]:
     have = set(pq.ParquetFile(parquet_path).schema_arrow.names)
     cols = [c for c in _NEEDED_COLS if c in have]
     df = pq.read_table(parquet_path, columns=cols).to_pandas()
-    return count_report(df, precursor_q=0.05)
+    return count_report(df, precursor_q=DEFAULT_PRECURSOR_Q)
 
 def render_figure(counts: Counts, svg_path: Path) -> None:
     """Render a 2-condition x 2-metric grouped bar chart. Paper-ready: only
