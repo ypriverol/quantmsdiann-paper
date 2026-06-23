@@ -675,6 +675,49 @@ PXD041421_SDRF = DATA_ROOT / 'PXD041421' / 'PXD041421.sdrf.tsv'
 PXD041421_PR_MATRIX = DATA_ROOT / 'PXD041421' / 'diann_report.pr_matrix.tsv'
 PXD041421_PG_MATRIX = DATA_ROOT / 'PXD041421' / 'diann_report.pg_matrix.tsv'
 E_PROT_73_TSV = DATA_ROOT / 'E-PROT-73-query-results.tsv'
+
+# Public-FTP sources for the bulk cell-line DIA-NN count matrices the reanalysis,
+# venn and atlas figures read. Three live under quantmsdiann-benchmarks/cell-lines
+# (with a version dir), two under the absolute-expression-2.0 collection (no
+# version dir). ensure_cell_line_matrices() auto-fetches any that are missing so
+# the rebuild is self-sufficient (no manual staging).
+_BENCH_CL_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/cell-lines'
+_ABSEXP_CL_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantms-collections/absolute-expression-2.0/cell-lines'
+# Per-cohort quant_tables base URLs (three on quantmsdiann-benchmarks with a
+# version dir; two on the absolute-expression-2.0 collection, no version dir).
+_CELL_LINE_QT_BASE: dict[str, str] = {
+    'PXD003539': f'{_BENCH_CL_BASE}/PXD003539/v2_5_1_enterprise/quant_tables',
+    'PXD030304': f'{_BENCH_CL_BASE}/PXD030304/v2_5_1/quant_tables',
+    'PXD004701': f'{_BENCH_CL_BASE}/PXD004701/v2_5_1/quant_tables',
+    'PXD017199': f'{_ABSEXP_CL_BASE}/PXD017199/quant_tables',
+    'PXD041421': f'{_ABSEXP_CL_BASE}/PXD041421/quant_tables',
+}
+# Small DIA-NN count matrices the figures read: shared across stages and NOT
+# purged (see _RAW_DOWNLOAD_GLOBS). The full diann_report.parquet is fetched only
+# on demand (with_report) and IS purged after the stage that needs it.
+_CELL_LINE_MATRICES = ('diann_report.pr_matrix.tsv', 'diann_report.pg_matrix.tsv',
+                       'diann_report.unique_genes_matrix.tsv')
+
+def ensure_cell_line_matrices(*accessions: str, with_report: bool = False) -> None:
+    """Download missing cell-line DIA-NN quant_tables files from the public FTP
+    so the rebuild is self-sufficient (no manual staging). Fetches the count
+    matrices for the given cohorts (all if none given); with_report=True also
+    pulls the large diann_report.parquet. No-op for files already present;
+    files absent on the FTP are skipped."""
+    wanted = list(_CELL_LINE_MATRICES) + (['diann_report.parquet'] if with_report else [])
+    for acc in (accessions or tuple(_CELL_LINE_QT_BASE)):
+        base = _CELL_LINE_QT_BASE.get(acc)
+        if not base:
+            continue
+        for fn in wanted:
+            dest = DATA_ROOT / acc / fn
+            if dest.exists() and dest.stat().st_size > 0:
+                continue
+            try:
+                print(f'Fetching {acc}/{fn} ...', file=sys.stderr)
+                download_if_missing(f'{base}/{fn}', dest)
+            except Exception as exc:
+                print(f'  (skipping {acc}/{fn}: {exc})', file=sys.stderr)
 DATASET_COLORS = {'PXD003539': '#1b9e77', 'PXD030304': '#7570b3', 'PXD004701': '#d95f02', 'PXD017199': '#e6ab02', 'PXD041421': '#8da0cb'}
 DATASET_LABELS = {'PXD003539': 'PXD003539\n(Guo 2019)', 'PXD030304': 'PXD030304\n(ProCan 2022)', 'PXD004701': 'PXD004701\n(Sun 2023)', 'PXD017199': 'PXD017199\n(Tognetti 2021)', 'PXD041421': 'PXD041421\n(Wang 2023)'}
 
@@ -1982,6 +2025,7 @@ def check_prerequisites() -> list[tuple[Path, str]]:
     return [(p, cmd) for p, cmd in PREREQS if not (p.exists() and p.stat().st_size > 0)]
 
 def figure_combined_cell_lines_atlas_main() -> int:
+    ensure_cell_line_matrices()  # auto-fetch all cohort matrices the atlas reads
     missing = check_prerequisites()
     if missing:
         print('Combined atlas requires the per-dataset scripts to run first.', file=sys.stderr)
@@ -3105,10 +3149,13 @@ def discard_download(*paths: Path) -> None:
         except OSError:
             pass
 
-# Filename patterns of the large raw FTP downloads (per-precursor reports,
-# count matrices, deposited zips, site reports). The small derived TSV/JSON
-# outputs the figures consume do NOT match these and are always kept.
-_RAW_DOWNLOAD_GLOBS = ('diann_report.parquet', 'diann_report.tsv', '*_matrix.tsv',
+# Filename patterns of the large raw per-precursor FTP downloads (full DIA-NN
+# reports, deposited zips, site reports) that are consumed once and re-derivable.
+# NOTE: the cell-line `*_matrix.tsv` count matrices are deliberately NOT purged:
+# they are small (~1.5 GB total) and shared across stages (a per-cohort figure
+# downloads them; `atlas`/`venn` read the same files later), so deleting them
+# between stages breaks those downstream figures.
+_RAW_DOWNLOAD_GLOBS = ('diann_report.parquet', 'diann_report.tsv',
                        '*.zip', 'site_report*.parquet', 'report.parquet')
 
 def purge_raw_downloads() -> int:
@@ -3777,6 +3824,7 @@ def _figure_original_vs_quantmsdiann__write_counts_tsv(counts: Counts, tsv_path:
             writer.writerow(row)
 
 def figure_original_vs_quantmsdiann_main() -> int:
+    ensure_cell_line_matrices('PXD003539', with_report=True)
     _figure_original_vs_quantmsdiann__DATA_DIR.mkdir(parents=True, exist_ok=True)
     _figure_original_vs_quantmsdiann__FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     pr_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'diann_report.pr_matrix.tsv'
@@ -5571,6 +5619,7 @@ def _figure_pxd004701_sun_vs_quantmsdiann__write_counts_tsv(counts: Counts, tsv_
             fh.write('\t'.join((str(x) for x in r)) + '\n')
 
 def figure_pxd004701_sun_vs_quantmsdiann_main() -> int:
+    ensure_cell_line_matrices('PXD004701')
     _figure_pxd004701_sun_vs_quantmsdiann__DATA_DIR.mkdir(parents=True, exist_ok=True)
     _figure_pxd004701_sun_vs_quantmsdiann__FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     _stage_from_ftp()
@@ -6110,6 +6159,7 @@ def _figure_pxd030304_procan_vs_quantmsdiann__write_counts_tsv(counts: Counts, t
             fh.write('\t'.join((str(x) for x in r)) + '\n')
 
 def figure_pxd030304_procan_vs_quantmsdiann_main() -> int:
+    ensure_cell_line_matrices('PXD030304')
     _figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR.mkdir(parents=True, exist_ok=True)
     _figure_pxd030304_procan_vs_quantmsdiann__FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     log_path = _figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'diannsummary.log'
@@ -7694,6 +7744,7 @@ def render_venn_diagram(guo_acc: set[str], diann_acc: set[str], svg_path: Path, 
     plt.close(fig)
 
 def venn_protein_accessions_main() -> int:
+    ensure_cell_line_matrices()  # venn overlaps all cohorts; fetch any missing matrix
     pr_path = _venn_protein_accessions__DATA_DIR / 'diann_report.pr_matrix.tsv'
     opensw_path = _venn_protein_accessions__DATA_DIR / 'feature_alignment_requant_matrix.tsv'
     if not pr_path.exists():
