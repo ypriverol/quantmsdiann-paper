@@ -1,0 +1,47 @@
+Run Name: hungry_watson
+
+## bigbio/quantmsdiann execution completed successfully! ##
+
+
+The workflow was completed at 2026-06-21T19:16:46.119699226+01:00 (duration: 1h 6m 8s)
+
+The command used to launch the workflow was as follows:
+
+  nextflow run /hps/nobackup/juan/pride/reanalysis/quantmsdiann -profile singularity,pride_slurm,diann_v1_8_1 -c /homes/yperez/extra.config -work-dir /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/work -with-report /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results/pipeline_info/nextflow_report.html -with-timeline /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results/pipeline_info/nextflow_timeline.html -with-trace /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results/pipeline_info/nextflow_trace.txt -with-tower --input /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/PXD049412.sdrf.tsv --database /hps/nobackup/juan/pride/reanalysis/databases/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta --root_folder /hps/nobackup/juan/pride/reanalysis/raw-data/PXD049412 --local_input_type raw --outdir /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results --max_mods 2 --min_peptide_length 7 --max_peptide_length 30 --min_fr_mz 200 --max_fr_mz 1800 --max_mods 3 --min_peptide_length 7 --max_peptide_length 40 --min_fr_mz 100 --max_fr_mz 1800 --email yperez@ebi.ac.uk -resume
+
+
+
+Pipeline Configuration:
+-----------------------
+ - runName: hungry_watson
+ - containerEngine: singularity
+ - container: [withLabel:diann:docker.io/biocontainers/diann:v1.8.1_cv1]
+ - launchDir: /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results
+ - workDir: /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/work
+ - projectDir: /hps/nobackup/juan/pride/reanalysis/quantmsdiann
+ - userName: pst_prd
+ - profile: singularity,pride_slurm,diann_v1_8_1
+ - configFiles: /hps/nobackup/juan/pride/reanalysis/quantmsdiann/nextflow.config, /homes/yperez/extra.config
+ - diann_version: 1.8.1
+ - mod_localization: Phospho (S),Phospho (T),Phospho (Y)
+ - min_peptide_length: 7
+ - trace_report_suffix: 2026-06-21_18-10-36
+ - input: /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/PXD049412.sdrf.tsv
+ - outdir: /hps/nobackup/juan/pride/reanalysis/absolute-expression/single-cell-proteomics/PXD049412/results
+ - email: yperez@ebi.ac.uk
+ - root_folder: /hps/nobackup/juan/pride/reanalysis/raw-data/PXD049412
+ - config_profile_description: The European Bioinformatics Institute HPC cluster (codon) profile for the SLURM login nodes
+ - config_profile_contact: Yasset Perez-Riverol
+ - config_profile_url: https://www.ebi.ac.uk/
+ - database: /hps/nobackup/juan/pride/reanalysis/databases/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta
+ - Date Started: 2026-06-21T18:10:38.224447787+01:00
+ - Date Completed: 2026-06-21T19:16:46.119699226+01:00
+ - Pipeline script file path: /hps/nobackup/juan/pride/reanalysis/quantmsdiann/main.nf
+ - Pipeline script hash ID: 616f8964258df62c3d59d3e10bf4bb16
+ - Nextflow Version: 26.04.1
+ - Nextflow Build: 12112
+ - Nextflow Compile Timestamp: 11-05-2026 13:29 UTC
+
+--
+bigbio/quantmsdiann
+https://github.com/bigbio/quantmsdiann
