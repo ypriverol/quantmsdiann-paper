@@ -3087,6 +3087,50 @@ def download_if_missing(url: str, dest: Path, *, retries: int=2) -> Path:
     finally:
         part.unlink(missing_ok=True)
 
+# When set, raw downloads (DIA-NN reports / matrices) are kept on disk for fast
+# repeated runs. Default OFF: the rebuild streams the public-FTP data one file at
+# a time and discards each after it has been counted/rendered, so it never needs
+# the whole FTP dataset on disk at once. Only the small derived TSV/JSON outputs
+# persist, and those are what the figure stages consume.
+KEEP_DOWNLOADS = os.environ.get('REBUILD_KEEP_DOWNLOADS', '').lower() not in ('', '0', 'false', 'no')
+
+def discard_download(*paths: Path) -> None:
+    """Delete large downloaded reports/matrices once consumed (unless
+    REBUILD_KEEP_DOWNLOADS is set), bounding peak disk to a single file."""
+    if KEEP_DOWNLOADS:
+        return
+    for p in paths:
+        try:
+            Path(p).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+# Filename patterns of the large raw FTP downloads (per-precursor reports,
+# count matrices, deposited zips, site reports). The small derived TSV/JSON
+# outputs the figures consume do NOT match these and are always kept.
+_RAW_DOWNLOAD_GLOBS = ('diann_report.parquet', 'diann_report.tsv', '*_matrix.tsv',
+                       '*.zip', 'site_report*.parquet', 'report.parquet')
+
+def purge_raw_downloads() -> int:
+    """Delete the large raw FTP downloads under data/ and analysis/figures/,
+    keeping the derived outputs. No-op when REBUILD_KEEP_DOWNLOADS is set. Called
+    after each stage by the orchestrator so the rebuild never holds the whole
+    public-FTP dataset on disk at once. Returns the number of files removed."""
+    if KEEP_DOWNLOADS:
+        return 0
+    n = 0
+    for root in (REPO / 'data', REPO / 'analysis' / 'figures'):
+        if not root.exists():
+            continue
+        for pat in _RAW_DOWNLOAD_GLOBS:
+            for p in root.rglob(pat):
+                try:
+                    p.unlink()
+                    n += 1
+                except OSError:
+                    pass
+    return n
+
 def count_quantified_rows(matrix_path: Path, metadata_cols: list[str], unique_by: str | None=None) -> int:
     """Count quantified rows in a DIA-NN-style TSV matrix."""
     df = pd.read_csv(matrix_path, sep='\t', dtype=str)
@@ -6861,7 +6905,8 @@ def build() -> dict[str, pd.DataFrame]:
     per_cell, completeness, rank, cv, totals = ([], [], [], [], [])
     for ds, acc in _make_single_cell_tables__ACC.items():
         for version in _make_single_cell_tables__VERSIONS:
-            df = _load(_make_single_cell_tables___cached_report(FTP_DIR[ds], version))
+            _sc_report = _make_single_cell_tables___cached_report(FTP_DIR[ds], version)
+            df = _load(_sc_report)
             df = df[~df['Run'].astype(str).str.contains('20xSC|40xSC', case=False, regex=True)]
             prot = _perrun_proteins(df)
             pgrun = prot.drop_duplicates(['Run', 'Protein.Group'])
@@ -6886,6 +6931,7 @@ def build() -> dict[str, pd.DataFrame]:
                 for i, val in enumerate(mean_int.values, start=1):
                     if i == 1 or i % 10 == 0:
                         rank.append((version, i, float(np.log10(val))))
+            discard_download(_sc_report)  # bound disk: drop the report once tabulated
     return {'mv_per_cell.tsv': pd.DataFrame(per_cell, columns=['dataset', 'version', 'pg_count']), 'mv_completeness.tsv': pd.DataFrame(completeness, columns=['dataset', 'version', 'min_cells', 'n_proteins']), 'mv_rank_abundance.tsv': pd.DataFrame(rank, columns=['version', 'rank', 'log10_intensity']), 'mv_cv.tsv': pd.DataFrame(cv, columns=['dataset', 'version', 'cv']), 'sc_totals.tsv': pd.DataFrame(totals, columns=['dataset', 'version', 'precursors', 'proteins'])}
 
 def make_single_cell_tables_main() -> int:
@@ -7707,6 +7753,7 @@ def recompute_report_counts() -> int:
             rows.append(c)
             print(f"  {dataset} {version}: prec_global={c['prec_global']:,} "
                   f"prot_global={c['prot_global']:,}", flush=True)
+            discard_download(parquet, tsv)  # bound disk: drop the report once counted
     pd.DataFrame(rows)[cols].to_csv(root / "report_counts.tsv", sep="\t", index=False)
     print(f"  wrote {root / 'report_counts.tsv'}", flush=True)
     return 0
@@ -7895,6 +7942,7 @@ def main(argv: list[str] | None = None) -> int:
     for name, fn, _ in stages:
         r = run_stage(name, fn)
         results.append(r)
+        purge_raw_downloads()  # drop raw FTP downloads so disk stays bounded across stages
         if not r[1] and fail_fast:
             break
 
