@@ -1,9 +1,0 @@
-{
-  "dataset": "PXD049412",
-  "diann_version": "2_5_1_enterprise",
-  "sweep_cores": null,
-  "queue_size": null,
-  "slurm_job_id": "53157132",
-  "slurm_submit_dir": "/homes/yperez",
-  "started_at_utc": "2026-06-21T17:10:34Z"
-}
