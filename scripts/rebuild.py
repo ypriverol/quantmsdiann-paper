@@ -2037,7 +2037,11 @@ def check_prerequisites() -> list[tuple[Path, str]]:
 def figure_combined_cell_lines_atlas_main() -> int:
     # atlas reads accessions from pr_matrix for PXD003539/017199/041421 only;
     # ProCan/Sun come from cached JSONs, so skip their (large) matrices.
-    ensure_cell_line_matrices('PXD003539', 'PXD017199', 'PXD041421')
+    # PXD003539 with its report parquet so refresh_dataset_headlines() actually
+    # recomputes the headline from the FTP instead of falling back to the
+    # precomputed constant; 017199/041421 need only their pr/pg matrices.
+    ensure_cell_line_matrices('PXD003539', with_report=True)
+    ensure_cell_line_matrices('PXD017199', 'PXD041421')
     missing = check_prerequisites()
     if missing:
         print('Combined atlas requires the per-dataset scripts to run first.', file=sys.stderr)
