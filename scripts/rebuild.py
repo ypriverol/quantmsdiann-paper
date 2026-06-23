@@ -2025,7 +2025,9 @@ def check_prerequisites() -> list[tuple[Path, str]]:
     return [(p, cmd) for p, cmd in PREREQS if not (p.exists() and p.stat().st_size > 0)]
 
 def figure_combined_cell_lines_atlas_main() -> int:
-    ensure_cell_line_matrices()  # auto-fetch all cohort matrices the atlas reads
+    # atlas reads accessions from pr_matrix for PXD003539/017199/041421 only;
+    # ProCan/Sun come from cached JSONs, so skip their (large) matrices.
+    ensure_cell_line_matrices('PXD003539', 'PXD017199', 'PXD041421')
     missing = check_prerequisites()
     if missing:
         print('Combined atlas requires the per-dataset scripts to run first.', file=sys.stderr)
