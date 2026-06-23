@@ -7309,9 +7309,13 @@ CHANNEL_LABELS = {'0': 'mTRAQ-0', '4': 'mTRAQ-4', '8': 'mTRAQ-8'}
 REPORT_COLUMNS = ['Run', 'Channel', 'Protein.Group', 'Protein.Ids', 'Precursor.Id', 'Decoy', 'Channel.Q.Value', 'PG.Q.Value']
 
 def _cached_report() -> Path:
-    """Download the DIA-NN report parquet once and cache it on disk."""
+    """Download the DIA-NN report parquet once and cache it on disk. The cache
+    filename is deliberately NOT 'diann_report.parquet' so purge_raw_downloads()
+    leaves it: both plexDIA stages (plexdia_per_cell, plexdia_vs_galatidou) share
+    this report, and purging it between them would force a wasteful ~245 MB
+    re-download."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    dest = CACHE_DIR / 'diann_report.parquet'
+    dest = CACHE_DIR / 'msv093870_plexdia_report.parquet'
     if dest.exists() and dest.stat().st_size > 0:
         return dest
     print(f'Downloading {REPORT_PARQUET_URL} (~245 MB, cached)…', file=sys.stderr)
