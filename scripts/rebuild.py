@@ -692,23 +692,33 @@ _CELL_LINE_QT_BASE: dict[str, str] = {
     'PXD017199': f'{_ABSEXP_CL_BASE}/PXD017199/quant_tables',
     'PXD041421': f'{_ABSEXP_CL_BASE}/PXD041421/quant_tables',
 }
-# Small DIA-NN count matrices the figures read: shared across stages and NOT
-# purged (see _RAW_DOWNLOAD_GLOBS). The full diann_report.parquet is fetched only
-# on demand (with_report) and IS purged after the stage that needs it.
-_CELL_LINE_MATRICES = ('diann_report.pr_matrix.tsv', 'diann_report.pg_matrix.tsv',
-                       'diann_report.unique_genes_matrix.tsv')
+# DIA-NN count matrices each cohort's figures actually read (shared across
+# stages, NOT purged). Per-cohort to avoid fetching the unused 2 GB ProCan
+# pr_matrix: pxd030304 reads only pg, and atlas reads ProCan/Sun from their
+# cached JSONs. The full diann_report.parquet is fetched only on demand
+# (with_report) and IS purged after the stage that needs it.
+_PR, _PG, _UG = 'diann_report.pr_matrix.tsv', 'diann_report.pg_matrix.tsv', 'diann_report.unique_genes_matrix.tsv'
+_CELL_LINE_MATRIX_FILES = {
+    'PXD003539': (_PR, _PG, _UG),
+    'PXD030304': (_PG,),
+    'PXD004701': (_PG,),
+    'PXD017199': (_PR, _PG),
+    'PXD041421': (_PR, _PG),
+}
 
 def ensure_cell_line_matrices(*accessions: str, with_report: bool = False) -> None:
     """Download missing cell-line DIA-NN quant_tables files from the public FTP
     so the rebuild is self-sufficient (no manual staging). Fetches the count
-    matrices for the given cohorts (all if none given); with_report=True also
-    pulls the large diann_report.parquet. No-op for files already present;
-    files absent on the FTP are skipped."""
-    wanted = list(_CELL_LINE_MATRICES) + (['diann_report.parquet'] if with_report else [])
+    matrices each given cohort's figures read (all cohorts if none given);
+    with_report=True also pulls the large diann_report.parquet. No-op for files
+    already present; files absent on the FTP are skipped."""
     for acc in (accessions or tuple(_CELL_LINE_QT_BASE)):
         base = _CELL_LINE_QT_BASE.get(acc)
         if not base:
             continue
+        wanted = list(_CELL_LINE_MATRIX_FILES.get(acc, (_PR, _PG, _UG)))
+        if with_report:
+            wanted.append('diann_report.parquet')
         for fn in wanted:
             dest = DATA_ROOT / acc / fn
             if dest.exists() and dest.stat().st_size > 0:
@@ -7746,7 +7756,7 @@ def render_venn_diagram(guo_acc: set[str], diann_acc: set[str], svg_path: Path, 
     plt.close(fig)
 
 def venn_protein_accessions_main() -> int:
-    ensure_cell_line_matrices()  # venn overlaps all cohorts; fetch any missing matrix
+    ensure_cell_line_matrices('PXD003539', with_report=True)  # 2-set venn (Guo vs quantmsdiann) is PXD003539 only
     pr_path = _venn_protein_accessions__DATA_DIR / 'diann_report.pr_matrix.tsv'
     opensw_path = _venn_protein_accessions__DATA_DIR / 'feature_alignment_requant_matrix.tsv'
     if not pr_path.exists():
