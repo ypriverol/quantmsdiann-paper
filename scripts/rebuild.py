@@ -821,6 +821,31 @@ def refresh_dataset_headlines() -> None:
     if n3539 > 0:
         h = DATASET_HEADLINES['PXD003539']
         DATASET_HEADLINES['PXD003539'] = DatasetHeadline(paper_count=h.paper_count, diann_count=n3539, paper_label=h.paper_label, metric=h.metric)
+    # Recompute the deposited "original" headline (paper_count) for the reanalysis
+    # cohorts from public files, so no per-cohort original count is a transcribed
+    # paper headline: NCI-60 from the deposited OpenSWATH matrix (all quantified
+    # proteins), ProCan from the figshare peptide-count matrix (all quantified
+    # proteins), Sun from the deposited OpenSWATH ids (all SwissProt proteins at
+    # mscore <= 0.01). Each keeps the import-time constant on failure.
+    def _nci60_paper() -> int:
+        mp = download_if_missing(OPENSWATH_MATRIX_URL, _figure_original_vs_quantmsdiann__DATA_DIR / 'feature_alignment_requant_matrix.tsv')
+        return count_openswath_quantified(mp)[2]
+    def _procan_paper() -> int:
+        fp = download_if_missing(f'{FIGSHARE_BASE}/{FIGSHARE_FILES["peptide_counts_per_protein_per_sample.txt"]}',
+                                 _figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'peptide_counts_per_protein_per_sample.txt')
+        mat = pd.read_csv(fp, sep='\t', index_col=0).apply(pd.to_numeric, errors='coerce')
+        return int(mat.notna().any(axis=0).sum())
+    def _sun_paper() -> int:
+        return sun_original_proteotypic_proteins(fallback=0, proteotypic_only=False)
+    for ds, fn in (('PXD003539', _nci60_paper), ('PXD030304', _procan_paper), ('PXD004701', _sun_paper)):
+        try:
+            n = int(fn())
+        except Exception as exc:
+            print(f'WARNING: {ds} deposited-original headline recompute failed ({exc}); keeping cited value', file=sys.stderr)
+            continue
+        if n > 0:
+            h = DATASET_HEADLINES[ds]
+            DATASET_HEADLINES[ds] = DatasetHeadline(paper_count=n, diann_count=h.diann_count, paper_label=h.paper_label, metric=h.metric)
 
 def cell_lines_from_sdrf(sdrf_path: Path, cell_line_col: str='characteristics[cell line]') -> set[str]:
     """Return the set of normalised cell-line names from any of the three
@@ -6682,13 +6707,16 @@ SUN_ORIGINAL_ID_URL = f'{_SUN_ARCHIVE}/1R_all_id.txt'
 SUN_ORIGINAL_LIB_URL = f'{_SUN_ARCHIVE}/sFile2_spectrast2tsv.tsv'
 _SUN_TG_RE = re.compile(r'^\d+_(.+)_(\d+)$')
 
-def sun_original_proteotypic_proteins(*, fallback: int) -> int:
+def sun_original_proteotypic_proteins(*, fallback: int, proteotypic_only: bool = True) -> int:
     """Sun 2023 original protein count, recomputed from the deposited OpenSWATH
-    files on PRIDE: distinct proteotypic SwissProt proteins identified at the
-    OpenSWATH peak-group q-value (``mscore``) <= 0.01 in ``1R_all_id.txt``, with
-    peptide->protein from the deposited library. This reproduces the published Sun
-    headline (~6,091) from public data (provenance: 1R_all_id.txt + sFile2 library);
-    falls back to the cited value if the deposit is unreachable."""
+    files on PRIDE: distinct SwissProt proteins identified at the OpenSWATH
+    peak-group q-value (``mscore``) <= 0.01 in ``1R_all_id.txt``, with
+    peptide->protein from the deposited library. With ``proteotypic_only`` (default)
+    only proteotypic peptides (leading ``1/``) count -- reproducing the published
+    ~6,091 used as the reanalysis-recovery baseline; with ``proteotypic_only=False``
+    every peptide's leading SwissProt protein counts -- the all-protein total
+    (~6,696) used as the deposited headline in the pan-cohort atlas. Provenance:
+    1R_all_id.txt + sFile2 library; falls back to the cited value on failure."""
     try:
         idp = download_if_missing(SUN_ORIGINAL_ID_URL, DATA_ROOT / 'PXD004701' / '1R_all_id.txt')
         libp = download_if_missing(SUN_ORIGINAL_LIB_URL, DATA_ROOT / 'PXD004701' / 'sun_library.tsv')
@@ -6697,7 +6725,7 @@ def sun_original_proteotypic_proteins(*, fallback: int) -> int:
         pep_acc: dict[str, str] = {}
         for pep, pn in zip(lib['PeptideSequence'], lib['ProteinName']):
             m = re.match(r'(\d+)/(.*)', str(pn))
-            if not m or int(m.group(1)) != 1:          # proteotypic only (leading 1/)
+            if not m or (proteotypic_only and int(m.group(1)) != 1):
                 continue
             rest = m.group(2)
             if not rest.startswith('sp|'):             # SwissProt leading protein only
