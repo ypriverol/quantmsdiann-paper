@@ -428,6 +428,28 @@ PR_METADATA = ['Protein.Group', 'Protein.Ids', 'Protein.Names', 'Genes', 'First.
 _PG_REQUIRED = ['Protein.Group', 'First.Protein.Description']
 _PR_REQUIRED = ['Protein.Group', 'Precursor.Id', 'First.Protein.Description']
 
+def assert_protein_inference_ok(protein_groups, source: str) -> float:
+    """methods.md §4 protein-inference sanity check.
+
+    Among the unique ``Protein.Group`` entries (at 1% global q-value), no more
+    than 1.2% (empirical cap) may carry multiple accessions (a ';' in the
+    ``Protein.Group`` string). Exceeding it signals inflated inference (e.g.
+    DIA-NN 1.8.1 without ``--relaxed-prot-inf``) and makes protein-group counts
+    NOT comparable; such data must be flagged for reanalysis. Every script that
+    reads a DIA-NN 1.8.1 ``.tsv`` report or a ``pg_matrix``/``pr_matrix`` must
+    call this. Returns the measured multi-accession percentage.
+    """
+    groups = pd.unique(pd.Series(list(protein_groups)).dropna())
+    if len(groups) == 0:
+        return 0.0
+    multi_frac = 100.0 * sum(';' in str(pg) for pg in groups) / len(groups)
+    if multi_frac > 1.2:
+        print(f"WARNING [methods.md §4]: {multi_frac:.2f}% of protein groups in "
+              f"{source} are multi-accession (>1.2% cap) — possible inference "
+              f"inflation; counts may not be comparable.", file=sys.stderr)
+    return multi_frac
+
+
 def count_matrix_rows(matrix_path: Path, metadata_cols: list[str]) -> int:
     """Number of quantified rows in a DIA-NN pg/pr count matrix.
 
@@ -446,6 +468,8 @@ def count_matrix_rows(matrix_path: Path, metadata_cols: list[str]) -> int:
     sample_cols = [c for c in df.columns if c not in metadata_cols]
     if not sample_cols:
         return 0
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], matrix_path.name)
     samples = df[sample_cols].replace({'NA': pd.NA, '': pd.NA})
     quantified = samples.notna().any(axis=1)
     return int(quantified.sum())
@@ -761,7 +785,9 @@ def _report_global_protein_groups(report_parquet: Path) -> int:
     df = pq.read_table(report_parquet, columns=cols).to_pandas()
     if 'Decoy' in df.columns:
         df = df[df['Decoy'] == 0]
-    return int(df.loc[df['Lib.PG.Q.Value'] <= 0.01, 'Protein.Group'].nunique())
+    global_pgs = df.loc[df['Lib.PG.Q.Value'] <= 0.01, 'Protein.Group']
+    assert_protein_inference_ok(global_pgs, report_parquet.name)
+    return int(global_pgs.nunique())
 
 def refresh_dataset_headlines() -> None:
     """Populate `DATASET_HEADLINES` from the on-disk inputs under the
@@ -1014,6 +1040,8 @@ def pxd003539_protein_accessions(pr_matrix_path: Path) -> set[str]:
     match the PXD030304 / PXD004701 caches (semicolon split, isoform suffix
     stripped, CONTAM_/ENTRAP_/DECOY_ prefix removed)."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD003539 pr_matrix missing metadata columns: {missing}')
@@ -1071,6 +1099,8 @@ def pxd003539_accessions_per_cell_line(pr_matrix_path: Path, sdrf_path: Path) ->
     precursors are dropped silently."""
     import re
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD003539 pr_matrix missing metadata columns: {missing}')
@@ -1113,6 +1143,8 @@ def pxd017199_protein_accessions(pr_matrix_path: Path) -> set[str]:
     Uses `extract_accessions_diann` for accession-normalisation parity
     with the other datasets."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD017199 pr_matrix missing metadata columns: {missing}')
@@ -1137,6 +1169,8 @@ def pxd017199_accessions_per_cell_line(pr_matrix_path: Path, sdrf_path: Path) ->
     cell lines with no matching pr_matrix columns or no quantified
     precursors are silently dropped."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD017199 pr_matrix missing metadata columns: {missing}')
@@ -1178,6 +1212,8 @@ def pxd041421_protein_accessions(pr_matrix_path: Path) -> set[str]:
     contaminant/entrapment/decoy filter is applied at the row level
     (2026-05-21 spec)."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD041421 pr_matrix missing metadata columns: {missing}')
@@ -1204,6 +1240,8 @@ def pxd041421_accessions_per_cell_line(pr_matrix_path: Path, sdrf_path: Path) ->
     cell lines with no matching pr_matrix columns or no quantified
     precursors are silently dropped."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD041421 pr_matrix missing metadata columns: {missing}')
@@ -1242,6 +1280,8 @@ def pxd003539_gene_symbols(pr_matrix_path: Path) -> set[str]:
     symbols; only rows with at least one non-NA quantification across the
     runs are counted (same filter as `pxd003539_protein_accessions`)."""
     df = pd.read_csv(pr_matrix_path, sep='\t', dtype=str)
+    if 'Protein.Group' in df.columns:
+        assert_protein_inference_ok(df['Protein.Group'], pr_matrix_path.name)
     missing = [c for c in _figure_original_vs_quantmsdiann__PR_METADATA_COLS if c not in df.columns]
     if missing:
         raise ValueError(f'PXD003539 pr_matrix missing metadata columns: {missing}')
@@ -3106,6 +3146,10 @@ WALZER_PROTEINS_50PCT_FILTER = 6867
 EPROT73_URL = 'https://ftp.ebi.ac.uk/pub/databases/microarray/data/atlas/experiments/E-PROT-73/E-PROT-73.tsv'
 GUO_CURATED_PEPTIDES = 22554
 GUO_CURATED_PROTEINS = 3171
+# Guo 2019 (PXD003539) published protein headline under the >=2-unique-peptide
+# criterion, used as the deposited baseline in the reanalysis-recovery figure.
+# External published value (TODO: confirm exact source/citation), not recomputed.
+GUO_PROTEINS_2PEP = 4284
 SUMMARY_LOG_PROTEIN_LINE_RE = re.compile('Protein groups with global q-value <= 0\\.01:\\s*(\\d+)')
 
 @dataclass(frozen=True)
@@ -5055,14 +5099,6 @@ VLABEL = {'2_5_1': '2.5.1', '2_5_1_enterprise': '2.5.1 Enterprise'}
 _figure_phospho__VCOL = {v: fs.VERSION_COLORS[v] for v in _figure_phospho__VERSIONS}
 BAR_DATASETS = ['PXD034128 biological-study', 'PXD034128 highspeed-DIA', 'PXD049692 NK-phospho']
 
-def _phospho_backbones():
-    import pandas as pd
-    df = pd.read_csv(FIGURES_DIR_049692 / 'counts.tsv', sep='\t').set_index('metric')
-    r = df.loc['phosphopeptides_stripped']
-    return (int(r['original_spectronaut']), int(r[[c for c in df.columns if c.startswith('quantmsdiann')][0]]))
-FIGURES_DIR_049692 = _figure_phospho__REPO_ROOT / 'analysis' / 'figures' / 'PXD049692'
-PXD049692_DEPOSITED, PXD049692_QUANTMSDIANN = _phospho_backbones()
-
 def _short(label: str) -> str:
     pxd, _, rest = label.partition(' ')
     return f'{pxd}\n{rest}'
@@ -5090,33 +5126,18 @@ def _version_panel(ax, df, col, title, ylabel):
     fs.kfmt_axis(ax.yaxis)
     fs.despine(ax)
 
-def _deposited_panel(ax):
-    vals = [PXD049692_DEPOSITED, PXD049692_QUANTMSDIANN]
-    cols = [fs.COMPARISON['original'], fs.COMPARISON['quantmsdiann']]
-    bars = ax.bar([0, 1], vals, 0.55, color=cols, edgecolor='white', linewidth=0.6)
-    for b, v in zip(bars, vals):
-        ax.text(b.get_x() + b.get_width() / 2, v, f'{v:,}', ha='center', va='bottom', fontsize=9.5)
-    pct = round(100 * (vals[1] - vals[0]) / vals[0])
-    ax.annotate(f'+{pct}%', (bars[1].get_x() + bars[1].get_width() / 2, vals[1]), textcoords='offset points', xytext=(0, 16), ha='center', va='bottom', fontsize=9, fontweight='bold', color=fs.COMPARISON['quantmsdiann'])
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Original\n(Spectronaut\ndirectDIA)', 'quantms.io\n(DIA-NN 2.5.1\nEnterprise)'], fontsize=8.5)
-    ax.set_xlim(-0.7, 1.7)
-    ax.set_ylim(0, max(vals) * 1.22)
-    ax.set_title('PXD049692 — deposited vs reanalysis')
-    ax.set_ylabel('phosphopeptide backbones (1% FDR)')
-    fs.kfmt_axis(ax.yaxis)
-    fs.despine(ax)
-
 def _figure_phospho__render(out: Path) -> Path:
+    # methods.md §1 line 58 + refactor target: phosphoproteomic identification
+    # numbers are not comparable across search engines, so this figure reports
+    # DIA-NN 2.5.1 / 2.5.1-enterprise counts ONLY (no deposited-vs-other-engine
+    # comparison panel).
     df = pd.read_csv(COUNTS, sep='\t')
-    fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.3))
+    fig, axes = plt.subplots(1, 2, figsize=(8.6, 4.3))
     _version_panel(axes[0], df, 'phosphopeptides', 'Phosphopeptides', 'phosphopeptides')
     _version_panel(axes[1], df, 'sites_classI', 'Class-I phosphosites (loc ≥ 0.75)', 'localized sites')
-    _deposited_panel(axes[2])
     handles = [Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=_figure_phospho__VCOL[v], markeredgecolor='white', label=f'DIA-NN {VLABEL[v]}') for v in _figure_phospho__VERSIONS]
-    handles += [Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=fs.COMPARISON['original'], markeredgecolor='white', label='deposited (original)'), Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=fs.COMPARISON['quantmsdiann'], markeredgecolor='white', label='quantms.io reanalysis')]
-    fig.legend(handles=handles, loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.03), fontsize=9)
-    for a, lab in zip(axes, 'ABC'):
+    fig.legend(handles=handles, loc='upper center', ncol=len(handles), bbox_to_anchor=(0.5, 1.03), fontsize=9)
+    for a, lab in zip(axes, 'AB'):
         a.text(-0.16, 1.06, lab, transform=a.transAxes, fontsize=14, fontweight='bold', va='bottom', ha='right')
     fig.tight_layout(rect=(0, 0, 1, 0.91))
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -6609,6 +6630,80 @@ def _figure_reanalysis_improvement__render(out: Path) -> Path:
     plt.close(fig)
     return out
 
+def generate_reanalysis_improvement_tsv() -> int:
+    """Regenerate analysis/figures/reanalysis/data/reanalysis_improvement.tsv
+    from the per-cohort sources (methods.md §3: FTP report -> count_report ->
+    figure-data TSV). Every reanalysis-side number is recomputed under the §1
+    rule; nothing is hand-typed. plexDIA (MSV000093870) is intentionally absent:
+    methods.md §1 forbids comparing plexDIA protein-group counts across DIA-NN
+    versions, so it carries no recovery row.
+
+    Reanalysis side: NCI-60 / ProCan = >=2-peptide global protein groups
+    (count_report prot_2pep); Sun = consistency-filter union (the study's own
+    >=10%-detection criterion, applied like-for-like); HeLa Astral = global
+    union (sc_totals, §1 Lib rule); spatial = deposited-vs-quantmsdiann matrix
+    row counts (DIA-NN 1.8.1 grants matrix-row equivalence per §1 line 58).
+    Original side: published baselines (Guo OpenSWATH, ProCan, Sun) or the
+    quantmsdiann 1.8.1 run (HeLa) or the deposited 1.8.1 matrix (spatial).
+    """
+    import json
+    out = _figure_reanalysis_improvement__DATA
+    rows = []
+
+    # --- PXD003539 NCI-60: Guo published >=2-peptide baseline vs reanalysis ---
+    # GUO_PROTEINS_2PEP is the published Guo 2019 protein headline under the
+    # >=2-unique-peptide criterion (external baseline, like PROCAN/SUN; it is NOT
+    # recomputed from the deposited OpenSWATH matrix, whose raw quantified-protein
+    # count is 6,556). The reanalysis side is the §1 >=2-peptide count.
+    download_if_missing(DIANN_REPORT_PARQUET_URL, PXD003539_REPORT_PARQUET)
+    nci_rean = int(report_global_counts_diann(PXD003539_REPORT_PARQUET)['prot_2pep'])
+    rows.append(('PXD003539', 'NCI-60', GUO_PROTEINS_2PEP, 'OpenSWATH', nci_rean,
+                 '2.5.1-enterprise', 'protein groups (>=2 peptides)', '', ''))
+
+    # --- PXD030304 ProCan: published >=2-peptide baseline vs reanalysis ---
+    with open(_figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'diann_report_protein_counts.json') as fh:
+        procan = json.load(fh)
+    rows.append(('PXD030304', 'ProCan', PROCAN_PROTEINS_STRINGENT, 'DIA-NN 1.7',
+                 int(procan['prot_2pep']), '2.5.1', 'protein groups (>=2 peptides)', '', ''))
+
+    # --- PXD004701 Sun: published consistency-filtered baseline vs reanalysis union ---
+    with open(_figure_pxd004701_sun_vs_quantmsdiann__DATA_DIR / 'diann_per_subtype_consistency_filter.json') as fh:
+        sun_subtypes = json.load(fh)
+    sun_union = set()
+    for pgs in sun_subtypes.values():
+        sun_union.update(pgs)
+    rows.append(('PXD004701', 'Sun', SUN_PROTEINS, 'PCT-SWATH', len(sun_union),
+                 '2.5.1', 'protein groups (consistency filter)', '', ''))
+
+    # --- PXD046357 HeLa Astral single-cell: quantmsdiann 1.8.1 vs 2.5.1-ent (sc_totals) ---
+    sc = pd.read_csv(DATA_ROOT / 'single_cell' / 'sc_totals.tsv', sep='\t')
+    hela = sc[sc['dataset'] == 'HeLa Astral SC'].set_index('version')
+    rows.append(('PXD046357', 'HeLa Astral', int(hela.loc['1_8_1', 'proteins']),
+                 'DIA-NN 1.8.1', int(hela.loc['2_5_1_enterprise', 'proteins']),
+                 '2.5.1-enterprise', 'protein groups (union)',
+                 int(hela.loc['1_8_1', 'precursors']), int(hela.loc['2_5_1_enterprise', 'precursors'])))
+
+    # --- PXD064049 spatial DVP: deposited 1.8.1 matrix vs 2.5.1-ent matrix ---
+    sp_orig_pg = count_matrix_rows(_orig_matrix('pg'), PG_METADATA)
+    sp_qm_pg = count_matrix_rows(_qm_matrix('pg'), PG_METADATA)
+    sp_orig_pr = count_matrix_rows(_orig_matrix('pr'), PR_METADATA)
+    sp_qm_pr = count_matrix_rows(_qm_matrix('pr'), PR_METADATA)
+    rows.append(('PXD064049', 'Spatial DVP', sp_orig_pg, 'DIA-NN 1.8.1', sp_qm_pg,
+                 '2.5.1-enterprise', 'protein groups', sp_orig_pr, sp_qm_pr))
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cols = ['dataset', 'label', 'original', 'original_engine', 'reanalysis',
+            'diann_version', 'metric', 'orig_precursors', 'new_precursors']
+    with out.open('w') as fh:
+        fh.write('\t'.join(cols) + '\n')
+        for r in rows:
+            fh.write('\t'.join(str(x) for x in r) + '\n')
+    for ds, lbl, o, _e, n, _v, _m, *_ in rows:
+        print(f'  {ds:12s} {lbl:12s} {o:>6} -> {n:>6}  (+{_pct(o, n):.0f}%)')
+    print(f'wrote {out} ({len(rows)} cohorts; plexDIA excluded per methods.md §1 L75)')
+    return 0
+
+
 def figure_reanalysis_improvement_main() -> int:
     print(f'wrote {_figure_reanalysis_improvement__render(_figure_reanalysis_improvement__OUT)}')
     return 0
@@ -6851,8 +6946,11 @@ def _count(ftp_dir: str, version: str) -> tuple[int, int, int]:
     r = r[r['Lib.Q.Value'] <= Q_THRESHOLD]
     phosphopeptides = r.loc[r['Modified.Sequence'].str.contains(PHOSPHO, na=False), 'Modified.Sequence'].nunique()
     site = _cached(ftp_dir, version, 'diann_report.site_report.parquet')
-    s = pq.read_table(site, columns=['Protein', 'Site', 'Modification', 'Probability']).to_pandas()
+    s = pq.read_table(site, columns=['Protein', 'Protein.Index.In.Group', 'Site', 'Modification', 'Probability']).to_pandas()
     ph = s[s['Modification'].astype(str).str.contains(PHOSPHO, na=False)]
+    # methods.md §1: a precursor mapping to multiple proteins yields multiple sites;
+    # count sites only against the FIRST protein in the group (index 0 in site_report).
+    ph = ph[ph['Protein.Index.In.Group'] == 0]
     sites_all = ph.drop_duplicates(['Protein', 'Site']).shape[0]
     sites_classI = ph[ph['Probability'] >= 0.75].drop_duplicates(['Protein', 'Site']).shape[0]
     return (phosphopeptides, sites_classI, sites_all)
@@ -7149,8 +7247,16 @@ def quantms_accessions(confident: pd.DataFrame) -> set[str]:
     acc.discard('')
     return acc
 
-def render_comparison(orig_per_cell: pd.Series, qm_cells: pd.DataFrame, orig_total: int, qm_total: int, shared: int, orig_only: int, qm_only: int, svg_path: Path) -> None:
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4.3))
+def render_comparison(orig_per_cell: pd.Series, qm_cells: pd.DataFrame, svg_path: Path) -> None:
+    """Per-single-cell protein-group depth, Galatidou 2024 vs quantmsdiann.
+
+    Distributional context only: methods.md §1 forbids comparing plexDIA
+    protein-group *counts* across DIA-NN versions (pre-2.0 PG.Q.Value does not
+    reflect channel-level confidence), so this panel is not an identification-
+    gain claim. The concordance test is the QC-matched panel (render_qc_matched).
+    """
+    fig, axes = plt.subplots(1, 1, figsize=(4.5, 4.3))
+    axes = [axes]
     ax = axes[0]
     data = [orig_per_cell.values, qm_cells['proteins'].values]
     bp = ax.boxplot(data, widths=0.6, patch_artist=True, showfliers=False, medianprops=dict(color='#212121', linewidth=1.4))
@@ -7165,28 +7271,6 @@ def render_comparison(orig_per_cell: pd.Series, qm_cells: pd.DataFrame, orig_tot
     ax.set_xticklabels([f'Galatidou 2024\n(n={len(orig_per_cell)})', f'quantmsdiann\n(n={len(qm_cells)})'])
     ax.set_ylabel('Protein groups per single cell')
     ax.set_ylim(bottom=0)
-    ax.text(0.5, 0.97, '(a)', transform=ax.transAxes, fontweight='bold', va='top')
-    ax = axes[1]
-    bars = ax.bar([0, 1], [orig_total, qm_total], width=0.6, color=[_figure_msv000093870_galatidou_vs_quantmsdiann__ORIG_COLOUR, _figure_msv000093870_galatidou_vs_quantmsdiann__QM_COLOUR], edgecolor='#37474f')
-    for b, v in zip(bars, (orig_total, qm_total)):
-        ax.text(b.get_x() + b.get_width() / 2, v, f'{v:,}', ha='center', va='bottom', fontsize=10)
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Galatidou 2024', 'quantmsdiann'])
-    ax.set_ylabel('Total protein groups (dataset)')
-    ax.set_ylim(0, max(orig_total, qm_total) * 1.15)
-    ax.text(0.5, 0.97, '(b)', transform=ax.transAxes, fontweight='bold', va='top')
-    ax = axes[2]
-    cats = ['Shared', 'Galatidou\nonly', 'quantmsdiann\nonly']
-    vals = [shared, orig_only, qm_only]
-    cols = ['#43a047', _figure_msv000093870_galatidou_vs_quantmsdiann__ORIG_COLOUR, _figure_msv000093870_galatidou_vs_quantmsdiann__QM_COLOUR]
-    bars = ax.bar(range(3), vals, width=0.6, color=cols, edgecolor='#37474f')
-    for b, v in zip(bars, vals):
-        ax.text(b.get_x() + b.get_width() / 2, v, f'{v:,}', ha='center', va='bottom', fontsize=10)
-    ax.set_xticks(range(3))
-    ax.set_xticklabels(cats)
-    ax.set_ylabel('Protein groups')
-    ax.set_ylim(0, max(vals) * 1.15)
-    ax.text(0.5, 0.97, '(c)', transform=ax.transAxes, fontweight='bold', va='top')
     for ax in axes:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -7196,66 +7280,35 @@ def render_comparison(orig_per_cell: pd.Series, qm_cells: pd.DataFrame, orig_tot
     fig.savefig(svg_path, bbox_inches='tight')
     plt.close(fig)
 
-def render_total_pg(orig_total: int, qm_total: int, svg_path: Path) -> None:
-    """Compact single-panel total-protein-group comparison for the main
-    cell-line-reanalysis figure (Fig 3): original (grey) vs quantmsdiann
-    (blue), matching the per-cohort `main_comparison` bar style. Conveys
-    the single-cell reanalysis benefit (more protein groups from the same
-    raw data) in one column-width panel. Uses the same (7, 5) canvas as the
-    per-cohort `main_comparison` panels so all three Fig. 3 sub-panels share
-    an aspect ratio and render at equal height."""
-    fig, ax = plt.subplots(figsize=(7, 5))
-    bars = ax.bar([0, 1], [orig_total, qm_total], width=0.55, color=[_figure_msv000093870_galatidou_vs_quantmsdiann__ORIG_COLOUR, _figure_msv000093870_galatidou_vs_quantmsdiann__QM_COLOUR], edgecolor='#37474f')
-    ax.set_xlim(-0.7, 1.7)
-    for b, v in zip(bars, (orig_total, qm_total)):
-        ax.text(b.get_x() + b.get_width() / 2, v, f'{v:,}', ha='center', va='bottom', fontsize=11)
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Galatidou 2024\n(original)', 'quantmsdiann\n(DIA-NN)'])
-    ax.set_ylabel('Protein groups (dataset, 1\\% FDR)'.replace('\\%', '%'))
-    ax.set_ylim(0, max(orig_total, qm_total) * 1.16)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.tick_params(labelsize=9)
-    fig.tight_layout()
-    svg_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(svg_path, bbox_inches='tight')
-    plt.close(fig)
-
 def figure_msv000093870_galatidou_vs_quantmsdiann_main() -> int:
     confident = load_channel_confident(_cached_report())
     qm_cells = per_cell_counts(confident)
-    qm_total = confident['Protein.Group'].nunique()
-    qm_acc = quantms_accessions(confident)
-    qm_lead = {_strip_isoform(str(g).split(';')[0]) for g in confident['Protein.Group'].dropna().unique()}
-    qm_lead.discard('')
+    # Global protein groups, §1 rule (Lib.PG.Q.Value); reported as a standalone
+    # quantmsdiann depth only — methods.md §1 forbids comparing plexDIA protein-
+    # group counts across DIA-NN versions, so there is no Galatidou comparison.
+    qm_global_pg = int(confident.loc[confident['Lib.PG.Q.Value'] <= 0.01, 'Protein.Group'].nunique())
     matrix_path = _cached_original()
-    orig_per_cell, orig_acc = original_per_cell(matrix_path)
-    orig_total = len(orig_acc)
-    shared = len(orig_acc & qm_lead)
-    orig_only = len(orig_acc - qm_lead)
-    qm_only = len(qm_lead - orig_acc)
+    orig_per_cell, _orig_acc = original_per_cell(matrix_path)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    render_comparison(orig_per_cell, qm_cells, orig_total=len(orig_acc), qm_total=qm_total, shared=shared, orig_only=orig_only, qm_only=qm_only, svg_path=FIGURES_DIR / 'main_galatidou_comparison.svg')
-    render_total_pg(orig_total=len(orig_acc), qm_total=qm_total, svg_path=FIGURES_DIR / 'main_galatidou_total_pg.svg')
+    render_comparison(orig_per_cell, qm_cells, svg_path=FIGURES_DIR / 'main_galatidou_comparison.svg')
     matched = qc_matched_table(matrix_path, qm_cells)
     r = render_qc_matched(matched, FIGURES_DIR / 'main_galatidou_qc_matched.svg')
     counts = FIGURES_DIR / 'comparison_counts.tsv'
     with counts.open('w') as fh:
+        # Reproduction metrics only. Per-cell protein-group counts are shown for
+        # distributional context (NOT an identification-gain claim, per §1 L75);
+        # the concordance metric is qc_matched_pearson_r.
         fh.write('metric\tGalatidou_2024\tquantmsdiann\n')
         fh.write(f'cells\t{len(orig_per_cell)}\t{len(qm_cells)}\n')
         fh.write(f"median_proteins_per_cell\t{int(orig_per_cell.median())}\t{int(qm_cells['proteins'].median())}\n")
-        fh.write(f'protein_groups_total\t{len(orig_acc)}\t{qm_total}\n')
-        fh.write(f'protein_groups_shared\t{shared}\t{shared}\n')
-        fh.write(f'protein_groups_unique\t{orig_only}\t{qm_only}\n')
-        fh.write(f'quantmsdiann_expanded_accessions\t-\t{len(qm_acc)}\n')
+        fh.write(f'quantmsdiann_global_protein_groups\t-\t{qm_global_pg}\n')
         fh.write(f'qc_matched_cells\t{len(matched)}\t{len(matched)}\n')
         fh.write(f"qc_matched_median_proteins_per_cell\t{int(matched['orig_proteins'].median())}\t{int(matched['qm_proteins'].median())}\n")
         fh.write(f'qc_matched_pearson_r\t{r:.3f}\t{r:.3f}\n')
-    print('=== Galatidou 2024 vs quantmsdiann ===')
+    print('=== Galatidou 2024 vs quantmsdiann (reproduction) ===')
     print(f'cells:            {len(orig_per_cell)} vs {len(qm_cells)}')
-    print(f"median prot/cell: {int(orig_per_cell.median())} vs {int(qm_cells['proteins'].median())}")
-    print(f'protein groups:   {len(orig_acc)} vs {qm_total}')
-    print(f'protein groups:   shared {shared}, Galatidou-only {orig_only}, quantmsdiann-only {qm_only} ({100 * shared / len(orig_acc):.0f}% of original recovered)')
+    print(f"median prot/cell: {int(orig_per_cell.median())} vs {int(qm_cells['proteins'].median())} (distributional context only)")
+    print(f'quantmsdiann global protein groups (Lib.PG.Q.Value <= 0.01): {qm_global_pg}')
     print(f'--- QC-matched cohort ({len(matched)} oocytes) ---')
     print(f"median prot/cell: {int(matched['orig_proteins'].median())} (orig) vs {int(matched['qm_proteins'].median())} (quantmsdiann), Pearson r={r:.2f}")
     print(f"Wrote {FIGURES_DIR / 'main_galatidou_comparison.svg'}")
@@ -7306,7 +7359,7 @@ _figure_msv000093870_oocyte_plexdia__FTP_BASE = 'https://ftp.pride.ebi.ac.uk/pub
 REPORT_PARQUET_URL = f'{_figure_msv000093870_oocyte_plexdia__FTP_BASE}/quant_tables/diann_report.parquet'
 CHANNEL_COLOURS = {'0': '#90caf9', '4': '#1e88e5', '8': '#0d47a1'}
 CHANNEL_LABELS = {'0': 'mTRAQ-0', '4': 'mTRAQ-4', '8': 'mTRAQ-8'}
-REPORT_COLUMNS = ['Run', 'Channel', 'Protein.Group', 'Protein.Ids', 'Precursor.Id', 'Decoy', 'Channel.Q.Value', 'PG.Q.Value']
+REPORT_COLUMNS = ['Run', 'Channel', 'Protein.Group', 'Protein.Ids', 'Precursor.Id', 'Decoy', 'Q.Value', 'Channel.Q.Value', 'PG.Q.Value', 'Lib.Q.Value', 'Lib.PG.Q.Value']
 
 def _cached_report() -> Path:
     """Download the DIA-NN report parquet once and cache it on disk. The cache
@@ -7345,9 +7398,10 @@ def load_channel_confident(report_path: Path) -> pd.DataFrame:
 
 def per_cell_counts(confident: pd.DataFrame) -> pd.DataFrame:
     """One row per single cell = (Run, Channel): precursors (Channel.Q.Value
-    <= 1%) and protein groups (PG.Q.Value <= 1%), per the Vadim per-run rule
-    (the channel is the per-run unit in plexDIA)."""
-    prec = confident[confident['Channel.Q.Value'] <= 0.01].groupby(['Run', 'Channel'])['Precursor.Id'].nunique().rename('precursors')
+    <= 1% AND Q.Value <= 1%, both gates per methods.md §1 line 69) and protein
+    groups (PG.Q.Value <= 1%), per the per-run rule (the channel is the per-run
+    unit in plexDIA)."""
+    prec = confident[(confident['Channel.Q.Value'] <= 0.01) & (confident['Q.Value'] <= 0.01)].groupby(['Run', 'Channel'])['Precursor.Id'].nunique().rename('precursors')
     prot = confident[confident['PG.Q.Value'] <= 0.01].groupby(['Run', 'Channel'])['Protein.Group'].nunique().rename('proteins')
     cells = pd.concat([prec, prot], axis=1).fillna(0).astype(int).reset_index()
     return cells.sort_values(['Channel', 'Run'])
@@ -7386,8 +7440,10 @@ def write_counts(cells: pd.DataFrame, confident: pd.DataFrame, path: Path) -> No
         fh.write('metric\tchannel\tvalue\tsource\n')
         fh.write(f'single_cells_total\tall\t{len(cells)}\tRun x Channel (channel-confident)\n')
         fh.write(f"runs\tall\t{cells['Run'].nunique()}\tdiann_report.parquet\n")
-        fh.write(f"unique_protein_groups\tall\t{confident['Protein.Group'].nunique()}\ttarget, channel-confident\n")
-        fh.write(f"unique_precursors\tall\t{confident['Precursor.Id'].nunique()}\ttarget, channel-confident\n")
+        global_pgs = confident.loc[confident['Lib.PG.Q.Value'] <= 0.01, 'Protein.Group'].nunique()
+        global_prec = confident.loc[confident['Lib.Q.Value'] <= 0.01, 'Precursor.Id'].nunique()
+        fh.write(f"unique_protein_groups\tall\t{global_pgs}\tglobal rule (Lib.PG.Q.Value <= 0.01)\n")
+        fh.write(f"unique_precursors\tall\t{global_prec}\tglobal rule (Lib.Q.Value <= 0.01)\n")
         fh.write(f"median_proteins_per_cell\tall\t{int(cells['proteins'].median())}\tmedian across cells\n")
         fh.write(f"median_precursors_per_cell\tall\t{int(cells['precursors'].median())}\tmedian across cells\n")
         for ch in ['0', '4', '8']:
@@ -7881,6 +7937,8 @@ DATA_PREP = [
      "Per-cell / completeness / CV tables for the single-cell figure"),
     ("phospho_tables", make_phospho_tables_main,
      "Phosphopeptide / phosphosite tables (Lib.Q.Value; site Prob>=0.75)"),
+    ("reanalysis_improvement_data", generate_reanalysis_improvement_tsv,
+     "Regenerate reanalysis_improvement.tsv from per-cohort §1 counts (no plexDIA)"),
 ]
 
 FIGURES = [
