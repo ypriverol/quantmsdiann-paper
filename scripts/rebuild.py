@@ -3146,10 +3146,6 @@ WALZER_PROTEINS_50PCT_FILTER = 6867
 EPROT73_URL = 'https://ftp.ebi.ac.uk/pub/databases/microarray/data/atlas/experiments/E-PROT-73/E-PROT-73.tsv'
 GUO_CURATED_PEPTIDES = 22554
 GUO_CURATED_PROTEINS = 3171
-# Guo 2019 (PXD003539) published protein headline under the >=2-unique-peptide
-# criterion, used as the deposited baseline in the reanalysis-recovery figure.
-# External published value (TODO: confirm exact source/citation), not recomputed.
-GUO_PROTEINS_2PEP = 4284
 SUMMARY_LOG_PROTEIN_LINE_RE = re.compile('Protein groups with global q-value <= 0\\.01:\\s*(\\d+)')
 
 @dataclass(frozen=True)
@@ -3290,6 +3286,33 @@ def count_openswath_quantified(matrix_path: Path) -> tuple[int, int, int]:
                 peptides.add(stripped)
         protein_groups.update(quantified['Protein'].tolist())
     return (total_precursors, len(peptides), len(protein_groups))
+
+def count_openswath_proteins_min_peptides(matrix_path: Path, min_peptides: int = 2) -> int:
+    """Target proteins supported by >= ``min_peptides`` distinct peptides among
+    quantified rows of the deposited OpenSWATH ``feature_alignment_requant_matrix.tsv``.
+
+    Reproduces the Guo 2019 (PXD003539) published >=2-peptide protein headline
+    (4,284) directly from the deposited matrix, so the reanalysis-figure baseline
+    is FTP-derived rather than a hand-typed constant. Decoys are dropped; a row is
+    quantified iff it carries >=1 non-NA ``Intensity_*`` value (the deposited
+    matrix is already FDR-filtered: max ``pg_pvalue`` ~1e-4). Distinct peptides are
+    counted from the matrix ``Peptide`` column.
+    """
+    header = list(pd.read_csv(matrix_path, sep='\t', nrows=0).columns)
+    if 'Peptide' not in header or 'Protein' not in header:
+        raise ValueError(f'OpenSWATH matrix {matrix_path} missing Peptide/Protein column')
+    intensity_cols = [c for c in header if c.startswith('Intensity_')]
+    if not intensity_cols:
+        raise ValueError(f'OpenSWATH matrix {matrix_path} has no Intensity_* columns')
+    pep_per_prot: dict[str, set[str]] = {}
+    for chunk in pd.read_csv(matrix_path, sep='\t', usecols=['Peptide', 'Protein'] + intensity_cols, dtype=str, chunksize=50000):
+        is_decoy = chunk['Peptide'].str.startswith('DECOY_', na=False) | chunk['Protein'].str.contains('DECOY', case=False, na=False)
+        target = chunk[~is_decoy]
+        quantified = target[target[intensity_cols].notna().any(axis=1)]
+        for prot, pep in zip(quantified['Protein'], quantified['Peptide']):
+            if isinstance(prot, str) and isinstance(pep, str):
+                pep_per_prot.setdefault(prot, set()).add(pep)
+    return sum(1 for peps in pep_per_prot.values() if len(peps) >= min_peptides)
 
 def count_eprot73_genes(tsv_path: Path) -> int:
     """Count unique Ensembl gene IDs in the Expression Atlas E-PROT-73 file.
@@ -6650,14 +6673,17 @@ def generate_reanalysis_improvement_tsv() -> int:
     out = _figure_reanalysis_improvement__DATA
     rows = []
 
-    # --- PXD003539 NCI-60: Guo published >=2-peptide baseline vs reanalysis ---
-    # GUO_PROTEINS_2PEP is the published Guo 2019 protein headline under the
-    # >=2-unique-peptide criterion (external baseline, like PROCAN/SUN; it is NOT
-    # recomputed from the deposited OpenSWATH matrix, whose raw quantified-protein
-    # count is 6,556). The reanalysis side is the §1 >=2-peptide count.
+    # --- PXD003539 NCI-60: Guo OpenSWATH >=2-peptide baseline vs reanalysis ---
+    # Both sides under the >=2-unique-peptide criterion. The original (Guo 2019)
+    # baseline is computed directly from the deposited OpenSWATH matrix on the
+    # PRIDE FTP (feature_alignment_requant_matrix.tsv), and the reanalysis side is
+    # the §1 >=2-peptide count from the DIA-NN report (also FTP).
+    opensw = _figure_original_vs_quantmsdiann__DATA_DIR / 'feature_alignment_requant_matrix.tsv'
+    download_if_missing(OPENSWATH_MATRIX_URL, opensw)
+    nci_orig = count_openswath_proteins_min_peptides(opensw, min_peptides=2)
     download_if_missing(DIANN_REPORT_PARQUET_URL, PXD003539_REPORT_PARQUET)
     nci_rean = int(report_global_counts_diann(PXD003539_REPORT_PARQUET)['prot_2pep'])
-    rows.append(('PXD003539', 'NCI-60', GUO_PROTEINS_2PEP, 'OpenSWATH', nci_rean,
+    rows.append(('PXD003539', 'NCI-60', nci_orig, 'OpenSWATH', nci_rean,
                  '2.5.1-enterprise', 'protein groups (>=2 peptides)', '', ''))
 
     # --- PXD030304 ProCan: published >=2-peptide baseline vs reanalysis ---

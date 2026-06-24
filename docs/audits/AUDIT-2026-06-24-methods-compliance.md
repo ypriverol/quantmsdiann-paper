@@ -224,3 +224,10 @@ or 29; dead `version` field.
 **Decisions requiring the user** (narrative-affecting): scope of the plexDIA reframe; how
 to handle the phospho-vs-Spectronaut comparison (disclose peptidoform metric / add
 non-comparability caveat / remove); whether to regenerate reanalysis_improvement.tsv now.
+
+**Update (resolved):** NCI-60 original 4,284 is now derived from the deposited OpenSWATH
+matrix on PRIDE FTP (`feature_alignment_requant_matrix.tsv`, proteins with >=2 distinct
+peptides among quantified rows; `count_openswath_proteins_min_peptides`), not a hand-typed
+constant. The reanalysis-side count (6,812) likewise comes from the DIA-NN report parquet
+on FTP. Spatial-cohort inference inflation (>1.2% multi-accession) remains an open
+follow-up for re-analysis/caveat.
