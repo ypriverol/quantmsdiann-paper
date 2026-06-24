@@ -6653,6 +6653,26 @@ def _figure_reanalysis_improvement__render(out: Path) -> Path:
     plt.close(fig)
     return out
 
+# Deposited ProCan DIA-NN 1.7 report (ProCan-DepMapSanger_DIANN_output.tsv, ~237 GB
+# on PRIDE), slimmed to the count_report columns via scripts/slim_diann_report.py
+# and hosted on the benchmarks FTP so the original >=2-peptide baseline is recomputed
+# from a public file rather than a hard-coded paper headline.
+PROCAN_ORIGINAL_REPORT_URL = f'{_BENCH_CL_BASE}/PXD030304/original_v1_7/quant_tables/diann_report.parquet'
+
+def _original_report_prot_2pep(url: str, dest: Path, *, fallback: int, label: str) -> int:
+    """>=2-peptide global protein groups from a deposited DIA-NN report on the FTP
+    (the §1 ``count_report`` ``prot_2pep`` metric). Returns ``fallback`` -- a cited
+    published headline -- with a warning if the FTP file is not yet available, so the
+    baseline is FTP-recomputed once the file is hosted while the rebuild never breaks
+    in the meantime."""
+    try:
+        download_if_missing(url, dest)
+        return int(report_global_counts_diann(dest)['prot_2pep'])
+    except Exception as exc:
+        print(f'WARNING: {label} original report not on FTP yet ({exc}); using cited '
+              f'published headline {fallback:,}', file=sys.stderr)
+        return fallback
+
 def generate_reanalysis_improvement_tsv() -> int:
     """Regenerate analysis/figures/reanalysis/data/reanalysis_improvement.tsv
     from the per-cohort sources (methods.md §3: FTP report -> count_report ->
@@ -6686,10 +6706,16 @@ def generate_reanalysis_improvement_tsv() -> int:
     rows.append(('PXD003539', 'NCI-60', nci_orig, 'OpenSWATH', nci_rean,
                  '2.5.1-enterprise', 'protein groups (>=2 peptides)', '', ''))
 
-    # --- PXD030304 ProCan: published >=2-peptide baseline vs reanalysis ---
+    # --- PXD030304 ProCan: deposited DIA-NN 1.7 original vs reanalysis ---
+    # Original >=2-peptide proteins recomputed from the deposited ProCan DIA-NN
+    # report (slimmed parquet on the FTP); cited headline 6,692 is the fallback
+    # until that file is hosted.
+    procan_orig = _original_report_prot_2pep(
+        PROCAN_ORIGINAL_REPORT_URL, DATA_ROOT / 'PXD030304' / 'original_diann_report.parquet',
+        fallback=PROCAN_PROTEINS_STRINGENT, label='ProCan')
     with open(_figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'diann_report_protein_counts.json') as fh:
         procan = json.load(fh)
-    rows.append(('PXD030304', 'ProCan', PROCAN_PROTEINS_STRINGENT, 'DIA-NN 1.7',
+    rows.append(('PXD030304', 'ProCan', procan_orig, 'DIA-NN 1.7',
                  int(procan['prot_2pep']), '2.5.1', 'protein groups (>=2 peptides)', '', ''))
 
     # --- PXD004701 Sun: published consistency-filtered baseline vs reanalysis union ---
