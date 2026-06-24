@@ -5012,7 +5012,7 @@ Three panels (all counts at 1% FDR, max_mods=2; see data/phospho/phospho_counts.
   A  Phosphopeptides  -- distinct phospho-bearing modified precursors
      (UniMod:21 in Modified.Sequence; Lib.Q.Value <= 0.01, no target filter).
   B  Class-I phosphosites -- localized sites from the DIA-NN site report
-     (Modification == UniMod:21, localization Probability >= 0.99), unique by
+     (Modification == UniMod:21, localization Probability >= 0.75), unique by
      protein + residue/site.
   C  PXD049692 deposited-vs-reanalysis -- distinct stripped phosphopeptide
      backbones on the identical 10 diaPASEF runs: the originally deposited
@@ -5111,7 +5111,7 @@ def _figure_phospho__render(out: Path) -> Path:
     df = pd.read_csv(COUNTS, sep='\t')
     fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.3))
     _version_panel(axes[0], df, 'phosphopeptides', 'Phosphopeptides', 'phosphopeptides')
-    _version_panel(axes[1], df, 'sites_classI', 'Class-I phosphosites (loc ≥ 0.99)', 'localized sites')
+    _version_panel(axes[1], df, 'sites_classI', 'Class-I phosphosites (loc ≥ 0.75)', 'localized sites')
     _deposited_panel(axes[2])
     handles = [Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=_figure_phospho__VCOL[v], markeredgecolor='white', label=f'DIA-NN {VLABEL[v]}') for v in _figure_phospho__VERSIONS]
     handles += [Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=fs.COMPARISON['original'], markeredgecolor='white', label='deposited (original)'), Line2D([0], [0], marker='s', linestyle='none', markersize=9, markerfacecolor=fs.COMPARISON['quantmsdiann'], markeredgecolor='white', label='quantms.io reanalysis')]
@@ -6812,7 +6812,7 @@ Definitions (Vadim filter rule; see methods.md §1)
   global precursor rule ``Lib.Q.Value <= 0.01`` (no contaminant/target filter);
 * sites_all: phospho sites from the DIA-NN site report (``Modification``
   contains ``UniMod:21``), unique by ``(Protein, Site)``;
-* sites_classI: the same restricted to localization ``Probability >= 0.99``.
+* sites_classI: the same restricted to localization ``Probability >= 0.75``.
 
 Output: data/phospho/phospho_counts.tsv (consumed by figure_phospho.py).
 
@@ -6854,7 +6854,7 @@ def _count(ftp_dir: str, version: str) -> tuple[int, int, int]:
     s = pq.read_table(site, columns=['Protein', 'Site', 'Modification', 'Probability']).to_pandas()
     ph = s[s['Modification'].astype(str).str.contains(PHOSPHO, na=False)]
     sites_all = ph.drop_duplicates(['Protein', 'Site']).shape[0]
-    sites_classI = ph[ph['Probability'] >= 0.99].drop_duplicates(['Protein', 'Site']).shape[0]
+    sites_classI = ph[ph['Probability'] >= 0.75].drop_duplicates(['Protein', 'Site']).shape[0]
     return (phosphopeptides, sites_classI, sites_all)
 
 def make_phospho_tables_main() -> int:
@@ -7880,7 +7880,7 @@ DATA_PREP = [
     ("single_cell_tables", make_single_cell_tables_main,
      "Per-cell / completeness / CV tables for the single-cell figure"),
     ("phospho_tables", make_phospho_tables_main,
-     "Phosphopeptide / phosphosite tables (Lib.Q.Value; site Prob>=0.99)"),
+     "Phosphopeptide / phosphosite tables (Lib.Q.Value; site Prob>=0.75)"),
 ]
 
 FIGURES = [
