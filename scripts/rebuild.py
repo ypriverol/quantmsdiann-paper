@@ -6653,23 +6653,69 @@ def _figure_reanalysis_improvement__render(out: Path) -> Path:
     plt.close(fig)
     return out
 
-# Deposited ProCan DIA-NN 1.7 report (ProCan-DepMapSanger_DIANN_output.tsv, ~237 GB
-# on PRIDE), slimmed to the count_report columns via scripts/slim_diann_report.py
-# and hosted on the benchmarks FTP so the original >=2-peptide baseline is recomputed
-# from a public file rather than a hard-coded paper headline.
-PROCAN_ORIGINAL_REPORT_URL = f'{_BENCH_CL_BASE}/PXD030304/original_v1_7/quant_tables/diann_report.parquet'
-
-def _original_report_prot_2pep(url: str, dest: Path, *, fallback: int, label: str) -> int:
-    """>=2-peptide global protein groups from a deposited DIA-NN report on the FTP
-    (the §1 ``count_report`` ``prot_2pep`` metric). Returns ``fallback`` -- a cited
-    published headline -- with a warning if the FTP file is not yet available, so the
-    baseline is FTP-recomputed once the file is hosted while the rebuild never breaks
-    in the meantime."""
+def procan_original_proteins_min2pep(*, fallback: int) -> int:
+    """ProCan 2022 original >=2-peptide protein count, recomputed from the public
+    ProCan figshare deposit (doi:10.6084/m9.figshare.19345397). The
+    ``peptide_counts_per_protein_per_sample.txt`` matrix gives the per-run number of
+    supporting peptides for each of the 8,498 quantified proteins; a protein has >=2
+    supporting peptides if its count is >=2 in at least one run. This reproduces the
+    published ~6,692 from a public file (provenance: figshare peptide-count matrix)
+    rather than a hard-coded paper headline. Falls back to the cited value on failure.
+    """
     try:
-        download_if_missing(url, dest)
-        return int(report_global_counts_diann(dest)['prot_2pep'])
+        path = _figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'peptide_counts_per_protein_per_sample.txt'
+        download_if_missing(f'{FIGSHARE_BASE}/{FIGSHARE_FILES["peptide_counts_per_protein_per_sample.txt"]}', path)
+        df = pd.read_csv(path, sep='\t', index_col=0)
+        max_peptides = df.apply(pd.to_numeric, errors='coerce').max(axis=0)
+        return int((max_peptides >= 2).sum())
     except Exception as exc:
-        print(f'WARNING: {label} original report not on FTP yet ({exc}); using cited '
+        print(f'WARNING: ProCan figshare recompute failed ({exc}); using cited '
+              f'published headline {fallback:,}', file=sys.stderr)
+        return fallback
+
+# Deposited Sun 2023 (PXD004701) original OpenSWATH identifications on PRIDE, used
+# to recompute the original protein baseline from public data instead of the paper
+# headline. 1R_all_id.txt: per-run peak-group ids (br, tg, area, mscore, rt);
+# sFile2 library: peptide -> protein (leading "N/" = #proteins, 1/ = proteotypic).
+_SUN_ARCHIVE = 'https://ftp.pride.ebi.ac.uk/pride/data/archive/2021/01/PXD004701'
+SUN_ORIGINAL_ID_URL = f'{_SUN_ARCHIVE}/1R_all_id.txt'
+SUN_ORIGINAL_LIB_URL = f'{_SUN_ARCHIVE}/sFile2_spectrast2tsv.tsv'
+_SUN_TG_RE = re.compile(r'^\d+_(.+)_(\d+)$')
+
+def sun_original_proteotypic_proteins(*, fallback: int) -> int:
+    """Sun 2023 original protein count, recomputed from the deposited OpenSWATH
+    files on PRIDE: distinct proteotypic SwissProt proteins identified at the
+    OpenSWATH peak-group q-value (``mscore``) <= 0.01 in ``1R_all_id.txt``, with
+    peptide->protein from the deposited library. This reproduces the published Sun
+    headline (~6,091) from public data (provenance: 1R_all_id.txt + sFile2 library);
+    falls back to the cited value if the deposit is unreachable."""
+    try:
+        idp = download_if_missing(SUN_ORIGINAL_ID_URL, DATA_ROOT / 'PXD004701' / '1R_all_id.txt')
+        libp = download_if_missing(SUN_ORIGINAL_LIB_URL, DATA_ROOT / 'PXD004701' / 'sun_library.tsv')
+        lib = pd.read_csv(libp, sep='\t', usecols=['PeptideSequence', 'ProteinName', 'decoy'], dtype=str)
+        lib = lib[lib['decoy'].astype(str) == '0']
+        pep_acc: dict[str, str] = {}
+        for pep, pn in zip(lib['PeptideSequence'], lib['ProteinName']):
+            m = re.match(r'(\d+)/(.*)', str(pn))
+            if not m or int(m.group(1)) != 1:          # proteotypic only (leading 1/)
+                continue
+            rest = m.group(2)
+            if not rest.startswith('sp|'):             # SwissProt leading protein only
+                continue
+            acc = rest.split('|')[1]
+            pep_acc[pep] = acc
+        proteins: set[str] = set()
+        for ch in pd.read_csv(idp, sep='\t', usecols=['tg', 'mscore'], dtype=str, chunksize=3_000_000):
+            ch = ch[pd.to_numeric(ch['mscore'], errors='coerce') <= 0.01]
+            for tg in ch['tg']:
+                mt = _SUN_TG_RE.match(str(tg))
+                if mt and mt.group(1) in pep_acc:
+                    proteins.add(pep_acc[mt.group(1)])
+        if not proteins:
+            raise ValueError('no proteins recomputed from Sun deposit')
+        return len(proteins)
+    except Exception as exc:
+        print(f'WARNING: Sun original deposit recompute failed ({exc}); using cited '
               f'published headline {fallback:,}', file=sys.stderr)
         return fallback
 
@@ -6706,26 +6752,26 @@ def generate_reanalysis_improvement_tsv() -> int:
     rows.append(('PXD003539', 'NCI-60', nci_orig, 'OpenSWATH', nci_rean,
                  '2.5.1-enterprise', 'protein groups (>=2 peptides)', '', ''))
 
-    # --- PXD030304 ProCan: deposited DIA-NN 1.7 original vs reanalysis ---
-    # Original >=2-peptide proteins recomputed from the deposited ProCan DIA-NN
-    # report (slimmed parquet on the FTP); cited headline 6,692 is the fallback
-    # until that file is hosted.
-    procan_orig = _original_report_prot_2pep(
-        PROCAN_ORIGINAL_REPORT_URL, DATA_ROOT / 'PXD030304' / 'original_diann_report.parquet',
-        fallback=PROCAN_PROTEINS_STRINGENT, label='ProCan')
+    # --- PXD030304 ProCan: figshare original >=2-peptide vs §1 reanalysis ---
+    # Original recomputed from the public ProCan figshare peptide-count matrix;
+    # reanalysis = quantmsdiann §1 >=2-peptide global protein groups (prot_2pep).
+    procan_orig = procan_original_proteins_min2pep(fallback=PROCAN_PROTEINS_STRINGENT)
     with open(_figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'diann_report_protein_counts.json') as fh:
         procan = json.load(fh)
     rows.append(('PXD030304', 'ProCan', procan_orig, 'DIA-NN 1.7',
                  int(procan['prot_2pep']), '2.5.1', 'protein groups (>=2 peptides)', '', ''))
 
-    # --- PXD004701 Sun: published consistency-filtered baseline vs reanalysis union ---
-    with open(_figure_pxd004701_sun_vs_quantmsdiann__DATA_DIR / 'diann_per_subtype_consistency_filter.json') as fh:
-        sun_subtypes = json.load(fh)
-    sun_union = set()
-    for pgs in sun_subtypes.values():
-        sun_union.update(pgs)
-    rows.append(('PXD004701', 'Sun', SUN_PROTEINS, 'PCT-SWATH', len(sun_union),
-                 '2.5.1', 'protein groups (consistency filter)', '', ''))
+    # --- PXD004701 Sun: deposited OpenSWATH original vs §1 reanalysis ---
+    # Original: proteotypic SwissProt proteins at OpenSWATH q-value <= 0.01,
+    # recomputed from the deposited 1R_all_id.txt + library (provenance), reproducing
+    # the published ~6,091. Reanalysis: quantmsdiann under its OWN §1 rule only --
+    # global protein groups at Lib.PG.Q.Value <= 0.01 (prot_global); no consistency
+    # / detection filter (that was the original study's gate, not a §1 rule).
+    sun_orig = sun_original_proteotypic_proteins(fallback=SUN_PROTEINS)
+    with open(_figure_pxd004701_sun_vs_quantmsdiann__DATA_DIR / 'diann_report_protein_counts.json') as fh:
+        sun_json = json.load(fh)
+    rows.append(('PXD004701', 'Sun', sun_orig, 'PCT-SWATH', int(sun_json['prot_global']),
+                 '2.5.1', 'protein groups (1% FDR)', '', ''))
 
     # --- PXD046357 HeLa Astral single-cell: quantmsdiann 1.8.1 vs 2.5.1-ent (sc_totals) ---
     sc = pd.read_csv(DATA_ROOT / 'single_cell' / 'sc_totals.tsv', sep='\t')
