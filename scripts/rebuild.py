@@ -5092,6 +5092,62 @@ def figure_performance_trace_main() -> int:
     return 0
 
 
+# Per-run wall-clock by dataset, grouped by acquisition / dataset type. Shows that
+# every supported modality completes in minutes-to-hours, including the cohorts that
+# are processed but NOT benchmarked against deposited data (plexDIA, phosphoproteomics,
+# spatial); the deep variable-modification phospho search is the most expensive per
+# run yet still finishes per cohort in hours.
+DATASET_TYPE = {
+    'ProteoBench_Module_7': 'Benchmark (ProteoBench)', 'PXD049412': 'Benchmark (ProteoBench)',
+    'PXD062685': 'Benchmark (ProteoBench)', 'PXD070049': 'Benchmark (ProteoBench)',
+    'PXD046357': 'Single-cell', 'PXD071075': 'Single-cell',
+    'MSV000093870': 'plexDIA',
+    'PXD003539': 'Bulk cell-line', 'PXD004701': 'Bulk cell-line', 'PXD030304': 'Bulk cell-line',
+    'PXD017199': 'Bulk cell-line', 'PXD041421': 'Bulk cell-line',
+    'PXD064049': 'Spatial DVP',
+    'PXD034128': 'Phosphoproteomics', 'PXD034623': 'Phosphoproteomics', 'PXD049692': 'Phosphoproteomics',
+}
+DATASET_TYPE_COLOURS = {
+    'Benchmark (ProteoBench)': OKABE_ITO['grey'], 'Single-cell': OKABE_ITO['blue'],
+    'plexDIA': OKABE_ITO['sky_blue'], 'Bulk cell-line': OKABE_ITO['orange'],
+    'Spatial DVP': OKABE_ITO['reddish_purple'], 'Phosphoproteomics': OKABE_ITO['vermillion'],
+}
+
+def figure_runtime_by_dataset_main() -> int:
+    """Supplementary figure: per-run wall-clock for every dataset, coloured by
+    dataset type, with cohort wall-clock and run count annotated."""
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+    apply_house_style()
+    repo = Path(__file__).resolve().parents[1]
+    df = pd.read_csv(repo / 'analysis' / 'figures' / 'performance' / 'data' / 'parallelism_data.tsv', sep='\t')
+    df = df[~df['version'].astype(str).str.startswith('v2_5_0_q')]   # drop q-value-sweep duplicates
+    df = df[df['dataset'].isin(DATASET_TYPE)].drop_duplicates('dataset').copy()
+    df['type'] = df['dataset'].map(DATASET_TYPE)
+    df['min_per_run'] = df['wallclock_seconds'] / df['n_runs'] / 60.0
+    df['cohort_h'] = df['wallclock_seconds'] / 3600.0
+    df = df.sort_values('min_per_run').reset_index(drop=True)
+    fig, ax = plt.subplots(figsize=(8.4, 5.4))
+    ax.barh(range(len(df)), df['min_per_run'], color=[DATASET_TYPE_COLOURS[t] for t in df['type']], edgecolor='#37474f', linewidth=0.5)
+    ax.set_yticks(range(len(df)))
+    ax.set_yticklabels(df['dataset'], fontsize=8)
+    ax.set_xscale('log')
+    ax.set_xlabel('Wall-clock per run (minutes, log scale)')
+    for i, r in df.iterrows():
+        ax.text(r['min_per_run'] * 1.08, i, f"{r['cohort_h']:.1f} h cohort, {int(r['n_runs'])} runs", va='center', fontsize=6.8, color='#37474f')
+    ax.set_xlim(right=ax.get_xlim()[1] * 4)
+    despine(ax)
+    handles = [Patch(facecolor=c, edgecolor='#37474f', label=t) for t, c in DATASET_TYPE_COLOURS.items()]
+    ax.legend(handles=handles, loc='lower right', fontsize=7.5, frameon=False, title='Dataset type', title_fontsize=8)
+    fig.tight_layout()
+    out = repo / 'analysis' / 'figures' / 'supplementary' / 'supp_runtime_by_dataset.svg'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, bbox_inches='tight')
+    plt.close(fig)
+    print(f'wrote {out}')
+    return 0
+
+
 # ======================================================================
 # inlined from analysis/figure_proteobench_accuracy.py
 # ======================================================================
@@ -7626,6 +7682,8 @@ FIGURES = [
      "Protein-accession overlap (supplementary)"),
     ("performance_trace", figure_performance_trace_main,
      "Per-step runtime + resources (runtime_per_step.svg, resources_per_step.svg)"),
+    ("runtime_by_dataset", figure_runtime_by_dataset_main,
+     "Per-run wall-clock by dataset type (supplementary Fig S3)"),
     ("mdc_cluster_runtime", figure_mdc_cluster_runtime_main,
      "MDC cluster runtime"),
 ]

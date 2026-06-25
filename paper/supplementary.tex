@@ -182,6 +182,25 @@ These figures decompose the end-to-end wall-clock and resource use reported in m
   \label{fig:resources-per-step}
 \end{figure}
 
+\begin{figure}[htbp]
+  \centering
+  \mcpincludegraphics[width=\textwidth,keepaspectratio]{supplementary/supp_runtime_by_dataset}
+  \caption[Per-run wall-clock by dataset type]{%
+    \textbf{Per-run wall-clock for every dataset processed in this study, grouped
+    by dataset type.} Bars show the mean \texttt{DIA-NN} wall-clock per run
+    (minutes, log scale); each bar is annotated with the cohort wall-clock and the
+    number of runs. Every supported modality completes within minutes to hours,
+    including the cohorts that are processed only to demonstrate workflow support
+    and are not benchmarked against the deposited analyses (plexDIA,
+    phosphoproteomics, spatial). The deep variable-modification phosphoproteomics
+    searches (PXD034128, PXD049692) are the most expensive per run, yet each cohort
+    still finishes in a few hours, while the bulk TripleTOF cohorts are fastest per
+    run. Times are from the EMBL-EBI HPC runs (\texttt{nextflow} traces), net of the
+    one-time in-silico library-prediction step.
+  }
+  \label{fig:supp-runtime-by-dataset}
+\end{figure}
+
 
 \section{ProteoBench protein-group depth across \texttt{DIA-NN} versions}
 \label{sec:supp-proteobench-proteins}
