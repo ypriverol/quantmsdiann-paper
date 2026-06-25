@@ -137,7 +137,7 @@ then the numbers aggregator); `--list` prints the same registry live.
 | `report_counts` | data | `data/quantmsdiann_benchmarks/report_counts.tsv` | downloads FTP reports, runs `count_report` |
 | `reanalysis_pg_counts` | data | per-cohort `diann_report_protein_counts.json` caches | Lib rule; inputs for the bulk-cohort figures |
 | `single_cell_tables` | data | `data/single_cell/mv_*.tsv`, `sc_totals.tsv` | per-cell `PG.Q.Value`; totals global |
-| `phospho_tables` | data | phosphopeptide / phosphosite tables | `Lib.Q.Value`; site Prob>=0.75 |
+| `runtime_by_dataset` | fig | per-run wall-clock by dataset type (Supp Fig S3) | `parallelism_data.tsv` |
 | `benchmarks` | fig | Fig 2 benchmark panels, `counts.tsv` | reads `report_counts.tsv` |
 | `queue_sweep` | fig | `queue_size_sweep.tsv` (feeds `fig2_validation`) | runtime trace |
 | `fig2_validation` | fig | Fig 2 validation composite | composes sweep + accuracy |

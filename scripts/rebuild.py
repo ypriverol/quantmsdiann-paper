@@ -283,16 +283,6 @@ def collect_single_cell(N: Numbers) -> None:
         for (ds, ver), v in med.items():
             N.add('', int(v), 'mv_per_cell.tsv', f'{ds} {ver} median protein groups/cell')
 
-def collect_phospho(N: Numbers) -> None:
-    df = _read(_collect_paper_numbers__REPO / 'data' / 'phospho' / 'phospho_counts.tsv')
-    if df is None:
-        return
-    for _, r in df.iterrows():
-        tag = f"{r['dataset']} {r['version']}"
-        for col in ('phosphopeptides', 'sites_classI', 'sites_all'):
-            if col in r:
-                N.add('', int(r[col]), 'phospho_counts.tsv', f'{tag} {col}')
-
 def collect_atlas(N: Numbers) -> None:
     df = _read(_collect_paper_numbers__REPO / 'analysis' / 'figures' / 'combined' / 'data' / 'combined_counts.tsv')
     if df is None:
@@ -305,7 +295,6 @@ def collect_paper_numbers_main() -> int:
     collect_benchmarks(N)
     collect_reanalysis(N)
     collect_single_cell(N)
-    collect_phospho(N)
     collect_atlas(N)
     N.to_tsv(OUT_TSV)
     N.to_tex(OUT_TEX)
@@ -6961,94 +6950,6 @@ def figure_single_cell_combined_main() -> int:
 
 
 # ======================================================================
-# inlined from analysis/make_phospho_tables.py
-# ======================================================================
-
-"""Generate the phospho supplementary figure's input table from public reports.
-
-Reproducibility generator for ``figure_phospho.py`` (Panels A/B): downloads the
-deposited DIA-NN phospho reports from the public PRIDE FTP and computes
-phosphopeptide and phosphosite counts, so nothing is hand-entered.
-
-PROVENANCE
-==========
-Our reanalyses are on the PRIDE FTP under
-``quantmsdiann-benchmarks/phospho/<dataset>/v<version>/quant_tables/``:
-  PXD034128-biological-study, PXD034128-highspeed-DIA, PXD049692, PXD034623
-each with ``diann_report.parquet`` and ``diann_report.site_report.parquet``,
-for DIA-NN ``v2_5_1`` and ``v2_5_1_enterprise``.
-
-Pipeline: https://github.com/bigbio/quantmsdiann
-
-Definitions (Vadim filter rule; see methods.md §1)
---------------------------------------------------
-* phosphopeptides: distinct ``Modified.Sequence`` carrying ``UniMod:21`` at the
-  global precursor rule ``Lib.Q.Value <= 0.01`` (no contaminant/target filter);
-* sites_all: phospho sites from the DIA-NN site report (``Modification``
-  contains ``UniMod:21``), unique by ``(Protein, Site)``;
-* sites_classI: the same restricted to localization ``Probability >= 0.75``.
-
-Output: data/phospho/phospho_counts.tsv (consumed by figure_phospho.py).
-
-Run:  python -m analysis.make_phospho_tables
-"""
-import sys
-import urllib.request
-from pathlib import Path
-import pandas as pd
-_make_phospho_tables__REPO = Path(__file__).resolve().parents[1]
-_make_phospho_tables__OUT_DIR = _make_phospho_tables__REPO / 'data' / 'phospho'
-_make_phospho_tables__CACHE_DIR = _make_phospho_tables__OUT_DIR / 'cache'
-_make_phospho_tables__FTP_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/phospho'
-PHOSPHO = 'UniMod:21'
-_make_phospho_tables__VERSIONS = ['2_5_1', '2_5_1_enterprise']
-DATASETS = {'PXD034128 biological-study': 'PXD034128-biological-study', 'PXD034128 highspeed-DIA': 'PXD034128-highspeed-DIA', 'PXD049692 NK-phospho': 'PXD049692', 'PXD034623 Galectin1': 'PXD034623'}
-
-def _cached(ftp_dir: str, version: str, fname: str) -> Path:
-    url = f'{_make_phospho_tables__FTP_BASE}/{ftp_dir}/v{version}/quant_tables/{fname}'
-    _make_phospho_tables__CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    dest = _make_phospho_tables__CACHE_DIR / f'{ftp_dir}_v{version}_{fname}'
-    if dest.exists() and dest.stat().st_size > 0:
-        return dest
-    print(f'Downloading {url} (cached) ...', file=sys.stderr)
-    tmp = dest.with_suffix(dest.suffix + '.part')
-    with urllib.request.urlopen(url, timeout=900) as resp, open(tmp, 'wb') as fh:
-        while (chunk := resp.read(1 << 20)):
-            fh.write(chunk)
-    tmp.replace(dest)
-    return dest
-
-def _count(ftp_dir: str, version: str) -> tuple[int, int, int]:
-    import pyarrow.parquet as pq
-    rep = _cached(ftp_dir, version, 'diann_report.parquet')
-    r = pq.read_table(rep, columns=['Modified.Sequence', 'Lib.Q.Value', 'Protein.Group']).to_pandas()
-    r = r[r['Lib.Q.Value'] <= Q_THRESHOLD]
-    phosphopeptides = r.loc[r['Modified.Sequence'].str.contains(PHOSPHO, na=False), 'Modified.Sequence'].nunique()
-    site = _cached(ftp_dir, version, 'diann_report.site_report.parquet')
-    s = pq.read_table(site, columns=['Protein', 'Protein.Index.In.Group', 'Site', 'Modification', 'Probability']).to_pandas()
-    ph = s[s['Modification'].astype(str).str.contains(PHOSPHO, na=False)]
-    # methods.md §1: a precursor mapping to multiple proteins yields multiple sites;
-    # count sites only against the FIRST protein in the group (index 0 in site_report).
-    ph = ph[ph['Protein.Index.In.Group'] == 0]
-    sites_all = ph.drop_duplicates(['Protein', 'Site']).shape[0]
-    sites_classI = ph[ph['Probability'] >= 0.75].drop_duplicates(['Protein', 'Site']).shape[0]
-    return (phosphopeptides, sites_classI, sites_all)
-
-def make_phospho_tables_main() -> int:
-    rows = []
-    for name, ftp_dir in DATASETS.items():
-        for version in _make_phospho_tables__VERSIONS:
-            pp, c1, sa = _count(ftp_dir, version)
-            rows.append((name, version, pp, c1, sa))
-            print(f'{name} {version}: {pp} phosphopeptides, {c1} class-I, {sa} sites')
-    df = pd.DataFrame(rows, columns=['dataset', 'version', 'phosphopeptides', 'sites_classI', 'sites_all'])
-    _make_phospho_tables__OUT_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(_make_phospho_tables__OUT_DIR / 'phospho_counts.tsv', sep='\t', index=False)
-    print(f"wrote {_make_phospho_tables__OUT_DIR / 'phospho_counts.tsv'}")
-    return 0
-
-
-# ======================================================================
 # inlined from analysis/make_single_cell_tables.py
 # ======================================================================
 
@@ -7653,8 +7554,6 @@ DATA_PREP = [
      "Recount bulk-cohort report protein groups (Lib rule) -> per-cohort JSON caches"),
     ("single_cell_tables", make_single_cell_tables_main,
      "Per-cell / completeness / CV tables for the single-cell figure"),
-    ("phospho_tables", make_phospho_tables_main,
-     "Phosphopeptide / phosphosite tables (Lib.Q.Value; site Prob>=0.75)"),
     ("reanalysis_improvement_data", generate_reanalysis_improvement_tsv,
      "Regenerate reanalysis_improvement.tsv from per-cohort §1 counts (no plexDIA)"),
 ]
