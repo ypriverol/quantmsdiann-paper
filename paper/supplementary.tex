@@ -279,32 +279,6 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
 
 \begin{figure}[htbp]
   \centering
-  \mcpincludegraphics[width=\textwidth,keepaspectratio]{plexDIA/MSV000093870/main_galatidou_comparison}\par
-  \vspace{0.6em}
-  \mcpincludegraphics[width=0.7\textwidth,keepaspectratio]{plexDIA/MSV000093870/main_galatidou_qc_matched}
-  \caption[MSV000093870 single-cell plexDIA reanalysis]{%
-    \textbf{MSV000093870 (Galatidou 2024, single-cell oocyte plexDIA):
-    \quantmsdiann{} reproduces the deposited single-cell depth.}
-    For plexDIA, protein-group identification counts are not comparable across
-    \texttt{DIA-NN} versions (the channel-level \texttt{PG.Q.Value} used here is
-    not defined in the \texttt{DIA-NN}~1.8.1 output of the original analysis), so
-    we assess reproducibility rather than an identification gain.
-    (\textbf{a})~Protein groups per single cell, shown for distributional
-    context only (Galatidou $n=97$ post-QC oocytes at their reported depth;
-    \quantmsdiann{} $n=107$ channel-confident cells at the channel-level
-    \texttt{PG.Q.Value} gate): the two distributions are of comparable magnitude
-    (per-cell median 1{,}784 versus 1{,}484) and this panel is not an
-    identification-count comparison.
-    (\textbf{b})~QC-matched per-oocyte comparison: with the two analyses
-    restricted to the same 97 cells, per-oocyte protein-group quantification is
-    strongly correlated (Pearson $r=0.97$), showing that the standardised,
-    version-pinned workflow reproduces the deposited plexDIA single-cell depth.
-  }
-  \label{fig:supp-msv093870-plexdia}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
   \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD030304/supp_proteins_per_tissue}
   \caption[PXD030304 per tissue]{%
     \textbf{PXD030304 (ProCan-DepMapSanger): protein groups per tissue.}
@@ -312,38 +286,6 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
     tissue of origin.
   }
   \label{fig:supp-pxd030304-tissue}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD030304/supp_missing_values_per_run}
-  \caption[PXD030304 missingness]{%
-    \textbf{PXD030304: per-run missing-value fraction across the
-    947-cell-line panel.}
-  }
-  \label{fig:supp-pxd030304-missing}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\textwidth,keepaspectratio]{supplementary/supp_phospho}
-  \caption[Phosphoproteomics reanalysis]{%
-    \textbf{Phosphoproteomics reanalysis by \quantmsdiann{} (DIA-NN, max.\ two
-    variable modifications per peptide, 1\% FDR).}
-    (\textbf{a})~Phosphopeptides (distinct phospho-bearing modified precursors)
-    and (\textbf{b})~class-I phosphosites (localization probability
-    $\geq 0.75$, unique by protein and residue) for the phospho-enriched
-    cohorts under standard DIA-NN~2.5.1 versus 2.5.1-enterprise: PXD034128
-    (HeLa EGF, biological-study and high-speed acquisitions) and PXD049692
-    (NK-cell Fe-NTA diaPASEF). The enterprise build adds a few percent of
-    identifications across both metrics. Phosphoproteomic identification numbers
-    are not compared across search engines (false-localisation rates differ
-    markedly at equal nominal confidence), so only \quantmsdiann{} DIA-NN~2.5.1
-    counts are shown. The non-enriched PXD034623 (Galectin-1 DIA) is reanalysed
-    for completeness but omitted here, as its $\sim$280 phosphopeptides are not
-    comparable to the enriched cohorts.
-  }
-  \label{fig:supp-phospho}
 \end{figure}
 
 \begin{figure}[htbp]
