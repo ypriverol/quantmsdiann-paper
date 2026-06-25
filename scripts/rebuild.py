@@ -6907,6 +6907,12 @@ def _merged(ax):
             bp = ax2.boxplot([vals], positions=[xc], widths=bw * 0.85, patch_artist=True, showfliers=False)
             fs.style_boxplot(bp, color=_figure_single_cell_combined__VCOL[v])
             ax2.scatter(xc + rng.uniform(-0.07, 0.07, len(vals)), vals, s=9, color=_figure_single_cell_combined__VCOL[v], alpha=0.6, edgecolors='none', zorder=3)
+            if v != '1_8_1' and len(vals):
+                lo_vals = percell[(percell['dataset'] == _FULL[d]) & (percell['version'] == '1_8_1')]['pg_count'].values
+                if len(lo_vals):
+                    lo_med, hi_med = np.median(lo_vals), np.median(vals)
+                    top = float(bp['whiskers'][1].get_ydata()[1])  # upper-whisker cap of this box
+                    ax2.annotate(f'{round(100 * (hi_med - lo_med) / lo_med):+d}%', (xc, top), textcoords='offset points', xytext=(0, 3), ha='center', va='bottom', fontsize=9, fontweight='bold', color=_figure_single_cell_combined__VCOL[v])
     ax.axvline(len(dsx) - 0.2, color='#cccccc', linewidth=0.8)
     ax.axvline(prot_x[dsx[-1]] + 0.7, color='#cccccc', linewidth=0.8)
     ticks = [prec_x[d] for d in dsx] + [prot_x[d] for d in dsx] + [cell_x[d] for d in dsx]
