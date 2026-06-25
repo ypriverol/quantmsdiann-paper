@@ -6304,6 +6304,41 @@ def _orig_matrix(kind: str) -> Path:
             dest.write_bytes(z.read(member))
     return dest
 
+def _orig_report() -> Path:
+    """Authors' deposited DIA-NN 1.8.1 per-precursor report (from the zip)."""
+    dest = _figure_pxd064049_spatial_vs_quantmsdiann__CACHE_DIR / 'orig_report.tsv'
+    if not dest.exists() or dest.stat().st_size == 0:
+        zip_dest = _download(_ORIG_ZIP, _figure_pxd064049_spatial_vs_quantmsdiann__CACHE_DIR / 'DIANN_results.zip')
+        with zipfile.ZipFile(zip_dest) as z:
+            member = next(m for m in z.namelist() if m.endswith('MYCN_High_Low.tsv'))
+            dest.write_bytes(z.read(member))
+    return dest
+
+def _dvp_global_counts(df: pd.DataFrame, label: str) -> dict[str, int]:
+    """Global §1 counts (Lib.PG.Q.Value / Lib.Q.Value <= 0.01), decoys dropped."""
+    if 'Decoy' in df.columns:
+        df = df[df['Decoy'] == 0]
+    gps = df.loc[df['Lib.PG.Q.Value'] <= 0.01, 'Protein.Group']
+    assert_protein_inference_ok(gps, label)
+    return {'prot_global': int(gps.nunique()),
+            'prec_global': int(df.loc[df['Lib.Q.Value'] <= 0.01, 'Precursor.Id'].nunique())}
+
+def dvp_report_counts() -> tuple[dict, dict]:
+    """§1 report-rule global counts for both DVP sides under a uniform
+    ``Lib.*.Q.Value`` <= 0.01. This avoids the ``--matrix-spec-q`` mismatch (the
+    deposited 1.8.1 matrices are written at q 0.01 but the quantmsdiann matrices at
+    0.05), so the spatial comparison is apples-to-apples instead of mixing
+    q-thresholds. The §4 multi-accession guard fires here: the 1.8.1 deposit is at
+    ~3.2%, the 2.5.1-ent at ~1.3% -- both above the 1.2% cap, but balanced."""
+    import pyarrow.parquet as pq
+    cols = ['Protein.Group', 'Precursor.Id', 'Lib.Q.Value', 'Lib.PG.Q.Value', 'Decoy']
+    o = pd.read_csv(_orig_report(), sep='\t', usecols=lambda c: c in cols)
+    q_parquet = _download(f'{_QB}/diann_report.parquet', _figure_pxd064049_spatial_vs_quantmsdiann__CACHE_DIR / 'qm_report.parquet')
+    have = set(pq.ParquetFile(q_parquet).schema_arrow.names)
+    q = pq.read_table(q_parquet, columns=[c for c in cols if c in have]).to_pandas()
+    return (_dvp_global_counts(o, 'DVP 1.8.1 deposited report'),
+            _dvp_global_counts(q, 'DVP 2.5.1-enterprise report'))
+
 def _entrapment_hit_rate(matrix_path: Path) -> tuple[int, int, float]:
     """(entrapment_passing, target_passing, entrapment_hit_rate_pct): the
     fraction of accepted identifications whose Protein.Group maps to an
@@ -6745,13 +6780,14 @@ def generate_reanalysis_improvement_tsv() -> int:
                  '2.5.1-enterprise', 'protein groups (union)',
                  int(hela.loc['1_8_1', 'precursors']), int(hela.loc['2_5_1_enterprise', 'precursors'])))
 
-    # --- PXD064049 spatial DVP: deposited 1.8.1 matrix vs 2.5.1-ent matrix ---
-    sp_orig_pg = count_matrix_rows(_orig_matrix('pg'), PG_METADATA)
-    sp_qm_pg = count_matrix_rows(_qm_matrix('pg'), PG_METADATA)
-    sp_orig_pr = count_matrix_rows(_orig_matrix('pr'), PR_METADATA)
-    sp_qm_pr = count_matrix_rows(_qm_matrix('pr'), PR_METADATA)
-    rows.append(('PXD064049', 'Spatial DVP', sp_orig_pg, 'DIA-NN 1.8.1', sp_qm_pg,
-                 '2.5.1-enterprise', 'protein groups', sp_orig_pr, sp_qm_pr))
+    # --- PXD064049 spatial DVP: deposited 1.8.1 report vs 2.5.1-ent report ---
+    # Both sides under the §1 rule (Lib.PG.Q.Value / Lib.Q.Value <= 0.01) from the
+    # per-precursor reports, NOT the count matrices -- the deposited matrices are at
+    # q 0.01 but the quantmsdiann matrices at 0.05, so a matrix-row comparison mixes
+    # thresholds (and understated the protein gain at +5%; the §1 rule gives +12%).
+    sp_o, sp_q = dvp_report_counts()
+    rows.append(('PXD064049', 'Spatial DVP', sp_o['prot_global'], 'DIA-NN 1.8.1', sp_q['prot_global'],
+                 '2.5.1-enterprise', 'protein groups (1% FDR)', sp_o['prec_global'], sp_q['prec_global']))
 
     out.parent.mkdir(parents=True, exist_ok=True)
     cols = ['dataset', 'label', 'original', 'original_engine', 'reanalysis',
@@ -6822,10 +6858,14 @@ _figure_single_cell_combined__FLAG = 'HeLa Astral SC'
 
 def _completeness(ax):
     df = pd.read_csv(D / 'mv_completeness.tsv', sep='\t')
-    df = df[df['dataset'] == _figure_single_cell_combined__FLAG]
-    for v in VERS:
-        s = df[df['version'] == v].sort_values('min_cells')
-        ax.plot(s['min_cells'], s['n_proteins'], linestyle='-', marker='o', ms=3.5, lw=1.8, color=_figure_single_cell_combined__VCOL[v])
+    # Both single-cell cohorts: HeLa Astral (solid) and A549/H460 (Bubis/Mechtler
+    # 2025, dashed), each in 1.8.1 and 2.5.1-enterprise.
+    for ds in ('HeLa Astral SC', 'A549/H460 SC'):
+        for v in VERS:
+            s = df[(df['dataset'] == ds) & (df['version'] == v)].sort_values('min_cells')
+            if not len(s):
+                continue
+            ax.plot(s['min_cells'], s['n_proteins'], linestyle=DS_STYLE.get(ds, '-'), marker='o', ms=3.0, lw=1.6, color=_figure_single_cell_combined__VCOL[v])
     ax.set_xlabel('quantified in ≥ N cells')
     ax.set_ylabel('protein groups')
     ax.set_ylim(bottom=0)
