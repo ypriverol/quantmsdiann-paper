@@ -23,6 +23,7 @@
 \usepackage{hyperref}
 \usepackage[margin=2cm]{geometry}
 \usepackage{mcpfigures}
+\usepackage{orcidlink}
 \input{macros}
 
 %% Keep long URLs, container names, paths and command tokens inside the
@@ -40,20 +41,20 @@
 
 \title{quantmsdiann: a scalable SDRF-driven DIA-NN workflow for reanalysis of single-cell, spatial, and bulk proteomics datasets}
 
-\author[aff1]{Qi-Xuan Yue} % ORCID 0009-0004-8120-9339
+\author[aff1]{Qi-Xuan Yue\,\orcidlink{0009-0004-8120-9339}}
 \author[aff1]{Yufei Shen}
-\author[aff3]{Asier Larrea}
-\author[aff2]{Chengxin Dai}
-\author[aff4]{Henry Webel}
-\author[aff6,aff11,aff12]{Jose Nimo}
-\author[aff6,aff12]{Fabian Coscia}
-\author[aff7]{Orhun Kok}
-\author[aff7,aff8]{Nikolai Slavov}
-\author[aff3]{Juan Antonio Vizca\'{\i}no} % ORCID 0000-0002-3905-4335
-\author[aff9,aff10]{Timo Sachsenberg} % ORCID 0000-0002-2833-6070
-\author[aff1]{Mingze Bai}
-\author[aff5]{Vadim Demichev}
-\author[aff3]{Yasset Perez-Riverol\corref{cor1}}
+\author[aff3]{Asier Larrea\,\orcidlink{0000-0001-9107-4299}}
+\author[aff2]{Chengxin Dai\,\orcidlink{0000-0001-6943-5211}}
+\author[aff4]{Henry Webel\,\orcidlink{0000-0001-8833-7617}}
+\author[aff6,aff11,aff12]{Jose Nimo\,\orcidlink{0000-0002-1565-7799}}
+\author[aff6,aff12]{Fabian Coscia\,\orcidlink{0000-0002-2244-5081}}
+\author[aff7]{Orhun Kok\,\orcidlink{0009-0002-9764-9094}}
+\author[aff7,aff8]{Nikolai Slavov\,\orcidlink{0000-0003-2035-1820}}
+\author[aff3]{Juan Antonio Vizca\'{\i}no\,\orcidlink{0000-0002-3905-4335}}
+\author[aff9,aff10]{Timo Sachsenberg\,\orcidlink{0000-0002-2833-6070}}
+\author[aff1]{Mingze Bai\,\orcidlink{0000-0002-9782-2056}}
+\author[aff5]{Vadim Demichev\,\orcidlink{0000-0002-2424-9412}}
+\author[aff3]{Yasset Perez-Riverol\,\orcidlink{0000-0001-6579-6941}\corref{cor1}}
 
 \ead[cor1]{yasset@ebi.ac.uk}
 \cortext[cor1]{Corresponding author.}
@@ -296,7 +297,7 @@ The Supplementary Notes provide the \texttt{DIA-NN} container-build recipes (Sup
 V.D.\ holds shares of Aptila Biotech. The other authors declare no competing interests.
 
 \section*{Acknowledgments}
-M.B.\ is supported by the Science and Technology Innovation Key R\&D Program of Chongqing (CSTB2023TIAD-STX0002). A.L.\ acknowledges support from MCIN (Recovery, Transformation and Resilience Plan); the Basque Government ``Biotechnology Complementary Plan Applied to Health'' funded by the European Union NextGeneration EU (PRTR-C17.I1; PRTR-C17.I01.P01.S13) (AAAA\_ACG\_AY\_2539/22\_05); and an EMBO Scientific Exchange Grant (number 10015/2023). Y.P-R.\ acknowledges support from the Wellcome Trust [223745/Z/21/Z], BBSRC [BB/V018779/1, BB/X001911/1], and EPSRC [EP/Y035984/1]. Y.P-R., N.S., O.K.\ and J.A.V.\ acknowledge support from a UKRI single-cell proteomics (SCP) grant [UKRI701]. Y.P-R.\ and J.A.V.\ acknowledge EMBL core funding. V.D.\ was funded by the German Ministry of Education and Research (BMBF), as part of the National Research Node ``Mass spectrometry in Systems Medicine'' (MSCoreSys), under grant agreement 161L0221.
+M.B.\ is supported by the Science and Technology Innovation Key R\&D Program of Chongqing (CSTB2023TIAD-STX0002). A.L.\ acknowledges support from MCIN (Recovery, Transformation and Resilience Plan); the Basque Government ``Biotechnology Complementary Plan Applied to Health'' funded by the European Union NextGeneration EU (PRTR-C17.I1; PRTR-C17.I01.P01.S13) (AAAA\_ACG\_AY\_2539/22\_05); and an EMBO Scientific Exchange Grant (number 10015/2023). Y.P-R.\ acknowledges support from the Wellcome Trust [223745/Z/21/Z], BBSRC [BB/V018779/1, BB/X001911/1], and EPSRC [EP/Y035984/1]. Y.P-R., N.S., O.K.\ and J.A.V.\ acknowledge support from a UKRI single-cell proteomics (SCP) grant [UKRI701]. Y.P-R.\ and J.A.V.\ acknowledge EMBL core funding. V.D.\ was funded by the German Ministry of Education and Research (BMBF), as part of the National Research Node ``Mass spectrometry in Systems Medicine'' (MSCoreSys), under grant agreement 161L0221. We use Claude; and Codex and ChatGPT for code generation and manuscript writting. We thank the EMBL-EBI HPC team for cluster support, and the ProteoBench community for providing a reproducible benchmark of DIA search engines.
 
 \section*{Author Contributions}
 QXY, YS and CD developed the pipeline. HW helped build the containers and contributed to the workflow implementation and manuscript writing. AL annotated the SDRF metadata and helped run the workflow.
