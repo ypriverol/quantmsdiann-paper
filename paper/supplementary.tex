@@ -34,7 +34,7 @@
 \renewcommand{\thetable}{S\arabic{table}}
 \setcounter{table}{0}
 
-%% Number the prose sections as "Supplementary Note 1, 2, ..." (figures stay S1..S11,
+%% Number the prose sections as "Supplementary Note 1, 2, ..." (figures stay S1..S8,
 %% Table S1). Each \section{...} below therefore renders as a Supplementary Note.
 \renewcommand{\thesection}{Supplementary Note~\arabic{section}}
 %% Widen the table-of-contents number box so the long "Supplementary Note N"
@@ -245,7 +245,7 @@ number quantified in every run (``complete profiles'', panel~b).
 \section{Per-cohort completeness and overlap (cell-line reanalyses)}
 \label{sec:supp-reanalyses}
 
-These figures complement main-text Fig.~4 with per-condition completeness, per-protein peptide counts, gene/accession overlap, and per-cell-line missingness for each reanalysed cohort.
+These figures complement main-text Fig.~4 with per-protein peptide counts, gene/accession overlap, and per-tissue protein recovery across the reanalysed cohorts.
 
 \begin{figure}[htbp]
   \centering
@@ -266,37 +266,6 @@ These figures complement main-text Fig.~4 with per-condition completeness, per-p
     OpenSWATH analysis and \quantmsdiann{} reanalysis.}
   }
   \label{fig:supp-pxd003539-venn}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD003539/supp_missing_values_per_run}
-  \caption[PXD003539 missingness]{%
-    \textbf{PXD003539: per-run missing-value fraction.}
-    Distribution of per-run missingness across the NCI-60 panel for both
-    pipelines.
-  }
-  \label{fig:supp-pxd003539-missing}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD004701/supp_proteins_per_subtype}
-  \caption[PXD004701 per subtype]{%
-    \textbf{PXD004701 (Sun 2023): protein groups per breast-cancer subtype.}
-    Distribution of identifications across the 76 cell lines stratified by
-    TNBC / non-TNBC subtype.
-  }
-  \label{fig:supp-pxd004701-subtype}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\textwidth,height=\mcpmaxfigheight,keepaspectratio]{PXD004701/supp_missing_values_per_run}
-  \caption[PXD004701 missingness]{%
-    \textbf{PXD004701 (Sun 2023): per-run missing-value fraction.}
-  }
-  \label{fig:supp-pxd004701-missing}
 \end{figure}
 
 \begin{figure}[htbp]
