@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-06-27T15:12:50.497178</dc:date>
+    <dc:date>2026-07-01T17:54:27.854571</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -35,7 +35,7 @@ C 45.80935 229.532006 40.265913 206.382516 40.265913 182.904658
 C 40.265913 159.4268 45.80935 136.27731 56.443691 115.345979 
 C 41.723067 134.787938 33.752663 158.518463 33.752663 182.904658 
 C 33.752663 207.290854 41.723067 231.021378 56.443691 250.463337 
-" clip-path="url(#pe9094c7a97)" style="fill: #9e9e9e; opacity: 0.55"/>
+" clip-path="url(#pc4b46fc4a1)" style="fill: #9e9e9e; opacity: 0.55"/>
    </g>
    <g id="patch_3">
     <path d="M 56.443691 115.345979 
@@ -71,7 +71,7 @@ C 207.968699 33.978128 191.250106 32.838386 174.690353 34.481558
 C 158.130601 36.12473 141.962001 40.527764 126.855615 47.507918 
 C 111.74923 54.488072 97.916984 63.947423 85.93297 75.493368 
 C 73.948957 87.039313 63.981298 100.509878 56.443691 115.345979 
-" clip-path="url(#pe9094c7a97)" style="fill: #1f77b4; opacity: 0.55"/>
+" clip-path="url(#pc4b46fc4a1)" style="fill: #1f77b4; opacity: 0.55"/>
    </g>
    <g id="patch_4">
     <path d="M 56.443691 250.463337 
@@ -93,7 +93,7 @@ C 101.532875 79.39999 91.004169 84.553551 81.461068 91.238179
 C 71.917967 97.922807 63.477007 106.056873 56.443691 115.345979 
 C 45.80935 136.27731 40.265913 159.4268 40.265913 182.904658 
 C 40.265913 206.382516 45.80935 229.532006 56.443691 250.463337 
-" clip-path="url(#pe9094c7a97)" style="fill: #84c2ed; opacity: 0.55"/>
+" clip-path="url(#pc4b46fc4a1)" style="fill: #84c2ed; opacity: 0.55"/>
    </g>
    <g id="text_1">
     <!-- 57 -->
@@ -1127,7 +1127,7 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="pe9094c7a97">
+  <clipPath id="pc4b46fc4a1">
    <rect x="7.2" y="7.2" width="357.922567" height="351.409317"/>
   </clipPath>
  </defs>

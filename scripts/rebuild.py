@@ -1914,8 +1914,8 @@ def _render_tissue_combined(ax, tissue_rows: list[tuple[str, dict[str, int]]], p
     for sp in ('top', 'right', 'bottom'):
         ax.spines[sp].set_visible(False)
     ax.spines['left'].set_visible(False)
-    ax.text(-0.5, n - 0.15, f'← Cell lines per tissue (max {max_c:,})', ha='center', va='bottom', fontsize=12, fontweight='bold')
-    ax.text(0.5, n - 0.15, f'Unique proteins per tissue (max {max_p:,}) →', ha='center', va='bottom', fontsize=12, fontweight='bold', color=prot_color)
+    ax.text(-0.5, n - 0.15, f'$\\leftarrow$ Cell lines per tissue (max {max_c:,})', ha='center', va='bottom', fontsize=12, fontweight='bold')
+    ax.text(0.5, n - 0.15, f'Unique proteins per tissue (max {max_p:,}) $\\rightarrow$', ha='center', va='bottom', fontsize=12, fontweight='bold', color=prot_color)
     handles, labels = ax.get_legend_handles_labels()
     handles.append(Patch(facecolor=prot_color, edgecolor='white'))
     labels.append('Unique proteins')
@@ -2240,11 +2240,11 @@ def _figure_fig2_validation__render(out: Path) -> Path:
         a.text(-0.06, 1.05, f'({lab})', transform=a.transAxes, fontsize=14, fontweight='bold', va='bottom', ha='left')
     insts = [i for i in dict.fromkeys(dp['instrument']) if isinstance(i, str)]
     handles = [Patch(facecolor=INSTRUMENT_COLOURS.get(i, '#9e9e9e'), edgecolor='#222222', label=i) for i in insts]
-    leg_inst = fig.legend(handles=handles, loc='lower center', ncol=5, fontsize=7, frameon=False, title='Instrument / dataset bar colour (panels b, c)', title_fontsize=7.5, bbox_to_anchor=(0.5, -0.02))
+    leg_inst = fig.legend(handles=handles, loc='lower center', ncol=5, fontsize=8.5, frameon=False, title='Instrument / dataset bar colour (panels b, c)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.02))
     fig.add_artist(leg_inst)
     types_present = [t for t in dict.fromkeys(DATASET_TYPE.get(ds) for ds in dp['dataset']) if t]
     thandles = [Patch(facecolor=DATASET_TYPE_COLOURS[t], edgecolor='#222222', label=t) for t in types_present]
-    fig.legend(handles=thandles, loc='lower center', ncol=6, fontsize=6.5, frameon=False, title='Dataset type (panel b y-axis label colour)', title_fontsize=7, bbox_to_anchor=(0.5, -0.11))
+    fig.legend(handles=thandles, loc='lower center', ncol=6, fontsize=8.5, frameon=False, title='Dataset type (panel b y-axis label colour)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.11))
     fig.tight_layout(rect=(0, 0.2, 1, 1), w_pad=0.4)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
@@ -2521,15 +2521,16 @@ def _render_main_metric(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_
         for bar, v in zip(bars, vals):
             if v == 0:
                 continue
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label_fmt(v), ha='center', va='bottom', fontsize=7)
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label_fmt(v), ha='center', va='bottom', fontsize=9)
     ax.set_xticks(x)
-    ax.set_xticklabels([_dataset_display_label(d).replace('\n', '\n') for d in datasets], fontsize=9)
+    ax.set_xticklabels([_dataset_display_label(d).replace('\n', '\n') for d in datasets], fontsize=11)
     ax.set_ylabel(ylabel)
     ymax = df[metric].max() * 1.15
     ax.set_ylim(0, ymax)
     fs.kfmt_axis(ax.yaxis)
+    ax.tick_params(axis='y', labelsize=11)
     fs.despine(ax)
-    ax.legend(title='DIA-NN version', loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=n_versions, frameon=False, fontsize=8, title_fontsize=9)
+    ax.legend(title='DIA-NN version', loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=n_versions, frameon=False, fontsize=10, title_fontsize=11)
     fig.tight_layout(rect=(0, 0.12, 1, 1))
     svg_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(svg_path, bbox_inches='tight', pad_inches=0.3)
@@ -3897,7 +3898,7 @@ def render_peptides_per_protein(guo_peptide_counts: dict[str, int], diann_peptid
     bars_diann = ax.bar([xi + width / 2 for xi in x], diann_values, width=width, color=fs.COMPARISON['quantmsdiann'], label='quantmsdiann (DIA-NN)')
     for bars, vals in [(bars_guo, guo_values), (bars_diann, diann_values)]:
         for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height(), f'{v:,}', ha='center', va='bottom', fontsize=8)
+            ax.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height(), f'{v:,}', ha='center', va='bottom', fontsize=9.5)
     ax.set_xticks(x)
     ax.set_xticklabels([f'≥ {k}' for k in thresholds])
     ax.set_xlabel('Minimum unique peptides per protein group')
@@ -4931,6 +4932,36 @@ def render_parallelism_scatter(df: pd.DataFrame, svg_path: Path | None=None, *, 
         fig.savefig(svg_path, bbox_inches='tight')
         plt.close(fig)
 
+# Readable labels for the Nextflow process names used as box-plot rows, so the
+# supplementary runtime/resource figures do not expose raw uppercase variable
+# names. Keys are the process (step) identifiers; values track the wording used
+# in the manuscript architecture description.
+STEP_LABELS: dict[str, str] = {
+    'INSILICO_LIBRARY_GENERATION': 'In-silico library generation',
+    'WIFF_CONVERT': 'Raw conversion (.wiff)',
+    'PRELIMINARY_ANALYSIS': 'Preliminary calibration',
+    'ASSEMBLE_EMPIRICAL_LIBRARY': 'Empirical library assembly',
+    'SUMMARY_PIPELINE': 'pmultiqc reporting',
+    'QPX_EXPORT': 'QPX export',
+    'FINAL_QUANTIFICATION': 'Final quantification',
+    'DIANN_MSSTATS': 'MSstats conversion',
+    'INDIVIDUAL_ANALYSIS': 'Individual search',
+    'SDRF_PARSING': 'SDRF parsing',
+    'SAMPLESHEET_CHECK': 'Samplesheet check',
+}
+
+def step_label(step: str) -> str:
+    """Map a Nextflow process name to a reader-friendly label."""
+    return STEP_LABELS.get(step, step.replace('_', ' ').capitalize())
+
+def _fmt_duration(seconds: float) -> str:
+    """Compact human-readable duration for on-figure median annotations."""
+    if seconds < 60:
+        return f'{seconds:.0f} s'
+    if seconds < 3600:
+        return f'{seconds / 60:.1f} min'
+    return f'{seconds / 3600:.1f} h'
+
 def render_per_step_boxplot(durations: dict[str, list[float]], summary: pd.DataFrame, svg_path: Path, fig_h: float | None=None) -> None:
     """Horizontal box plot of per-task durations, one row per step, ordered
     by descending median. `fig_h` overrides the auto-scaled figure height
@@ -4938,12 +4969,12 @@ def render_per_step_boxplot(durations: dict[str, list[float]], summary: pd.DataF
     steps = summary['step'].tolist()
     data = [durations[s] for s in steps]
     if fig_h is None:
-        fig_h = max(3.5, 0.45 * len(steps) + 1.5)
+        fig_h = max(3.2, 0.4 * len(steps) + 1.2)
     fig, ax = plt.subplots(figsize=(8.0, fig_h))
     bp = ax.boxplot(data, vert=False, whis=(5, 95), showfliers=True, flierprops=dict(marker='o', markerfacecolor='#888888', markeredgecolor='none', markersize=3.5, alpha=0.6), medianprops=dict(color=fs.OKABE_ITO['vermillion'], linewidth=1.6), boxprops=dict(color=fs.OKABE_ITO['blue'], linewidth=1.2), whiskerprops=dict(color=fs.OKABE_ITO['blue'], linewidth=1.0), capprops=dict(color=fs.OKABE_ITO['blue'], linewidth=1.0), patch_artist=False)
     del bp
     ax.set_yticks(range(1, len(steps) + 1))
-    ax.set_yticklabels(steps, fontsize=9)
+    ax.set_yticklabels([step_label(s) for s in steps], fontsize=9)
     ax.invert_yaxis()
     ax.set_xlabel('Task duration (s)', fontsize=10)
     fs.despine(ax)
@@ -4955,9 +4986,20 @@ def render_per_step_boxplot(durations: dict[str, list[float]], summary: pd.DataF
             ax.set_xscale('log')
             ax.set_xlim(left=max(0.5, min(flat) * 0.7))
     ax.grid(True, axis='x', which='both', alpha=0.25, linestyle=':')
+    # Median task duration per step (reader-friendly units), rendered as a tidy
+    # right-margin column so the value sits next to each box regardless of the
+    # distribution's tail. Computed from the raw durations so it is independent
+    # of the summary-table schema.
+    trans = ax.get_yaxis_transform()
+    ax.text(1.02, 0.4, 'median', transform=trans, va='center', ha='left', fontsize=8, fontweight='bold', color='#c8500a', clip_on=False)
+    for i, vals in enumerate(data, start=1):
+        pos = [v for v in vals if v > 0]
+        if not pos:
+            continue
+        ax.text(1.02, i, _fmt_duration(float(np.median(pos))), transform=trans, va='center', ha='left', fontsize=8, color='#c8500a', clip_on=False)
     fig.tight_layout()
     svg_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(svg_path)
+    fig.savefig(svg_path, bbox_inches='tight')
     plt.close(fig)
 
 def write_parallelism_tsv(df: pd.DataFrame, tsv_path: Path) -> None:
@@ -5044,9 +5086,10 @@ def render_resources_boxplot(resources: dict[str, dict[str, list[float]]], summa
         return
     rss_data = [[b / 1024 ** 3 for b in resources[s]['peak_rss_bytes']] for s in steps]
     cpu_data = [[v / DIANN_THREADS_BASELINE for v in resources[s]['pct_cpu']] for s in steps]
-    fig, (ax_rss, ax_cpu) = plt.subplots(nrows=1, ncols=2, figsize=(9.5, max(4.5, 0.55 * len(steps) + 1.5)), sharey=True)
+    step_names = [step_label(s) for s in steps]
+    fig, (ax_rss, ax_cpu) = plt.subplots(nrows=1, ncols=2, figsize=(9.5, max(3.6, 0.4 * len(steps) + 1.2)), sharey=True)
     _box_kw = dict(medianprops=dict(color=fs.OKABE_ITO['vermillion'], linewidth=1.4), boxprops=dict(color=fs.OKABE_ITO['blue']), whiskerprops=dict(color=fs.OKABE_ITO['blue']), capprops=dict(color=fs.OKABE_ITO['blue']))
-    ax_rss.boxplot(rss_data, vert=False, widths=0.62, tick_labels=steps, showfliers=False, **_box_kw)
+    ax_rss.boxplot(rss_data, vert=False, widths=0.62, tick_labels=step_names, showfliers=False, **_box_kw)
     ax_rss.set_xlabel('Peak RSS per task (GB)', fontsize=10)
     all_rss = [v for vals in rss_data for v in vals if v > 0]
     rss_hi = max(all_rss) if all_rss else 1.0
@@ -5061,7 +5104,7 @@ def render_resources_boxplot(resources: dict[str, dict[str, list[float]]], summa
         if n:
             xpos = max(rss_data[i - 1]) if rss_data[i - 1] else rss_lo
             ax_rss.text(xpos * 1.15, i, f'n={n}', va='center', ha='left', fontsize=7, color='#666666', clip_on=True)
-    ax_cpu.boxplot(cpu_data, vert=False, widths=0.62, tick_labels=steps, showfliers=False, **_box_kw)
+    ax_cpu.boxplot(cpu_data, vert=False, widths=0.62, tick_labels=step_names, showfliers=False, **_box_kw)
     ax_cpu.set_xlabel('Threading efficiency (%)', fontsize=10)
     ax_cpu.axvline(100.0, color=fs.OKABE_ITO['bluish_green'], linestyle='--', linewidth=0.9, zorder=1)
     ax_cpu.axvline(100.0 / DIANN_THREADS_BASELINE, color='#bdbdbd', linestyle=':', linewidth=0.8, zorder=1)
@@ -6143,7 +6186,7 @@ def render_proteins_per_tissue(procan_per_tissue: dict[str, set[str]], diann_per
     bars_p = ax.bar([xi - bar_width / 2 for xi in x], procan_vals, width=bar_width, color=fs.COMPARISON['original'], label='ProCan-DepMapSanger 2022')
     bars_d = ax.bar([xi + bar_width / 2 for xi in x], diann_vals, width=bar_width, color=fs.COMPARISON['quantmsdiann'], label='quantmsdiann (DIA-NN)')
     ax.set_xticks(x)
-    ax.set_xticklabels(tissues, rotation=30, ha='right', fontsize=8)
+    ax.set_xticklabels(tissues, rotation=30, ha='right', fontsize=10)
     ax.set_ylabel('Distinct protein groups detected')
     ymax = max(max(procan_vals, default=0), max(diann_vals, default=0))
     ax.set_ylim(0, ymax * 1.15 if ymax else 1)
@@ -6648,11 +6691,11 @@ def _panel(ax, df, orig_col, new_col, xlabel):
         vcol = VERSION_COLOUR.get(row['diann_version'], '#1976d2')
         ax.barh(i + bar_h / 2 + 0.02, row[orig_col], height=bar_h, color=_figure_reanalysis_improvement__ORIG_COLOUR, edgecolor='#37474f', linewidth=0.6, zorder=2)
         ax.barh(i - bar_h / 2 - 0.02, row[new_col], height=bar_h, color=vcol, edgecolor='#37474f', linewidth=0.6, zorder=2)
-        ax.text(row[orig_col] + xmax * 0.008, i + bar_h / 2 + 0.02, f'{int(row[orig_col]):,}', va='center', ha='left', fontsize=8, color='#555555')
-        ax.text(row[new_col] + xmax * 0.008, i - bar_h / 2 - 0.02, f'{int(row[new_col]):,}', va='center', ha='left', fontsize=8, fontweight='bold', color='#222222')
+        ax.text(row[orig_col] + xmax * 0.008, i + bar_h / 2 + 0.02, f'{int(row[orig_col]):,}', va='center', ha='left', fontsize=9, color='#555555')
+        ax.text(row[new_col] + xmax * 0.008, i - bar_h / 2 - 0.02, f'{int(row[new_col]):,}', va='center', ha='left', fontsize=9, fontweight='bold', color='#222222')
         ax.text(xmax * 1.17, i, f"+{row['gain'] * 100:.0f}%", va='center', ha='right', fontsize=10, fontweight='bold', color=vcol)
     ax.set_yticks(range(len(df)))
-    ax.set_yticklabels([f"{r['dataset']} ({r['label']})\n{r['original_engine']} → DIA-NN {r['diann_version']}" for _, r in df.iterrows()], fontsize=8.0)
+    ax.set_yticklabels([f"{r['dataset']} ({r['label']})\n{r['original_engine']} $\\rightarrow$ DIA-NN {r['diann_version']}" for _, r in df.iterrows()], fontsize=9.0)
     ax.set_xlabel(xlabel, fontsize=10)
     ax.set_xlim(0, xmax * 1.2)
     ax.set_ylim(-0.7, len(df) - 0.3)
