@@ -7,7 +7,6 @@ PXD030304	v2_5_1	TripleTOF 6600	5798	17414	1	22229.0	23763.0	1534.0	True	True	da
 PXD034128	v2_5_1	timsTOF Pro	7	5	1	18003.0	20163.0	2160.0	True	True	data/perf_traces/PXD034128/nextflow_trace.txt
 PXD034623	v2_5_1	Orbitrap Exploris 480	63	134	1	4299.0	8193.0	3894.0	True	True	data/perf_traces/PXD034623/nextflow_trace.txt
 PXD041421	v2_5_1	timsTOF Pro	48	104	1	7923.281999999999	8568.282	645.0	True	True	data/perf_traces/PXD041421/nextflow_trace.txt
-PXD044991	v2_5_1	Orbitrap Astral	12	32	1	1798.987	2388.987	590.0	True	True	data/perf_traces/PXD044991/nextflow_trace.txt
 PXD046357	v2_5_1	Orbitrap Astral	12	32	1	1367.34	1947.34	580.0	True	True	data/perf_traces/PXD046357/nextflow_trace.txt
 PXD049412	v2_5_1	Orbitrap Astral	6	19	1	1538.0	2368.0	830.0	True	True	data/perf_traces/PXD049412/nextflow_trace.txt
 PXD049692	v2_5_1	timsTOF HT	10	28	1	28935.0	32844.0	3909.0	True	True	data/perf_traces/PXD049692/nextflow_trace.txt
