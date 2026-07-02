@@ -27,8 +27,7 @@ SVGS := \
 	PXD003539/supp_peptides_per_protein.svg \
 	PXD003539/supp_venn_protein_accessions.svg \
 	PXD004701/supp_missing_values_per_run.svg \
-	PXD004701/supp_proteins_per_subtype.svg \
-	PXD030304/supp_proteins_per_tissue.svg
+	PXD004701/supp_proteins_per_subtype.svg
 
 PDF_TARGETS := $(addprefix $(FIG_PDF)/,$(SVGS:.svg=.pdf)) \
 	$(FIG_PDF)/manuscript/workflow_panel.pdf

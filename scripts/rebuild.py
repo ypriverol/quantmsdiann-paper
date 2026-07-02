@@ -1921,27 +1921,30 @@ def _render_tissue_combined(ax, tissue_rows: list[tuple[str, dict[str, int]]], p
     labels.append('Unique proteins')
     ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.04), frameon=False, fontsize=10, ncol=len(labels))
 
-def render_atlas_main(headlines: dict[str, DatasetHeadline], tissue_rows: list[tuple[str, dict[str, int]]], svg_path: Path, *, tissue_protein_rows: list[tuple[str, dict[str, int]]] | None=None) -> None:
-    """Compose the main pan-cohort figure as three stacked, full-width
-    panels (drops the protein-accession UpSet overlap and the
-    detection-count histogram, which were too small to read in the
-    multi-panel layout):
+def render_atlas_main(tissue_rows: list[tuple[str, dict[str, int]]], svg_path: Path, *, tissue_protein_rows: list[tuple[str, dict[str, int]]] | None=None, procan_per_tissue: dict[str, set[str]] | None=None, diann_per_tissue: dict[str, set[str]] | None=None) -> None:
+    """Compose the pan-cohort per-tissue figure as two stacked, full-width
+    panels:
 
-        A (top):    per-cohort headline counts (paper vs quantmsdiann)
-        B (middle): per-tissue cell-line coverage (stacked bars)
-        C (bottom): per-tissue unique-protein coverage (stacked bars)
+        a (top):    ProCan deposited vs quantmsdiann protein groups per tissue
+        b (bottom): pan-cohort per-tissue cell lines and unique proteins
 
-    Removing the UpSet panel also removes the upsetplot/numpy-2 render
-    dependency, so this figure renders on any supported NumPy."""
+    The former headline panel is dropped because it duplicated main-text
+    Fig 4a; this figure now also absorbs the previously standalone ProCan
+    per-tissue supplementary figure (panel a). No UpSet panel, so it renders
+    on any supported NumPy."""
     tissue_protein_rows = tissue_protein_rows or []
-    fig = plt.figure(figsize=(15, 11))
-    gs = fig.add_gridspec(2, 1, height_ratios=[0.5, 1.0], hspace=0.3)
+    fig = plt.figure(figsize=(15, 15))
+    gs = fig.add_gridspec(2, 1, height_ratios=[0.85, 1.0], hspace=0.28)
     ax_a = fig.add_subplot(gs[0])
-    ax_bc = fig.add_subplot(gs[1])
-    _render_panel_a_headlines(ax_a, headlines)
-    _annotate_panel_letter(ax_a, 'a', subtitle='Protein groups (≥2 peptides): deposited vs quantms.io')
-    _render_tissue_combined(ax_bc, tissue_rows, tissue_protein_rows)
-    _annotate_panel_letter(ax_bc, 'b', subtitle='Per-tissue cell lines and unique proteins')
+    ax_b = fig.add_subplot(gs[1])
+    if procan_per_tissue or diann_per_tissue:
+        _render_procan_per_tissue(ax_a, procan_per_tissue or {}, diann_per_tissue or {})
+    else:
+        ax_a.text(0.5, 0.5, 'ProCan per-tissue data unavailable', ha='center', va='center', transform=ax_a.transAxes)
+        ax_a.set_axis_off()
+    _annotate_panel_letter(ax_a, 'a', subtitle='ProCan per tissue: deposited vs quantmsdiann protein groups')
+    _render_tissue_combined(ax_b, tissue_rows, tissue_protein_rows)
+    _annotate_panel_letter(ax_b, 'b')
     svg_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(svg_path, bbox_inches='tight')
     plt.close(fig)
@@ -2164,16 +2167,25 @@ def figure_combined_cell_lines_atlas_main() -> int:
     runs_per_cohort = _compute_runs_per_cohort()
     for ds in ('PXD003539', 'PXD030304', 'PXD004701', 'PXD017199', 'PXD041421'):
         print(f'  {ds}: {runs_per_cohort.get(ds, 0):,} runs')
-    print('Rendering main pan-cohort figure (headline + per-tissue panels)...')
+    print('Rendering main pan-cohort figure (ProCan per-tissue + pan-cohort per-tissue panels)...')
     main_svg = _figure_combined_cell_lines_atlas__FIGURES_DIR / 'atlas_main.svg'
-    _ri = pd.read_csv(_figure_combined_cell_lines_atlas__REPO_ROOT / 'analysis' / 'figures' / 'reanalysis' / 'data' / 'reanalysis_improvement.tsv', sep='\t').set_index('dataset')
-    _panel_a_labels = {'PXD003539': 'Guo 2019 (OpenSWATH)', 'PXD030304': 'ProCan 2022'}
-    panel_a_headlines = {acc: DatasetHeadline(int(_ri.loc[acc, 'original']), int(_ri.loc[acc, 'reanalysis']), _panel_a_labels[acc], 'Protein groups (>=2 peptides)') for acc in ('PXD003539', 'PXD030304')}
+    # Panel a: ProCan deposited vs quantmsdiann protein groups per tissue
+    # (absorbs the former standalone supp figure). The quantmsdiann side reuses
+    # the per-tissue accession sets already loaded above; the ProCan side is
+    # streamed from the deposited replicate matrix when it is available locally.
+    procan_matrix = DATA_ROOT / 'PXD030304' / 'protein_matrix_8498_replicates.txt'
+    procan_mapping = DATA_ROOT / 'PXD030304' / 'mapping_file_replicates.txt'
+    if procan_matrix.exists() and procan_mapping.exists():
+        print('  computing ProCan per-tissue protein sets (deposited replicate matrix)...')
+        procan_per_tissue = proteins_per_tissue_procan(procan_matrix, procan_mapping)
+    else:
+        print('  ProCan replicate matrix not cached; panel a will note unavailability', file=sys.stderr)
+        procan_per_tissue = {}
     TOP_TISSUES = 12
     tissue_rows_top = tissue_rows[:TOP_TISSUES]
     _top_set = {t for t, _ in tissue_rows_top}
     tissue_protein_rows_top = [(t, d) for t, d in tissue_protein_rows if t in _top_set]
-    render_atlas_main(panel_a_headlines, tissue_rows_top, main_svg, tissue_protein_rows=tissue_protein_rows_top)
+    render_atlas_main(tissue_rows_top, main_svg, tissue_protein_rows=tissue_protein_rows_top, procan_per_tissue=procan_per_tissue, diann_per_tissue=per_tissue_30304)
     print(f'  saved: {main_svg}')
     import shutil
     manuscript_svg = _figure_combined_cell_lines_atlas__REPO_ROOT / 'analysis' / 'figures' / 'manuscript' / 'fig4_cellline_atlas.svg'
@@ -6172,19 +6184,18 @@ def _figure_pxd030304_procan_vs_quantmsdiann__render_main_figure(counts: Counts,
     fig.savefig(svg_path)
     plt.close(fig)
 
-def render_proteins_per_tissue(procan_per_tissue: dict[str, set[str]], diann_per_tissue: dict[str, set[str]], svg_path: Path) -> None:
-    """Grouped bar chart: 28 tissues x 2 conditions (ProCan vs quantmsdiann).
-    Tissues sorted by descending ProCan cell-line count is not directly
-    available here; we sort by descending union size across the two
-    pipelines (largest tissues first). Paper-ready: no title, no footer."""
+def _render_procan_per_tissue(ax, procan_per_tissue: dict[str, set[str]], diann_per_tissue: dict[str, set[str]]) -> None:
+    """Grouped bars per tissue (ProCan deposited vs quantmsdiann), drawn into a
+    caller-supplied axis so it works both standalone and as a panel inside the
+    pan-cohort atlas figure. Tissues sorted by descending union size across the
+    two pipelines (largest first). Paper-ready: no title, no footer."""
     tissues = sorted(set(procan_per_tissue) | set(diann_per_tissue), key=lambda t: -(len(procan_per_tissue.get(t, set())) + len(diann_per_tissue.get(t, set()))))
     procan_vals = [len(procan_per_tissue.get(t, set())) for t in tissues]
     diann_vals = [len(diann_per_tissue.get(t, set())) for t in tissues]
-    fig, ax = plt.subplots(figsize=(13, 6.5))
     x = list(range(len(tissues)))
     bar_width = 0.4
-    bars_p = ax.bar([xi - bar_width / 2 for xi in x], procan_vals, width=bar_width, color=fs.COMPARISON['original'], label='ProCan-DepMapSanger 2022')
-    bars_d = ax.bar([xi + bar_width / 2 for xi in x], diann_vals, width=bar_width, color=fs.COMPARISON['quantmsdiann'], label='quantmsdiann (DIA-NN)')
+    ax.bar([xi - bar_width / 2 for xi in x], procan_vals, width=bar_width, color=fs.COMPARISON['original'], label='ProCan-DepMapSanger 2022')
+    ax.bar([xi + bar_width / 2 for xi in x], diann_vals, width=bar_width, color=fs.COMPARISON['quantmsdiann'], label='quantmsdiann (DIA-NN)')
     ax.set_xticks(x)
     ax.set_xticklabels(tissues, rotation=30, ha='right', fontsize=10)
     ax.set_ylabel('Distinct protein groups detected')
@@ -6192,8 +6203,14 @@ def render_proteins_per_tissue(procan_per_tissue: dict[str, set[str]], diann_per
     ax.set_ylim(0, ymax * 1.15 if ymax else 1)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.28), ncol=2, frameon=False)
-    fig.tight_layout(rect=(0, 0.18, 1, 1))
+    ax.legend(loc='upper right', frameon=False, fontsize=11)
+
+
+def render_proteins_per_tissue(procan_per_tissue: dict[str, set[str]], diann_per_tissue: dict[str, set[str]], svg_path: Path) -> None:
+    """Standalone per-tissue grouped-bar figure (ProCan vs quantmsdiann)."""
+    fig, ax = plt.subplots(figsize=(13, 6.5))
+    _render_procan_per_tissue(ax, procan_per_tissue, diann_per_tissue)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
     svg_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(svg_path, bbox_inches='tight', pad_inches=0.3)
     plt.close(fig)
