@@ -123,7 +123,7 @@ For each cell-line reanalysis cohort, the original published quantification was 
 \label{sec:benchmarking}
 A distributed workflow is only useful if it reproduces a single-machine \texttt{DIA-NN} run, so we benchmarked \quantmsdiann{} against the ProteoBench community submissions~\cite{devreese2025proteobench} on the four public DIA modules (Orbitrap Astral, single-cell Astral, timsTOF diaPASEF, and SCIEX ZenoTOF~7600). All \quantmsdiann{} runs were library-free (the library predicted in-silico from the FASTA), so for a like-for-like comparison we kept only predicted-from-FASTA \texttt{DIA-NN} community submissions and report the oldest supported release (1.8.1) and the current 2.5.1-enterprise build at \texttt{DIA-NN}'s recommended per-version q-values under a uniform 1\% global precursor cut-off. For the public reanalyses, each deposit's original published quantification served as the comparator, counted under that study's own threshold.
 
-Cross-engine identification counts carry three caveats that apply to every comparison in the Results. \emph{FDR calibration}: older \texttt{DIA-NN} releases (e.g. 1.8.1) and other search engines can carry substantially higher true false-discovery rate (FDR) at the same nominal 1\% q-value than recent builds (2.5/2.5.1)~\cite{wen2025fdr,krull2024singlecell,frohlich2022benchmarking}; we do not re-verify each deposit's calibration, so the reported gains are identifications obtained under a current, FDR-controlled engine rather than strictly FDR-matched differences. \emph{Counting criterion}: for the same reason we compare counts only under each original study's own threshold, and do not compare plexDIA protein groups or phosphosite numbers across engine versions. \emph{Database and settings}: the reanalysis applies one harmonised FASTA and parameter set across all cohorts, whereas deposited analyses used their own databases and settings, including contaminant databases that are often not deposited (as for the spatial Deep Visual Proteomics cohort, PXD064049); residual differences from such undocumented choices cannot be fully excluded.
+Cross-engine identification counts carry three caveats that apply to every comparison in the Results: differences in FDR calibration across search-engine generations, the use of each original study's own counting criterion, and possible differences in protein sequence database and search settings between the deposited analysis and the reanalysis. These are set out where the comparisons are presented (Results, ``The value of reanalysing public DIA deposits at scale'').
 %% [end methods]
 
 \section{Results}
@@ -164,7 +164,7 @@ We then compared time-to-finish across every dataset in the study (Fig.~\ref{fig
 
 With scaling characterised, we asked whether distributed, SDRF-driven execution matches a single-machine \texttt{DIA-NN} run. On the two ProteoBench modules with predicted-from-FASTA \texttt{DIA-NN} community submissions (Orbitrap Astral, $n=15$; timsTOF diaPASEF, $n=8$), \quantmsdiann{} reproduces the expected HYE per-species log$_2$ fold-changes, and across both releases its measured ratios sit within the spread of the standalone desktop submissions (Fig.~\ref{fig:validation}c). Quantification accuracy is thus indistinguishable between desktop \texttt{DIA-NN} and \quantmsdiann{}: scaling out delivers the same result as a single-machine run.
 
-Identification depth, by contrast, increases with each \texttt{DIA-NN} version on every module: precursors, per-run protein groups, and proteins quantified in every run are all higher for 2.5.1-enterprise than for 1.8.1 (full per-version, per-module breakdown in Supplementary Note~5, Fig.~S3). This tracks the broader ProteoBench community trend~\cite{devreese2025proteobench} and motivates reanalysis of public deposits with the current build.
+Identification depth, by contrast, increases with each \texttt{DIA-NN} version on every module: precursors, per-run protein groups, and proteins quantified in every run are all higher for 2.5.1-enterprise than for 1.8.1 (per-run protein-group depth in Fig.~\ref{fig:validation}d; per-version precursor counts and the complete-profile breakdown in Supplementary Note~5, Fig.~S3). This tracks the broader ProteoBench community trend~\cite{devreese2025proteobench} and motivates reanalysis of public deposits with the current build.
 
 \begin{figure}[htbp]
   \centering
@@ -174,10 +174,10 @@ Identification depth, by contrast, increases with each \texttt{DIA-NN} version o
     (\textbf{a})~Workflow wall-clock versus number of cluster nodes (Nextflow
     \texttt{executor.queueSize}) on the PXD071075 single-cell cohort (log--log;
     one run per point). The dashed grey line is ideal $1{/}N$ scaling anchored at
-    10 nodes; parallel efficiency is printed under each dot. The curve bends above
-    ideal beyond \textasciitilde 100 nodes (efficiency 100\%~$\to$~58\%), reflecting
-    fixed serial cohort-level steps and shared-cluster contention on this EMBL-EBI
-    allocation.
+    10 nodes; parallel efficiency is printed under each dot. The measured curve
+    rises above the ideal line beyond \textasciitilde 100 nodes (parallel
+    efficiency falling from 100\% to 58\%), reflecting fixed serial cohort-level
+    steps and shared-cluster contention on this EMBL-EBI allocation.
     (\textbf{b})~Wall-clock per reanalysis, one bar per dataset, ordered by cohort
     size and coloured by instrument family; the dataset-type metadata is shown by
     the colour of each cohort's y-axis label (descriptive only: bar height reflects
@@ -190,6 +190,13 @@ Identification depth, by contrast, increases with each \texttt{DIA-NN} version o
     shaped by \texttt{DIA-NN} version (circle, 1.8.1; triangle, 2.5.1-enterprise),
     tracking the community distribution, i.e.\ distributed orchestration does not
     change quantification accuracy.
+    (\textbf{d})~Protein-group identification depth on ProteoBench across three
+    \texttt{DIA-NN} configurations (1.8.1, 2.5.1, and the 2.5.1-enterprise build)
+    and four DIA modalities, as protein groups per run (averaged over the six
+    replicates) at a 1\% run-specific protein-group q-value. Depth increases with
+    each release on every module, tracking the accuracy trend in (c); the
+    complete-profile companion (protein groups quantified in every run) and the
+    per-version precursor breakdown are in Supplementary Note~5, Fig.~S3.
   }
   \label{fig:validation}
 \end{figure}
@@ -229,7 +236,9 @@ The improvement is largest in the data-completeness profile (the number of prote
 \subsection{The value of reanalysing public DIA deposits at scale}
 \label{sec:reanalyses}
 
-Public DIA deposits are typically processed once, with the search engine available at the time of deposition, and are seldom revisited, leaving recoverable identifications in raw data that has already been collected and published. Reanalysing these deposits with a current \texttt{DIA-NN} build surfaces them: across every deposit reanalysed here (single-cell, bulk cell-line, and spatial), reprocessing yielded more protein groups than the originally deposited or published analysis, and more precursors wherever the original was itself \texttt{DIA-NN} (Fig.~\ref{fig:reanalysis}). This is therefore not a property of any single dataset but a systematic return on reprocessing archived DIA data with an up-to-date engine. These cross-deposit comparisons should be read under the three caveats set out in the Experimental Procedures (FDR calibration, counting criterion, and database and search settings).
+Public DIA deposits are typically processed once, with the search engine available at the time of deposition, and are seldom revisited, leaving recoverable identifications in raw data that has already been collected and published. Reanalysing these deposits with a current \texttt{DIA-NN} build recovers them: across every deposit reanalysed here (single-cell, bulk cell-line, and spatial), reprocessing yielded more protein groups than the originally deposited or published analysis, and more precursors wherever the original was itself \texttt{DIA-NN} (Fig.~\ref{fig:reanalysis}). This is therefore not a property of any single dataset but a systematic return on reprocessing archived DIA data with an up-to-date engine.
+
+Three caveats bound how these cross-deposit comparisons should be read. First, \emph{FDR calibration}: the comparisons assume that recent \texttt{DIA-NN} (2.5/2.5.1) exercises largely correct false-discovery-rate (FDR) control, whereas older releases (the 1.7-series and 1.8.1) and other search engines may carry substantially higher true FDR at the same nominal 1\% q-value~\cite{wen2025fdr,krull2024singlecell,frohlich2022benchmarking}, and verifying each deposit's FDR calibration is beyond the scope of this work; the reported gains should therefore be read as identifications recovered under a current, FDR-controlled engine, not as strictly FDR-matched differences. Second, \emph{counting criterion}: for the same reason we compare counts only under each original study's own threshold, and do not compare plexDIA protein groups or phosphosite numbers across engine versions. Third, \emph{database and search settings}: the reanalysis applies one harmonised FASTA and parameter set across all cohorts, whereas deposited analyses used their own databases and settings, including contaminant databases that are often not deposited (as for the spatial Deep Visual Proteomics cohort, PXD064049); residual count differences attributable to such undocumented choices cannot be fully excluded.
 
 \begin{figure}[htbp]
   \centering
@@ -273,9 +282,13 @@ The same pattern extends beyond bulk cell lines to another acquisition mode: a s
 \section{Discussion}
 \label{sec:discussion}
 %% [begin sections/discussion.tex]
-Two findings give \quantmsdiann{} its practical value. First, distributed, SDRF-driven execution reproduces a desktop \texttt{DIA-NN} analysis (Fig.~\ref{fig:validation}c), so scaling across a cluster is a deployment choice rather than an analytical trade-off. Second, reanalysis with a current engine gains the most on the oldest deposits, those processed with earlier or non-\texttt{DIA-NN} software, while recently processed cohorts gain little because they already approach current performance. The recoverable value is therefore concentrated in the large back-catalogue of ageing DIA data, exactly where a workflow that reprocesses each deposit from a single SDRF is most useful.
+Reanalysing archived DIA data with a current engine delivers two gains at once. Where a deposit was already processed with \texttt{DIA-NN}, distributed \quantmsdiann{} reproduces the single-machine result (Fig.~\ref{fig:validation}c), so moving from a desktop run to a cluster is a deployment choice rather than an analytical trade-off. Where a deposit was processed with an older or non-\texttt{DIA-NN} engine, reprocessing recovers substantially more, up to 59\% more protein groups, and the gain is largest exactly where deposits are most numerous: the large back-catalogue of ageing DIA data. The same workflow therefore both preserves results the community already trusts and extracts new ones from data that has already been collected and published.
 
-To our knowledge this is the first pipeline-level treatment of cross-version \texttt{DIA-NN} reproducibility, a question that will grow in importance as the engine evolves: a single-cell DIA dataset analysed with \diannversion{1.8} today and re-analysed with \diannversion{2.x} in two years should not yield different biological conclusions for the same data and parameters. By design, \quantmsdiann{} ends at harmonised quantification and hands batch correction, cell-type assignment, and differential analysis to downstream packages such as scp~\cite{vanderaa2023} that read its \qpx{} or MSstats output directly, complementing rather than replacing existing single-cell DIA workflows. It is open-source under the MIT license and openly developed within the nf-core and bigbio proteomics ecosystem, so it can track new \texttt{DIA-NN} releases and acquisition modes as they appear.
+These gains matter only if they are easy to obtain. \quantmsdiann{} packages the entire analysis behind a single SDRF file and container-pinned \texttt{DIA-NN} profiles, so a reanalysis needs no manual installation, parameter harmonisation, or per-study scripting, and the same invocation runs unchanged from a six-run benchmark to thousands of runs across cloud and HPC. This makes it an accessible, reproducible platform for analysing both public deposits and a laboratory's own unpublished cohorts en masse. Because the per-file work is parallelised, throughput is bounded only by the compute dedicated to it: a 2{,}300-run single-cell cohort completes in 2.2~hours on 300 nodes, and the same pipeline scales down to a handful of runs on a workstation.
+
+To our knowledge this is also the first pipeline-level treatment of cross-version \texttt{DIA-NN} reproducibility, a question that grows in importance as the engine evolves: a dataset analysed with \diannversion{1.8} today and reprocessed with \diannversion{2.x} in two years should not yield different biological conclusions for the same data and parameters. By design, \quantmsdiann{} ends at harmonised quantification and hands batch correction, cell-type assignment, and differential analysis to downstream packages such as scp~\cite{vanderaa2023} that read its \qpx{} or MSstats output directly, complementing rather than replacing existing single-cell DIA workflows. It is open-source under the MIT license and openly developed within the nf-core and bigbio proteomics ecosystem, so it can track new \texttt{DIA-NN} releases and acquisition modes as they appear.
+
+Looking ahead, a workflow that turns any SDRF-annotated deposit into harmonised, queryable quantifications is well suited to powering DIA reanalysis at archive scale. Applied across the growing body of public data, it can integrate independently deposited cohorts into a single reusable resource, a step towards a proteomics knowledge base that aggregates the community's accumulated measurements rather than leaving them siloed in individual deposits.
 
 %% [end discussion]
 

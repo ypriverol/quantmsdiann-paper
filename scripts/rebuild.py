@@ -2239,25 +2239,33 @@ def _figure_fig2_validation__render(out: Path) -> Path:
     from matplotlib.patches import Patch
     dq = pd.read_csv(PERF / 'queue_size_sweep.tsv', sep='\t')
     dp = pd.read_csv(PERF / 'parallelism_data.tsv', sep='\t')
-    fig, ax = plt.subplots(1, 3, figsize=(10.5, 4.6))
-    render_queue_size_sweep(dq, ax=ax[0], composite=True)
-    render_parallelism_scatter(dp, ax=ax[1], composite=True, show_legend=False, short_labels=True)
+    fig, axes = plt.subplots(2, 2, figsize=(10.5, 8.4))
+    ax0, ax1, ax2, ax3 = axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]
+    render_queue_size_sweep(dq, ax=ax0, composite=True)
+    render_parallelism_scatter(dp, ax=ax1, composite=True, show_legend=False, short_labels=True)
     ds_colors = {}
     for ds in _COMMUNITY_COMPARATOR_DATASETS:
         inst = dp.loc[dp['dataset'] == ds, 'instrument']
         if len(inst):
             ds_colors[ds] = INSTRUMENT_COLOURS.get(inst.iloc[0], '#9e9e9e')
-    acc.draw_strip(ax[2], compact=True, dataset_colors=ds_colors)
-    for a, lab in zip(ax, 'abc'):
+    acc.draw_strip(ax2, compact=True, dataset_colors=ds_colors)
+    # Panel (d): ProteoBench protein-group depth across DIA-NN versions (the
+    # former Supplementary Fig. S3a), read from the same staged report counts.
+    rc = load_report_counts()
+    protavg = [(ds, v, rc[ds, v]['prec_global'], rc[ds, v]['prot_perrun_avg'])
+               for ds in _figure_quantmsdiann_benchmarks_vs_proteobench__DATASET_TO_MODULE
+               for v in DIANN_VERSIONS if (ds, v) in rc]
+    render_main_proteins(protavg, ax=ax3)
+    for a, lab in zip((ax0, ax1, ax2, ax3), 'abcd'):
         a.text(-0.06, 1.05, f'({lab})', transform=a.transAxes, fontsize=14, fontweight='bold', va='bottom', ha='left')
     insts = [i for i in dict.fromkeys(dp['instrument']) if isinstance(i, str)]
     handles = [Patch(facecolor=INSTRUMENT_COLOURS.get(i, '#9e9e9e'), edgecolor='#222222', label=i) for i in insts]
-    leg_inst = fig.legend(handles=handles, loc='lower center', ncol=5, fontsize=8.5, frameon=False, title='Instrument / dataset bar colour (panels b, c)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.02))
+    leg_inst = fig.legend(handles=handles, loc='lower center', ncol=5, fontsize=8.5, frameon=False, title='Instrument / dataset bar colour (panels b, c)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.015))
     fig.add_artist(leg_inst)
     types_present = [t for t in dict.fromkeys(DATASET_TYPE.get(ds) for ds in dp['dataset']) if t]
     thandles = [Patch(facecolor=DATASET_TYPE_COLOURS[t], edgecolor='#222222', label=t) for t in types_present]
-    fig.legend(handles=thandles, loc='lower center', ncol=6, fontsize=8.5, frameon=False, title='Dataset type (panel b y-axis label colour)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.11))
-    fig.tight_layout(rect=(0, 0.2, 1, 1), w_pad=0.4)
+    fig.legend(handles=thandles, loc='lower center', ncol=6, fontsize=8.5, frameon=False, title='Dataset type (panel b y-axis label colour)', title_fontsize=9.5, bbox_to_anchor=(0.5, -0.075))
+    fig.tight_layout(rect=(0, 0.11, 1, 1), w_pad=1.4, h_pad=2.6)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
     plt.close(fig)
@@ -2517,12 +2525,22 @@ _VERSION_LABELS = {'v1_8_1': '1.8.1', 'v2_1_0': '2.1.0', 'v2_2_0': '2.2.0', 'v2_
 _VERSION_COLORS = dict(fs.VERSION_COLORS)
 _VERSION_MARKERS = {'v1_8_1': 'o', 'v2_5_1': 's', 'v2_5_1_enterprise': 'D'}
 
-def _render_main_metric(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_path: Path, *, metric: str, ylabel: str, label_fmt) -> None:
+def _render_main_metric(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_path: Path | None = None, *, metric: str, ylabel: str, label_fmt, ax: plt.Axes | None = None) -> None:
     """Grouped-bar panel of `metric` (`precursors` or `proteins`) across the
-    4 datasets x 3 DIA-NN versions. Paper-ready: no title, no footer."""
+    4 datasets x 3 DIA-NN versions. Paper-ready: no title, no footer.
+
+    When ``ax`` is given the panel is drawn into it (composite mode, e.g. as a
+    Fig.~2 panel) with reduced fonts and an in-panel version legend, and nothing
+    is saved; otherwise a standalone figure is written to ``svg_path``."""
+    composite = ax is not None
     df = pd.DataFrame(quantmsdiann_rows, columns=['dataset', 'version', 'precursors', 'proteins'])
     datasets = sorted(df['dataset'].unique(), key=_dataset_sort_key)
-    fig, ax = plt.subplots(figsize=(10.5, 5))
+    if composite:
+        fig = ax.figure
+        lab_fs, bar_fs, tick_fs, ylab_fs = 8, 6.5, 8, 9
+    else:
+        fig, ax = plt.subplots(figsize=(10.5, 5))
+        lab_fs, bar_fs, tick_fs, ylab_fs = 11, 9, 11, None
     n_versions = len(DIANN_VERSIONS)
     bar_width = 0.8 / n_versions
     x = list(range(len(datasets)))
@@ -2533,15 +2551,23 @@ def _render_main_metric(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_
         for bar, v in zip(bars, vals):
             if v == 0:
                 continue
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label_fmt(v), ha='center', va='bottom', fontsize=9)
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), label_fmt(v), ha='center', va='bottom', fontsize=bar_fs)
     ax.set_xticks(x)
-    ax.set_xticklabels([_dataset_display_label(d).replace('\n', '\n') for d in datasets], fontsize=11)
-    ax.set_ylabel(ylabel)
-    ymax = df[metric].max() * 1.15
+    if composite:
+        # Compact two-line labels ("Module 7 / Astral") so 4 groups fit a half-width panel.
+        xtick_labels = [_dataset_compact_label(d) for d in datasets]
+    else:
+        xtick_labels = [_dataset_display_label(d).replace('\n', '\n') for d in datasets]
+    ax.set_xticklabels(xtick_labels, fontsize=lab_fs)
+    ax.set_ylabel(ylabel, fontsize=ylab_fs)
+    ymax = df[metric].max() * (1.28 if composite else 1.15)
     ax.set_ylim(0, ymax)
     fs.kfmt_axis(ax.yaxis)
-    ax.tick_params(axis='y', labelsize=11)
+    ax.tick_params(axis='y', labelsize=tick_fs)
     fs.despine(ax)
+    if composite:
+        ax.legend(title='DIA-NN version', loc='upper left', ncol=n_versions, frameon=False, fontsize=6.5, title_fontsize=7, handlelength=1.0, columnspacing=0.9, handletextpad=0.4, borderpad=0.2)
+        return
     ax.legend(title='DIA-NN version', loc='upper center', bbox_to_anchor=(0.5, -0.18), ncol=n_versions, frameon=False, fontsize=10, title_fontsize=11)
     fig.tight_layout(rect=(0, 0.12, 1, 1))
     svg_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2554,13 +2580,13 @@ def render_main_precursors(quantmsdiann_rows: list[tuple[str, str, int, int]], s
     per-version recommended cut-off + 1% global)."""
     _render_main_metric(quantmsdiann_rows, svg_path, metric='precursors', ylabel='Precursors quantified (1% global FDR)', label_fmt=lambda v: f'{v / 1000:.0f}k')
 
-def render_main_proteins(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_path: Path) -> None:
+def render_main_proteins(quantmsdiann_rows: list[tuple[str, str, int, int]], svg_path: Path | None = None, *, ax: plt.Axes | None = None) -> None:
     """Protein-group headline: 4 datasets x 3 DIA-NN versions, grouped bars.
     Protein groups are the per-run average, counted from the DIA-NN report at
     1% run-specific protein-group q-value (not the pg_matrix row count). This
     per-run depth metric is sensitive to the version improvement; the
     complete-profile (all-runs) companion panel is in the supplementary."""
-    _render_main_metric(quantmsdiann_rows, svg_path, metric='proteins', ylabel='Protein groups per run (1% FDR)', label_fmt=lambda v: f'{v / 1000:.1f}k')
+    _render_main_metric(quantmsdiann_rows, svg_path, metric='proteins', ylabel='Protein groups per run (1% FDR)', label_fmt=lambda v: f'{v / 1000:.1f}k', ax=ax)
 
 def _dataset_sort_key(name: str) -> tuple[int, str]:
     if name == 'ProteoBench_Module_7':
@@ -2572,6 +2598,18 @@ def _dataset_display_label(name: str) -> str:
     if info is None:
         return name
     return f"{name}\n{info['label']}"
+
+def _dataset_compact_label(name: str) -> str:
+    """Short two-line x-tick label ("Module 7\\nAstral") for the embedded
+    composite protein-depth panel, where the full dataset+module label is too
+    wide. Derived from the module label by dropping the `` - DIA`` connector."""
+    info = _figure_quantmsdiann_benchmarks_vs_proteobench__DATASET_TO_MODULE.get(name)
+    if info is None:
+        return name
+    label = info['label']
+    module, _, instrument = label.partition(' - DIA ')
+    instrument = instrument or label
+    return f'{module}\n{instrument}'.strip()
 
 def _figure_quantmsdiann_benchmarks_vs_proteobench__write_counts_tsv(long_df: pd.DataFrame, tsv_path: Path, *, quantmsdiann_unfiltered_rows: list[tuple[str, str, int, int]] | None=None) -> None:
     """Write the per-dataset counts table for the benchmark figure.
@@ -5074,19 +5112,22 @@ DIANN_THREADS_BASELINE = 12
 
 def render_resources_boxplot(resources: dict[str, dict[str, list[float]]], summary: pd.DataFrame, svg_path: Path) -> None:
     """Two-panel horizontal box plot: (left) `peak_rss` per step in GB,
-    (right) **threading efficiency** = `%cpu / (12 * 100 %)` per step.
-    Step order is fixed by descending median `peak_rss`, mirrored
-    across both panels so a reviewer can read the same step across
-    both axes.
+    (right) **CPU utilisation** = `%cpu / 12` per step, i.e. per-task
+    CPU expressed as a percentage of quantmsdiann's 12-thread DIA-NN
+    allocation (`DIANN_THREADS_BASELINE`). Step order is fixed by
+    descending median `peak_rss`, mirrored across both panels so a
+    reviewer can read the same step across both axes.
 
-    The threading efficiency divisor (12) is `DIANN_THREADS_BASELINE`
-    — quantmsdiann's `--threads` setting for the heavy DIA-NN steps.
-    DIA-NN steps (INSILICO_LIBRARY_GENERATION / PRELIMINARY_ANALYSIS /
-    INDIVIDUAL_ANALYSIS) should sit near 100 % here. Glue steps that
-    Nextflow allocates 1-2 cores to (SDRF_PARSING, MSstats, raw
-    conversion) sit near 1/12 ≈ 8 % on this scale — this is the
-    expected pattern for single-threaded helpers, not a quantmsdiann
-    deficiency. The note in the figure footer spells this out."""
+    Because the scale is relative to a fixed 12-thread baseline, a step
+    that spawns more than its 12 allotted threads legitimately exceeds
+    100 % (e.g. INSILICO_LIBRARY_GENERATION, whose DIA-NN prediction
+    parallelises beyond the nominal allocation). Heavy per-file DIA-NN
+    steps (PRELIMINARY_ANALYSIS / INDIVIDUAL_ANALYSIS) sit near the
+    100 % baseline; glue steps that Nextflow allocates 1-2 cores to
+    (SDRF_PARSING, MSstats, raw conversion) sit near 1/12 ≈ 8 % on this
+    scale — the expected pattern for single-threaded helpers, not a
+    quantmsdiann deficiency. Per-step task counts (n) are shown in the
+    y-axis labels and each box is annotated with its median."""
     steps = summary['step'].tolist()
     if not steps:
         fig, ax = plt.subplots(figsize=(8, 3))
@@ -5098,9 +5139,12 @@ def render_resources_boxplot(resources: dict[str, dict[str, list[float]]], summa
         return
     rss_data = [[b / 1024 ** 3 for b in resources[s]['peak_rss_bytes']] for s in steps]
     cpu_data = [[v / DIANN_THREADS_BASELINE for v in resources[s]['pct_cpu']] for s in steps]
-    step_names = [step_label(s) for s in steps]
+    # Embed the per-step task count in the y-axis label so it aligns with the
+    # box and is shared across both panels (n is identical for the RSS and CPU
+    # rows), rather than floating at each box's max-whisker position.
+    step_names = [f'{step_label(s)} (n={len(resources[s]["peak_rss_bytes"])})' for s in steps]
     fig, (ax_rss, ax_cpu) = plt.subplots(nrows=1, ncols=2, figsize=(9.5, max(3.6, 0.4 * len(steps) + 1.2)), sharey=True)
-    _box_kw = dict(medianprops=dict(color=fs.OKABE_ITO['vermillion'], linewidth=1.4), boxprops=dict(color=fs.OKABE_ITO['blue']), whiskerprops=dict(color=fs.OKABE_ITO['blue']), capprops=dict(color=fs.OKABE_ITO['blue']))
+    _box_kw = dict(medianprops=dict(color=fs.OKABE_ITO['vermillion'], linewidth=1.8), boxprops=dict(color=fs.OKABE_ITO['blue']), whiskerprops=dict(color=fs.OKABE_ITO['blue']), capprops=dict(color=fs.OKABE_ITO['blue']))
     ax_rss.boxplot(rss_data, vert=False, widths=0.62, tick_labels=step_names, showfliers=False, **_box_kw)
     ax_rss.set_xlabel('Peak RSS per task (GB)', fontsize=10)
     all_rss = [v for vals in rss_data for v in vals if v > 0]
@@ -5111,15 +5155,25 @@ def render_resources_boxplot(resources: dict[str, dict[str, list[float]]], summa
     fs.despine(ax_rss)
     ax_rss.tick_params(axis='both', labelsize=8)
     ax_rss.invert_yaxis()
-    for i, step in enumerate(steps, start=1):
-        n = len(resources[step]['peak_rss_bytes'])
-        if n:
-            xpos = max(rss_data[i - 1]) if rss_data[i - 1] else rss_lo
-            ax_rss.text(xpos * 1.15, i, f'n={n}', va='center', ha='left', fontsize=7, color='#666666', clip_on=True)
+    # Print the median value above each box (the median line is hard to read for
+    # narrow distributions, especially on the compressed log RSS axis).
+    for i, vals in enumerate(rss_data, start=1):
+        if vals:
+            med = float(pd.Series(vals).median())
+            ax_rss.text(med, i - 0.34, f'{med:.2g}', va='center', ha='center', fontsize=6, color=fs.OKABE_ITO['vermillion'], clip_on=False)
     ax_cpu.boxplot(cpu_data, vert=False, widths=0.62, tick_labels=step_names, showfliers=False, **_box_kw)
-    ax_cpu.set_xlabel('Threading efficiency (%)', fontsize=10)
+    # Values are per-task %CPU expressed relative to the 12-thread DIA-NN
+    # allocation, so a step that spawns more than its 12 allotted threads
+    # (e.g. in-silico library generation) legitimately exceeds 100%.
+    ax_cpu.set_xlabel('CPU utilisation (% of 12-thread baseline)', fontsize=10)
     ax_cpu.axvline(100.0, color=fs.OKABE_ITO['bluish_green'], linestyle='--', linewidth=0.9, zorder=1)
     ax_cpu.axvline(100.0 / DIANN_THREADS_BASELINE, color='#bdbdbd', linestyle=':', linewidth=0.8, zorder=1)
+    cpu_hi = max((max(v) for v in cpu_data if v), default=100.0)
+    ax_cpu.set_xlim(0, cpu_hi * 1.12)
+    for i, vals in enumerate(cpu_data, start=1):
+        if vals:
+            med = float(pd.Series(vals).median())
+            ax_cpu.text(med, i - 0.34, f'{med:.0f}%', va='center', ha='center', fontsize=6, color=fs.OKABE_ITO['vermillion'], clip_on=False)
     fs.despine(ax_cpu)
     ax_cpu.tick_params(axis='both', labelsize=8)
     fig.tight_layout()
