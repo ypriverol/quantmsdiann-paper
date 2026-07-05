@@ -175,13 +175,20 @@ These figures decompose the end-to-end wall-clock and resource use reported in m
   \mcpincludegraphics[width=\textwidth,keepaspectratio]{performance/resources_per_step}
   \caption[Resources per task]{%
     \textbf{Peak memory and CPU envelope per Nextflow process.}
-    Per-task peak resident-set-size memory (left panel) and CPU-hours
-    (right panel) per \quantmsdiann{} process across the ProteoBench
-    benchmark cohorts and the PXD071075 cluster-node sweep. The collective
-    \texttt{FINAL\_QUANTIFICATION} stage
-    dominates memory use on large cohorts; per-file stages remain well
-    within the commodity 8--16~GB per-task envelope typical of HPC
-    partitions.
+    Per-task peak resident-set-size memory (left panel) and CPU
+    utilisation (right panel) per \quantmsdiann{} process across the
+    ProteoBench benchmark cohorts and the PXD071075 cluster-node sweep.
+    Box plots show the median (vermillion) and interquartile range; the
+    per-step task count is given in each y-axis label and the median is
+    printed above each box. CPU utilisation is expressed as a percentage
+    of \quantmsdiann{}'s 12-thread \texttt{DIA-NN} allocation, so a step
+    that parallelises beyond its 12 allotted threads exceeds the 100\%
+    baseline (green dashed line); the in-silico library-generation step
+    does so, while single-threaded glue steps sit near
+    $1{/}12\approx8\%$ (grey dotted line). The collective
+    \texttt{FINAL\_QUANTIFICATION} stage dominates memory use on large
+    cohorts; per-file stages remain well within the commodity
+    8--16~GB per-task envelope typical of HPC partitions.
   }
   \label{fig:resources-per-step}
 \end{figure}
@@ -189,35 +196,32 @@ These figures decompose the end-to-end wall-clock and resource use reported in m
 \section{ProteoBench protein-group depth across \texttt{DIA-NN} versions}
 \label{sec:supp-proteobench-proteins}
 
-The main text reports ProteoBench quantification accuracy (Fig.~2c); the
-identification depth behind the same runs is summarised here. Total precursors
-(at the global 1\% \texttt{Lib.Q.Value}) rise by 9--22\% from \texttt{DIA-NN}~1.8.1 to
+The main text reports ProteoBench quantification accuracy (Fig.~2c) and the
+per-run protein-group depth behind the same runs (Fig.~2d); the precursor and
+complete-profile depth are summarised here. Total precursors (at the global 1\%
+\texttt{Lib.Q.Value}) rise by 9--22\% from \texttt{DIA-NN}~1.8.1 to
 2.5.1-enterprise on all four modules (largest on timsTOF diaPASEF,
 102{,}528~$\to$~124{,}756); proteins quantified in every run rise by up to 18\%
 (e.g.\ single-cell Astral, 6{,}246~$\to$~7{,}299, $+17$\%). Protein groups are
 counted from the per-precursor \texttt{DIA-NN} report at a 1\% run-specific
-protein-group q-value (\texttt{PG.Q.Value}) as the average per run (panel~a) and the
-number quantified in every run (``complete profiles'', panel~b).
+protein-group q-value (\texttt{PG.Q.Value}); the per-run average is shown in
+Fig.~2d and the ``complete profile'' count (quantified in every run) below.
 
 \begin{figure}[htbp]
   \centering
-  \textbf{(a)}\par\vspace{0.1em}
-  \mcpincludegraphics[width=\mcponehalfcolwidth,keepaspectratio]{quantmsdiann_benchmarks/main_benchmarks_proteins}\par
-  \vspace{0.5em}
-  \textbf{(b)}\par\vspace{0.1em}
   \mcpincludegraphics[width=\mcponehalfcolwidth,keepaspectratio]{quantmsdiann_benchmarks/supplementary/supp_benchmarks_proteins_complete}
-  \caption[ProteoBench protein groups across DIA-NN versions]{%
-    \textbf{Protein-group depth on ProteoBench across three \texttt{DIA-NN}
-    configurations and four DIA modalities.}
-    (\textbf{a})~Protein groups per run (averaged over the six replicates) at a
-    1\% run-specific protein-group FDR, by \texttt{DIA-NN} configuration (1.8.1
-    and 2.5.1 light to dark blue; 2.5.1-enterprise in amber) from one
-    \quantmsdiann{} invocation.
-    (\textbf{b})~Complete-profile protein groups (quantified in every run).
-    Both metrics increase consistently from 1.8.1 to 2.5.1 to the enterprise build
-    on every module; the gain is larger for the complete profiles (up to
-    $+$18\% to the enterprise build) than for the per-run average ($+$10--12\%),
-    reflecting improved cross-run consistency in the newer release.
+  \caption[ProteoBench complete-profile protein groups across DIA-NN versions]{%
+    \textbf{Complete-profile protein-group depth on ProteoBench across three
+    \texttt{DIA-NN} configurations and four DIA modalities.}
+    Complete-profile protein groups (quantified in every run) at a 1\%
+    run-specific protein-group FDR, by \texttt{DIA-NN} configuration (1.8.1 and
+    2.5.1 light to dark blue; 2.5.1-enterprise in amber) from one
+    \quantmsdiann{} invocation. This complements the per-run average in Fig.~2d:
+    both increase consistently from 1.8.1 to 2.5.1 to the enterprise build on
+    every module, and the gain is larger for the complete profiles (up to
+    $+$18\% to the enterprise build) than for the per-run average
+    ($+$10--12\%), reflecting improved cross-run consistency in the newer
+    release.
   }
   \label{fig:supp-proteobench-proteins}
 \end{figure}
