@@ -205,26 +205,7 @@ complete-profile depth are summarised here. Total precursors (at the global 1\%
 (e.g.\ single-cell Astral, 6{,}246~$\to$~7{,}299, $+17$\%). Protein groups are
 counted from the per-precursor \texttt{DIA-NN} report at a 1\% run-specific
 protein-group q-value (\texttt{PG.Q.Value}); the per-run average is shown in
-Fig.~2d and the ``complete profile'' count (quantified in every run) below.
-
-\begin{figure}[htbp]
-  \centering
-  \mcpincludegraphics[width=\mcponehalfcolwidth,keepaspectratio]{quantmsdiann_benchmarks/supplementary/supp_benchmarks_proteins_complete}
-  \caption[ProteoBench complete-profile protein groups across DIA-NN versions]{%
-    \textbf{Complete-profile protein-group depth on ProteoBench across three
-    \texttt{DIA-NN} configurations and four DIA modalities.}
-    Complete-profile protein groups (quantified in every run) at a 1\%
-    run-specific protein-group FDR, by \texttt{DIA-NN} configuration (1.8.1 and
-    2.5.1 light to dark blue; 2.5.1-enterprise in amber) from one
-    \quantmsdiann{} invocation. This complements the per-run average in Fig.~2d:
-    both increase consistently from 1.8.1 to 2.5.1 to the enterprise build on
-    every module, and the gain is larger for the complete profiles (up to
-    $+$18\% to the enterprise build) than for the per-run average
-    ($+$10--12\%), reflecting improved cross-run consistency in the newer
-    release.
-  }
-  \label{fig:supp-proteobench-proteins}
-\end{figure}
+Fig.~2d.
 
 
 \section{Per-cohort completeness and overlap (cell-line reanalyses)}
