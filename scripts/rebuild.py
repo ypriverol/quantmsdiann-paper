@@ -2239,6 +2239,7 @@ def _figure_fig2_validation__render(out: Path) -> Path:
     from matplotlib.patches import Patch
     dq = pd.read_csv(PERF / 'queue_size_sweep.tsv', sep='\t')
     dp = pd.read_csv(PERF / 'parallelism_data.tsv', sep='\t')
+    dp = dp[dp['dataset'] != 'PXD003539'].copy()  # excluded from Fig 2b: sub-0.4 h, incomplete trace
     fig, axes = plt.subplots(2, 2, figsize=(10.5, 8.4))
     ax0, ax1, ax2, ax3 = axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]
     render_queue_size_sweep(dq, ax=ax0, composite=True)
