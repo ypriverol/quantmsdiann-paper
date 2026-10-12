@@ -226,6 +226,7 @@ class Numbers:
             if not key:
                 continue
             lines.append(f'\\newcommand{{\\num{key}}}{{{value}}}')
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('\n'.join(lines) + '\n')
 
 def _read(path: Path) -> pd.DataFrame | None:
@@ -2314,7 +2315,7 @@ DATA_DIR = _figure_quantmsdiann_benchmarks_vs_proteobench__REPO_ROOT / 'data' / 
 _figure_quantmsdiann_benchmarks_vs_proteobench__FIGURES_DIR = _figure_quantmsdiann_benchmarks_vs_proteobench__REPO_ROOT / 'analysis' / 'figures' / 'quantmsdiann_benchmarks'
 SUPP_DIR = _figure_quantmsdiann_benchmarks_vs_proteobench__FIGURES_DIR / 'supplementary'
 FIG_DATA_DIR = _figure_quantmsdiann_benchmarks_vs_proteobench__FIGURES_DIR / 'data'
-PRIDE_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/proteobench/quantmsdiann_results'
+PRIDE_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/proteobench'
 DIANN_VERSIONS = ('v1_8_1', 'v2_5_1', 'v2_5_1_enterprise')
 _figure_quantmsdiann_benchmarks_vs_proteobench__DATASET_TO_MODULE: dict[str, dict[str, str]] = {'PXD049412': {'label': 'Module 9 - DIA single-cell', 'results_repo': 'Proteobench/Results_quant_ion_DIA_singlecell'}, 'PXD062685': {'label': 'Module 5 - DIA diaPASEF', 'results_repo': 'Proteobench/Results_quant_ion_DIA_diaPASEF'}, 'PXD070049': {'label': 'Module 10 - DIA ZenoTOF', 'results_repo': 'Proteobench/Results_quant_ion_DIA_ZenoTOF'}, 'ProteoBench_Module_7': {'label': 'Module 7 - DIA Astral 2Th', 'results_repo': 'Proteobench/Results_quant_ion_DIA_Astral'}}
 GITHUB_API_BASE = 'https://api.github.com'
@@ -4124,7 +4125,7 @@ _figure_performance_runtime__REPO_ROOT = Path(__file__).resolve().parent.parent
 _figure_performance_runtime__DATA_DIR = _figure_performance_runtime__REPO_ROOT / 'data'
 _figure_performance_runtime__FIGURES_DIR = _figure_performance_runtime__REPO_ROOT / 'analysis' / 'figures' / 'performance'
 CELL_LINE_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantms-collections/absolute-expression-2.0/cell-lines'
-BENCHMARK_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/proteobench/quantmsdiann_results'
+BENCHMARK_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/proteobench'
 CELL_LINE_DATASETS = ('PXD003539', 'PXD004701', 'PXD030304')
 BENCHMARK_DATASETS = ('PXD049412', 'PXD062685', 'PXD070049', 'ProteoBench_Module_7')
 _figure_performance_runtime__DIANN_VERSIONS = ('v1_8_1', 'v2_1_0', 'v2_2_0', 'v2_3_2', 'v2_5_0')
@@ -7888,6 +7889,9 @@ def main(argv: list[str] | None = None) -> int:
     # fail-fast vs keep-going. Otherwise a failed data/figure stage (keep-going
     # default) would still emit PDFs from a mix of stale and partial artifacts.
     all_ok = all(ok for _, ok, _ in results)
+    if build_pdf and not (REPO / "paper" / "Makefile").exists():
+        print("\npaper/ is not part of the public repository; skipping the PDF build.", flush=True)
+        build_pdf = False
     if build_pdf and not all_ok:
         print("\nSkipping PDF build: one or more stages failed "
               "(PDFs would mix stale and partial artifacts).", file=sys.stderr)
