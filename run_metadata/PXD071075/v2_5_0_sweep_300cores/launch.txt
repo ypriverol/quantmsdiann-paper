@@ -1,0 +1,14 @@
+====================================================================
+SLURM job      : 27489842  node=hl-codon-cn-102
+Pipeline dir   : /hps/nobackup/juan/pride/reanalysis/quantmsdiann
+SDRF           : /hps/nobackup/juan/pride/reanalysis/quantms-test-datasets/benchmarks/dia/OrbitrapEclipse/PXD071075/PXD071075.sdrf.tsv
+FASTA          : /hps/nobackup/juan/pride/reanalysis/quantms-test-datasets/benchmarks/dia/OrbitrapEclipse/PXD071075/UP000005640_9606.fasta
+RAW            : /hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075-mzml
+Work dir       : /hps/nobackup/juan/pride/reanalysis/quantmsdiann_work/PXD071075/v2_5_0_sweep_300cores
+Results dir    : /hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075/v2_5_0_sweep_300cores
+DIA-NN version : 2_5_0
+Profiles       : singularity,pride_slurm,diann_v2_5_0
+Input type     : mzML
+====================================================================
+N E X T F L O W  ~  version 26.04.1
+Launching `/hps/nobackup/juan/pride/reanalysis/quantmsdiann/main.nf` [deadly_koch] - revision: 616f896425

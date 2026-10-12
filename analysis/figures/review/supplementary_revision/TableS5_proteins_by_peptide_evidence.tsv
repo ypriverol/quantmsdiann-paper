@@ -1,0 +1,4 @@
+Cohort	>=1 pep: original	>=1 pep: quantmsdiann	>=2 pep: original	>=2 pep: quantmsdiann	>=3 pep: original	>=3 pep: quantmsdiann	>=5 pep: original	>=5 pep: quantmsdiann	Precursors: original	Precursors: quantmsdiann	Peptides: original	Peptides: quantmsdiann	Median peptides/protein: original	Median peptides/protein: quantmsdiann	Peptides shared with original	% of original peptides recovered
+NCI-60 (PXD003539)	6556	7553	4154	6812	3313	6082	2312	5017	48374	122511	40592	98850	3	8	18,322	45.1
+Sun 2023 (PXD004701)	6183	8304	4475	7381	3615	6575	2532	5233	52507	107783	45027	88579	3	7	20,150	44.8
+ProCan (PXD030304)	8498	10027	6698	8993	5727	8044	4488	6670	n/a	169677	n/a	143246	5	8	n/a	n/a

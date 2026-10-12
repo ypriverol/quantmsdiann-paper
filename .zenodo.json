@@ -1,0 +1,79 @@
+{
+  "title": "quantmsdiann-paper: analysis code and figure data for the quantmsdiann manuscript",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Yue, Qi-Xuan",
+      "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+    },
+    {
+      "name": "Shen, Yufei",
+      "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+    },
+    {
+      "name": "Dai, Chengxin",
+      "affiliation": "State Key Laboratory of Proteomics, Beijing Proteome Research Center, Beijing, China"
+    },
+    {
+      "name": "Larrea-Sebal, Asier",
+      "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+    },
+    {
+      "name": "Webel, Henry",
+      "affiliation": "Novo Nordisk Foundation Center for Protein Research, University of Copenhagen, Copenhagen, Denmark"
+    },
+    {
+      "name": "Nimo, Jose",
+      "affiliation": "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+    },
+    {
+      "name": "Coscia, Fabian",
+      "affiliation": "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+    },
+    {
+      "name": "Kok, Orhun",
+      "affiliation": "Northeastern University, Boston, Massachusetts, USA"
+    },
+    {
+      "name": "Slavov, Nikolai",
+      "affiliation": "Northeastern University, Boston, Massachusetts, USA"
+    },
+    {
+      "name": "Vizcaíno, Juan Antonio",
+      "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+    },
+    {
+      "name": "Sachsenberg, Timo",
+      "affiliation": "University of Tübingen, Tübingen, Germany"
+    },
+    {
+      "name": "Bai, Mingze",
+      "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+    },
+    {
+      "name": "Demichev, Vadim",
+      "affiliation": "Charité – Universitätsmedizin Berlin, Berlin, Germany"
+    },
+    {
+      "name": "Perez-Riverol, Yasset",
+      "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+    }
+  ],
+  "description": "Scripts that reproduce every figure, table and number of the quantmsdiann manuscript from the published DIA-NN outputs (python -m scripts.rebuild --all), including the reviewer-response analyses (scripts/review_*.py) and the PRIDE/Zenodo submission builders.",
+  "keywords": [
+    "DIA",
+    "DIA-NN",
+    "quantmsdiann",
+    "reanalysis",
+    "proteomics",
+    "SDRF"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/bigbio/quantmsdiann",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

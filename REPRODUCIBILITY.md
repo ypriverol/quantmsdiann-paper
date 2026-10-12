@@ -57,44 +57,42 @@ single-cell → the `single_cell_tables` stage; spatial → the figure stage
 downloads directly. ProCan's per-tissue
 generator is the one remaining item.
 
-## Deposition checklist (to close the ⏳ rows)
+## Run inputs and parameters (committed)
 
-To make the pending datasets reproducible from public data, upload their DIA-NN
-reports to `quantmsdiann-benchmarks/` using the **same layout as single-cell**
-(which already works), i.e. one tree per DIA-NN version, report under
-`quant_tables/`:
+- `sdrf/`: the exact SDRF of every run, copied verbatim (the curated copies in
+  sdrf-annotated-datasets keep changing). Known instrument-accession errors are
+  listed in `sdrf/README.md`.
+- `run_metadata/<dataset>/<run>/`: final Nextflow parameters (`params.json`),
+  launch command (`launch.txt`) and DIA-NN options (`diann_config.cfg`) per run;
+  `run_metadata/runs.tsv` indexes all 38 runs. Rebuild with
+  `python -m scripts.build_run_metadata`.
 
-```
-quantmsdiann-benchmarks/<class>/<dataset>/v<version>/quant_tables/diann_report.{parquet,tsv}
-```
+## Reviewer-response analyses
 
-| Dataset | Suggested path | Versions | Files needed |
-|---|---|---|---|
-| ProCan PXD030304 | `cell-lines/PXD030304/v<ver>/quant_tables/` | 1_8_1, 2_5_1, 2_5_1_enterprise | `diann_report.parquet` (or `.tsv` for 1.8.1) |
-| plexDIA MSV000093870 | `single-cell/MSV000093870/v<ver>/quant_tables/` | 2_5_1, 2_5_1_enterprise | `diann_report.parquet` |
-| spatial PXD064049 | `spatial/PXD064049/v<ver>/quant_tables/` | 1_8_1, 2_5_1_enterprise | `diann_report.parquet` |
-| phospho PXD049692, PXD034128, PXD034623 | `phospho/<PXD>/v<ver>/quant_tables/` | 2_5_1, 2_5_1_enterprise | `diann_report.parquet` **and** `diann_report.site_report.parquet` (for class-I sites) |
+| Script | Output (`analysis/figures/review/`) |
+|---|---|
+| `review_desktop_vs_quantmsdiann` | paired standalone vs quantmsdiann statistics |
+| `review_desktop_overview` | `supplementary_revision/FigS6_*` |
+| `review_runtime_vs_scale` | wall-clock vs files / GB |
+| `review_threshold_regimes`, `review_peptide_overlap` | peptide-evidence counts and peptide overlap (streams the Fig. 4 reports) |
+| `review_supplementary` | `supplementary_revision/FigS7-S8`, `TableS3-S5` |
+| `build_run_metadata` | `supplementary_revision/TableS6_run_parameters.tsv` |
 
-Once these are live, the per-dataset generators (modeled on
-`analysis/make_single_cell_tables.py`) read them directly from the FTP — no
-hardcoded numbers. Until then, those figures read cluster-staged derived tables.
+The paired runs read `data/proteobench-review-experiments/x/` (extracted from
+the review-experiment archives; git-ignored).
 
-### Current cluster source paths (to upload from)
+## Deposition (PRIDE reanalysis dataset + Zenodo)
 
-Under `/hps/nobackup/juan/pride/reanalysis/absolute-expression/`, version trees:
-`_v1_8_1/` = 1.8.1, no-prefix = 2.5.1 standard, `_v2_5_1_enterprise/` = enterprise.
-Each `quant_tables/` holds `diann_report.parquet` (+ `diann_report.site_report.parquet` for phospho).
-
-| Dataset | 2.5.1 standard (no-prefix) | enterprise (`_v2_5_1_enterprise/`) |
-|---|---|---|
-| ProCan PXD030304 | `cell-lines-proteomes/PXD030304/results/quant_tables/` | (same subpath under `_v2_5_1_enterprise/`) |
-| plexDIA MSV000093870 | `single-cell-proteomics/MSV000093870/results-plexDIA/quant_tables/` | ″ |
-| spatial PXD064049 | `spatial-proteomics/PXD064049/results-CHP212-MYCN-DVP-diaPASEF-carbamidomethyl/quant_tables/` | ″ |
-| phospho PXD049692 | `phospho-proteomics/PXD049692/results-NK-fibrin-IL15-phospho-diaPASEF/quant_tables/` | ″ |
-| phospho PXD034128 | `phospho-proteomics/PXD034128/results-phospho-{biological-study,highspeed-DIA}/quant_tables/` | ″ |
-| phospho PXD034623 | `phospho-proteomics/PXD034623/results-M2-Galectin1-phospho-DIA/quant_tables/` | ″ |
-
-(1.8.1 reanalyses, where they exist, are under `_v1_8_1/<same subpath>`.)
+1. `python -m scripts.build_pride_raw_list` writes `pride_submission/raw_files.{tsv,txt}`.
+2. `python -m scripts.build_submission_manifest` crawls the run folders on the FTP.
+3. `python -m scripts.build_submission_px` writes the corrected SDRF copies,
+   `submission_files_final.tsv`, `zenodo_files.tsv` and `submission.px`.
+4. PRIDE: on the EBI cluster, `python -m scripts.stage_pride_submission --dest <dir>`
+   (~64 GB), then upload `<dir>` with `submission.px`.
+5. Zenodo: `ZENODO_TOKEN=... python -m scripts.zenodo_upload` creates a draft
+   (~20 GB, streamed from the FTP; everything but the 44 GB ProCan report),
+   with metadata from `docs/zenodo_data_metadata.json`. Publish it on zenodo.org.
+6. Code: `.zenodo.json` describes this repository for the GitHub-Zenodo release.
 
 ## Per-figure provenance
 

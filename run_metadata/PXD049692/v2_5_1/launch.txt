@@ -1,0 +1,16 @@
+====================================================================
+SLURM job      : 49181401  node=hl-codon-cn-125
+Pipeline dir   : /hps/nobackup/juan/pride/reanalysis/quantmsdiann
+SDRF           : /hps/nobackup/juan/pride/reanalysis/quantms-datasets/projects/phospho-proteomics/PXD049692/PXD049692-NK-fibrin-IL15-phospho-diaPASEF.sdrf.tsv
+FASTA          : /hps/nobackup/juan/pride/reanalysis/databases/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta
+RAW            : /hps/nobackup/juan/pride/reanalysis/raw-data/PXD049692
+Work dir       : /hps/nobackup/juan/pride/reanalysis/absolute-expression/phospho-proteomics/PXD049692/work-NK-fibrin-IL15-phospho-diaPASEF
+Results dir    : /hps/nobackup/juan/pride/reanalysis/absolute-expression/phospho-proteomics/PXD049692/results-NK-fibrin-IL15-phospho-diaPASEF
+DIA-NN version : 2_5_1
+Profiles       : singularity,pride_slurm,diann_v2_5_1
+Input type     : d
+====================================================================
+Extra NF args  : --max_mods 2 --min_peptide_length 7 --max_peptide_length 40 --min_fr_mz 100 --max_fr_mz 1800 --enable_qpx_export --project_accession PXD049692 --export_quant
+Extra NF config: /hps/nobackup/juan/pride/reanalysis/quantms-datasets/scripts/extra.config
+N E X T F L O W  ~  version 26.04.1
+Launching `/hps/nobackup/juan/pride/reanalysis/quantmsdiann/main.nf` [high_nobel] - revision: 616f896425
