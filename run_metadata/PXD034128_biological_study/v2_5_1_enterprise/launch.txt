@@ -1,0 +1,16 @@
+====================================================================
+SLURM job      : 49181395  node=hl-codon-cn-065
+Pipeline dir   : /hps/nobackup/juan/pride/reanalysis/quantmsdiann
+SDRF           : /hps/nobackup/juan/pride/reanalysis/quantms-datasets/projects/phospho-proteomics/PXD034128/PXD034128-phospho-biological-study.sdrf.tsv
+FASTA          : /hps/nobackup/juan/pride/reanalysis/databases/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta
+RAW            : /hps/nobackup/juan/pride/reanalysis/raw-data/PXD034128
+Work dir       : /hps/nobackup/juan/pride/reanalysis/absolute-expression/_v2_5_1_enterprise/phospho-proteomics/PXD034128/work-phospho-biological-study
+Results dir    : /hps/nobackup/juan/pride/reanalysis/absolute-expression/_v2_5_1_enterprise/phospho-proteomics/PXD034128/results-phospho-biological-study
+DIA-NN version : 2_5_1_enterprise
+Profiles       : singularity,pride_slurm,diann_v2_5_1_enterprise
+Input type     : d
+====================================================================
+Extra NF args  : --max_mods 2 --min_peptide_length 7 --max_peptide_length 40 --min_fr_mz 100 --max_fr_mz 1800 --enable_qpx_export --project_accession PXD034128 --export_quant
+Extra NF config: /hps/nobackup/juan/pride/reanalysis/quantms-datasets/scripts/extra.config
+N E X T F L O W  ~  version 26.04.1
+Launching `/hps/nobackup/juan/pride/reanalysis/quantmsdiann/main.nf` [drunk_noyce] - revision: 616f896425

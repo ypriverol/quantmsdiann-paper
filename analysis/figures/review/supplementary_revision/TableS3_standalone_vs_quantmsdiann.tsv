@@ -1,0 +1,26 @@
+Dataset	Metric	DIA-NN standalone	quantmsdiann	Difference
+PXD049412	Precursors per run (mean)	40986	41351	+0.9%
+PXD049412	Precursors, global 1% FDR: overlap	2,985 only	3,294 only	45,047 shared; Jaccard 87.8%; 93.8% of standalone / 93.2% of quantmsdiann found by the other
+PXD049412	Peptides per run (mean)	39033	39421	+1.0%
+PXD049412	Peptides, global 1% FDR: overlap	2,713 only	3,053 only	42,670 shared; Jaccard 88.1%; 94.0% of standalone / 93.3% of quantmsdiann found by the other
+PXD049412	Protein groups per run (mean)	7889	8030	+1.8%
+PXD049412	Protein groups, global 1% FDR: overlap	292 only	493 only	8,116 shared; Jaccard 91.2%; 96.5% of standalone / 94.3% of quantmsdiann found by the other
+PXD049412	Precursor quantity, log2 ratio quantmsdiann/standalone (median)			-0.13 (r = 0.960)
+PXD049412	Median precursor CV, condition A (%)	16.979999542236328	19.26000022888184	
+PXD049412	Median precursor CV, condition B (%)	20.940000534057617	23.200000762939453	
+PXD049412	Human: median |log2 A/B - expected|	0.449999988079071	0.4359999895095825	
+PXD049412	Yeast: median |log2 A/B - expected|	0.4930000007152557	0.3680000007152557	
+PXD049412	Wall-clock, same workstation (min)	151.8	122.8	
+PXD070049	Precursors per run (mean)	94149	93773	-0.4%
+PXD070049	Precursors, global 1% FDR: overlap	7,412 only	7,024 only	100,924 shared; Jaccard 87.5%; 93.2% of standalone / 93.5% of quantmsdiann found by the other
+PXD070049	Peptides per run (mean)	79341	79497	+0.2%
+PXD070049	Peptides, global 1% FDR: overlap	5,759 only	5,865 only	85,790 shared; Jaccard 88.1%; 93.7% of standalone / 93.6% of quantmsdiann found by the other
+PXD070049	Protein groups per run (mean)	9679	9594	-0.9%
+PXD070049	Protein groups, global 1% FDR: overlap	319 only	391 only	9,816 shared; Jaccard 93.3%; 96.9% of standalone / 96.2% of quantmsdiann found by the other
+PXD070049	Precursor quantity, log2 ratio quantmsdiann/standalone (median)			-0.04 (r = 0.974)
+PXD070049	Median precursor CV, condition A (%)	9.029999732971191	9.90999984741211	
+PXD070049	Median precursor CV, condition B (%)	9.890000343322754	10.8100004196167	
+PXD070049	Human: median |log2 A/B - expected|	0.1459999978542328	0.1560000032186508	
+PXD070049	Yeast: median |log2 A/B - expected|	0.3260000050067901	0.2879999876022339	
+PXD070049	Ecoli: median |log2 A/B - expected|	0.4020000100135803	0.3289999961853027	
+PXD070049	Wall-clock, same workstation (min)	177.1	233.1	

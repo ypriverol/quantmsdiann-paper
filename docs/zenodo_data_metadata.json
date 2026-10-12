@@ -1,0 +1,87 @@
+{
+  "metadata": {
+    "title": "quantmsdiann reanalysis outputs: DIA-NN reports, matrices, SDRFs and run parameters",
+    "upload_type": "dataset",
+    "license": "cc-by-4.0",
+    "access_right": "open",
+    "creators": [
+      {
+        "name": "Yue, Qi-Xuan",
+        "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+      },
+      {
+        "name": "Shen, Yufei",
+        "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+      },
+      {
+        "name": "Dai, Chengxin",
+        "affiliation": "State Key Laboratory of Proteomics, Beijing Proteome Research Center, Beijing, China"
+      },
+      {
+        "name": "Larrea-Sebal, Asier",
+        "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+      },
+      {
+        "name": "Webel, Henry",
+        "affiliation": "Novo Nordisk Foundation Center for Protein Research, University of Copenhagen, Copenhagen, Denmark"
+      },
+      {
+        "name": "Nimo, Jose",
+        "affiliation": "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+      },
+      {
+        "name": "Coscia, Fabian",
+        "affiliation": "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+      },
+      {
+        "name": "Kok, Orhun",
+        "affiliation": "Northeastern University, Boston, Massachusetts, USA"
+      },
+      {
+        "name": "Slavov, Nikolai",
+        "affiliation": "Northeastern University, Boston, Massachusetts, USA"
+      },
+      {
+        "name": "Vizcaíno, Juan Antonio",
+        "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+      },
+      {
+        "name": "Sachsenberg, Timo",
+        "affiliation": "University of Tübingen, Tübingen, Germany"
+      },
+      {
+        "name": "Bai, Mingze",
+        "affiliation": "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+      },
+      {
+        "name": "Demichev, Vadim",
+        "affiliation": "Charité – Universitätsmedizin Berlin, Berlin, Germany"
+      },
+      {
+        "name": "Perez-Riverol, Yasset",
+        "affiliation": "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+      }
+    ],
+    "description": "DIA-NN outputs of every quantmsdiann reanalysis in the manuscript (ProteoBench modules 5, 7, 9, 10; single-cell, spatial, phosphoproteomics and bulk cell-line cohorts; PXD071075 scalability run) and the paired standalone DIA-NN vs quantmsdiann runs (PXD049412, PXD070049). Files are named <dataset>_<diann-version>_<file>. Per run: DIA-NN report (parquet/tsv), precursor/protein/gene matrices, stats, SDRF, diann_config.cfg, Nextflow parameters and trace. raw_files.tsv lists every raw file processed with its URL in the original ProteomeXchange/MassIVE deposit. The 44 GB ProCan (PXD030304) DIA-NN report is deposited only in PRIDE (see related identifier); all other files are here.",
+    "keywords": [
+      "DIA",
+      "DIA-NN",
+      "quantmsdiann",
+      "reanalysis",
+      "single-cell proteomics",
+      "SDRF"
+    ],
+    "related_identifiers": [
+      {
+        "identifier": "https://github.com/bigbio/quantmsdiann",
+        "relation": "isDerivedFrom",
+        "scheme": "url"
+      },
+      {
+        "identifier": "https://github.com/ypriverol/quantmsdiann-paper",
+        "relation": "isSupplementTo",
+        "scheme": "url"
+      }
+    ]
+  }
+}
