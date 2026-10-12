@@ -4,17 +4,17 @@ Writes (committed to the repo, so later edits to sdrf-annotated-datasets or the
 FTP do not change what the paper used):
 
   sdrf/<dataset>/<file>.sdrf.tsv           as-run SDRFs, verbatim (one copy per distinct content)
-  run_metadata/<dataset>/<version>/
+  sdrf/<sdrf folder>/<run>/
       params.json                          final Nextflow parameters (pipeline_info/params_*.json)
       launch.txt                           launch command (pipeline_report.txt) or SLURM run header
       diann_config.cfg                     DIA-NN options derived from the SDRF
-  run_metadata/common/extra.config         resource overrides passed with -c to every cluster run
-  run_metadata/runs.tsv                    index: run -> SDRF, sources, key parameters (Table S6)
+  sdrf/extra.config                        resource overrides passed with -c to every cluster run
+  sdrf/runs.tsv                            index: run -> SDRF, sources, key parameters (Table S6)
 
 Sources, in order: the run's own folder on the PRIDE FTP; for runs whose FTP
 folder has no sdrf/ or pipeline_info/ (phosphoproteomics, PXD071075 sweep), the
-files copied from the cluster run folders (run_metadata/_cluster/, fetched once
-with ssh; see run_metadata/README.md); for the paired standalone/quantmsdiann
+files copied from the cluster run folders (data/_cluster_run_files/, fetched once
+with ssh; see sdrf/README.md); for the paired standalone/quantmsdiann
 runs, data/proteobench-review-experiments/x/.
 
 Usage:
@@ -36,8 +36,7 @@ from scripts.build_submission_manifest import FTP, RUNS, crawl
 
 REPO = Path(__file__).resolve().parents[1]
 SDRF_DIR = REPO / "sdrf"
-META = REPO / "run_metadata"
-CL = META / "_cluster"
+CL = REPO / "data/_cluster_run_files"
 REVIEW = REPO / "data/proteobench-review-experiments/x"
 
 # Runs with no sdrf/ or pipeline_info/ on the FTP: (sdrf, launch log, params) in _cluster/.
@@ -73,6 +72,18 @@ EXTRA_ARG = re.compile(r"--(\w+)\s+(\S+)")
 def fetch(url: str) -> bytes:
     with urllib.request.urlopen(url, timeout=120) as r:
         return r.read()
+
+
+def run_dir(dataset: str, run: str) -> Path:
+    """Folder for one run's parameter files, next to its SDRF in sdrf/."""
+    for prefix, folder in (("ProteoBench-", "ProteoBench"), ("Paired-", "Paired_standalone_vs_quantmsdiann"),
+                           ("PXD034128_", "PXD034128")):
+        if dataset.startswith(prefix):
+            base = SDRF_DIR / folder / dataset[len(prefix):]
+            break
+    else:
+        base = SDRF_DIR / dataset
+    return base if dataset.startswith("Paired-") else base / run
 
 
 def store_sdrf(dataset: str, name: str, content: bytes, seen: dict) -> str:
@@ -159,13 +170,13 @@ def table_s6(df: pd.DataFrame) -> None:
 
 def main() -> None:
     if not CL.exists():
-        raise SystemExit("run_metadata/_cluster/ missing: fetch it first (see run_metadata/README.md)")
+        raise SystemExit("data/_cluster_run_files/ missing: fetch it first (see sdrf/README.md)")
     seen: dict[str, str] = {}
     rows = []
     for ds, ver, run in RUNS:
         if ds == "PXD071075":
             continue  # the paper's PXD071075 runs are the v2.5.0 sweep (below)
-        out = META / ds / ver
+        out = run_dir(ds, ver)
         out.mkdir(parents=True, exist_ok=True)
         base = f"{FTP}/{run}"
         files = crawl(base)
@@ -201,7 +212,7 @@ def main() -> None:
     for (ds, ver), (sdrf, log) in CLUSTER_RUNS.items():
         if ds != "PXD071075":
             continue
-        out = META / ds / ver
+        out = run_dir(ds, ver)
         out.mkdir(parents=True, exist_ok=True)
         hdr = header_from_log((CL / log).read_text(errors="replace"))
         (out / "launch.txt").write_text(hdr + "\n")
@@ -213,7 +224,7 @@ def main() -> None:
 
     for ds in ("PXD049412", "PXD070049"):  # paired standalone vs quantmsdiann (Supplementary Note 8)
         qm = REVIEW / ds / f"quantmsdiann/results_{ds}"
-        out = META / f"Paired-{ds}"
+        out = run_dir(f"Paired-{ds}", "")
         out.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REVIEW / ds / "diann/run_diann_v2_5_1.sh", out / "standalone_run_diann_v2_5_1.sh")
         shutil.copy2(REVIEW / ds / "quantmsdiann/run_quantmsdiann.config", out / "quantmsdiann_run.config")
@@ -227,10 +238,9 @@ def main() -> None:
                      "sdrf_source": "as-run (results sdrf/)", **key_params(params),
                      "params_source": f"{p.name}; standalone command in standalone_run_diann_v2_5_1.sh"})
 
-    (META / "common").mkdir(exist_ok=True)
-    shutil.copy2(CL / "quantms-datasets/scripts/extra.config", META / "common/extra.config")
+    shutil.copy2(CL / "quantms-datasets/scripts/extra.config", SDRF_DIR / "extra.config")
     df = pd.DataFrame(rows)
-    df.to_csv(META / "runs.tsv", sep="\t", index=False)
+    df.to_csv(SDRF_DIR / "runs.tsv", sep="\t", index=False)
     table_s6(df)
     print(f"\n{len(df)} runs; {len(seen)} distinct SDRFs; missing SDRF: {df.sdrf.isna().sum()}; "
           f"missing params: {df.params_source.isna().sum()}")

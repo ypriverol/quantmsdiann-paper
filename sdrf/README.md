@@ -1,7 +1,8 @@
-# SDRF snapshot
+# SDRFs and run parameters
 
 The exact SDRF files used by every quantmsdiann run in the manuscript, copied
-verbatim on 2026-10-12. They are kept here because the curated copies in
+verbatim on 2026-10-12, with the final pipeline parameters of each run. They
+are kept here because the curated copies in
 [bigbio/sdrf-annotated-datasets](https://github.com/bigbio/sdrf-annotated-datasets)
 keep evolving; these are the versions the results were produced from.
 
@@ -15,12 +16,39 @@ keep evolving; these are the versions the results were produced from.
 | `PXD071075/` | Node-count sweep (Fig. 2a) |
 | `Paired_standalone_vs_quantmsdiann/` | Paired standalone DIA-NN vs quantmsdiann runs (Supplementary Note 8) |
 
-Which run used which file: `run_metadata/runs.tsv` (column `sdrf`).
+Which run used which file: `runs.tsv` (column `sdrf`).
+
+## Run parameters
+
+Next to each SDRF, one folder per run (e.g. `PXD046357/v1_8_1/`,
+`ProteoBench/PXD049412/v2_5_1/`, `PXD034128/biological_study/v2_5_1/`):
+
+| File | Content |
+|---|---|
+| `params.json` | Final Nextflow/nf-core parameters as resolved by the pipeline (`pipeline_info/params_*.json`) |
+| `launch.txt` | The `nextflow run` command (from `pipeline_report.txt`), or the SLURM run header when that report is not available |
+| `diann_config.cfg` | DIA-NN options the pipeline derived from the SDRF |
+
+`runs.tsv` indexes all 38 runs: SDRF used, where the parameters came from, and
+the key search parameters; Supplementary Table S6 is the readable version.
+`extra.config` is the resource-override config passed with `-c` to every
+cluster run.
+
+The phosphoproteomics runs (PXD034128, PXD034623, PXD049692 v2.5.1) and the
+PXD071075 v2.5.0 node-count sweep published no `pipeline_info/` folder. For
+these, `launch.txt` is the SLURM run header, which records the SDRF, FASTA,
+DIA-NN version, Nextflow profiles and the extra arguments given on the command
+line; every other parameter is the pipeline default.
+
+Rebuild with `python -m scripts.build_run_metadata`. It reads the run folders on
+the PRIDE FTP, plus `data/_cluster_run_files/` (not committed: SLURM logs and
+input SDRFs copied read-only from `/hps/nobackup/juan/pride/reanalysis` on the
+EMBL-EBI cluster; paths in `CLUSTER_RUNS`).
 
 ## Supplementary Table 1: datasets, search settings and SDRFs
 
 One row per dataset; when a dataset was run with several DIA-NN versions, all used the same SDRF, FASTA
-and peptide length. Values from `run_metadata/runs.tsv`; full parameters per run in Supplementary Table S6.
+and peptide length. Values from `runs.tsv`; full parameters per run in Supplementary Table S6.
 
 | Accession | DIA-NN version | FASTA database | Peptide length | SDRF |
 |---|---|---|---|---|
