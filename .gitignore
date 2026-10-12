@@ -21,7 +21,7 @@ analysis/figures/**/*.pdf
 analysis/figures/**/*.png
 
 # Analysis cache (multi-GB DIA-NN matrices; re-downloaded from PRIDE FTP
-# by the figure scripts. See MANIFEST.md for sources). Matched at any depth,
+# by the figure scripts. See REPRODUCIBILITY.md for sources). Matched at any depth,
 # so per-figure data/cache/ dirs are covered too.
 data/
 
