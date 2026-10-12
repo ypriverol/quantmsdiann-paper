@@ -62,9 +62,9 @@ generator is the one remaining item.
 - `sdrf/`: the exact SDRF of every run, copied verbatim (the curated copies in
   sdrf-annotated-datasets keep changing). Known instrument-accession errors are
   listed in `sdrf/README.md`.
-- `run_metadata/<dataset>/<run>/`: final Nextflow parameters (`params.json`),
-  launch command (`launch.txt`) and DIA-NN options (`diann_config.cfg`) per run;
-  `run_metadata/runs.tsv` indexes all 38 runs. Rebuild with
+- `sdrf/<folder>/<run>/`: final Nextflow parameters (`params.json`),
+  launch command (`launch.txt`) and DIA-NN options (`diann_config.cfg`) per run,
+  next to the run's SDRF; `sdrf/runs.tsv` indexes all 38 runs. Rebuild with
   `python -m scripts.build_run_metadata`.
 
 ## Reviewer-response analyses
