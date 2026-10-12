@@ -45,6 +45,23 @@ the PRIDE FTP, plus `data/_cluster_run_files/` (not committed: SLURM logs and
 input SDRFs copied read-only from `/hps/nobackup/juan/pride/reanalysis` on the
 EMBL-EBI cluster; paths in `CLUSTER_RUNS`).
 
+## FASTA databases
+
+`fasta/` holds the five protein databases used by the 38 runs, gzipped, each
+stored once; column `fasta` in `runs.tsv` gives the file for every run.
+`fasta/SHA256SUMS.txt` lists the checksums of the uncompressed files, identical
+to the files the 36 cluster runs read (checked 2026-10-12). The two paired
+standalone/quantmsdiann runs (Supplementary Note 8) were run on a local machine
+with the same-named ProteoBench FASTAs; those copies were not checksummed.
+
+| File | Runs |
+|---|---|
+| `Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz` | 17 |
+| `ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz` | 10 |
+| `UP000005640_9606.fasta.gz` | 5 |
+| `ProteoBenchFASTA_DDAQuantification_noecoli.fasta.gz` | 4 |
+| `Homo-sapiens-uniprot-reviewed-entrap-contaminants-202605.fasta.gz` | 2 |
+
 ## Supplementary Table 1: datasets, search settings and SDRFs
 
 One row per dataset; when a dataset was run with several DIA-NN versions, all used the same SDRF, FASTA
