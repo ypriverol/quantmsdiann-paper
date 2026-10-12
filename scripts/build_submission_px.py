@@ -3,8 +3,8 @@
 Reads pride_submission/submission_files.tsv (from scripts.build_submission_manifest)
 and writes, under pride_submission/:
 
-  sdrf/                      SDRF copies to upload: the as-run SDRF snapshot in
-                             this repo (sdrf/), with wrong instrument accessions corrected
+  sdrf/                      SDRF copies to upload: byte-identical to the as-run SDRF
+                             snapshot in this repo (sdrf/)
   submission_files_final.tsv every file to upload (FTP URL or local path), with
                              its PRIDE type and whether it also goes to Zenodo
   submission.px              PRIDE submission summary (metadata + file mapping)
@@ -19,6 +19,7 @@ Usage:
 
 from __future__ import annotations
 
+import io
 import re
 import shutil
 from pathlib import Path
@@ -30,7 +31,8 @@ OUT = REPO / "pride_submission"
 REVIEW = REPO / "data/proteobench-review-experiments/x"
 META = REPO / "run_metadata"
 
-# Wrong PSI-MS accessions found in as-run SDRFs (checked against OLS, 2026-10-11).
+# Wrong PSI-MS accessions found in as-run SDRFs (checked against OLS, 2026-10-11). Applied only to the
+# instrument list in submission.px; the uploaded SDRFs stay as run.
 INSTRUMENT_FIXES = {
     "AC=MS:1003356": "AC=MS:1003378",              # labelled Orbitrap Astral; 1003356 is Orbitrap Ascend
     "AC=MS:1003387": "AC=MS:1003443",              # labelled ZenoTOF 8600; 1003387 is MetaboAnnotation
@@ -78,7 +80,10 @@ MODS = [("MOD:01060", "S-carboxamidomethyl-L-cysteine"), ("MOD:00719", "L-methio
 def instruments(sdrf_dir: Path) -> dict[str, str]:
     out = {}
     for f in sdrf_dir.glob("*.tsv"):
-        s = pd.read_csv(f, sep="\t", dtype=str)
+        text = f.read_text()
+        for k, v in INSTRUMENT_FIXES.items():
+            text = text.replace(k, v)
+        s = pd.read_csv(io.StringIO(text), sep="\t", dtype=str)
         for c in [c for c in s.columns if "instrument" in c.lower()]:
             for v in s[c].dropna().unique():
                 parts = dict(p.split("=", 1) for p in v.split(";") if "=" in p)
@@ -128,14 +133,10 @@ def main() -> None:
             continue  # added by review_files()
         tag = f"{ds}_{ver}"
         dest = sdrf_dir / f"{tag}_{Path(run['sdrf']).name}"
-        text = (REPO / run["sdrf"]).read_text()
-        fixed = [k for k in INSTRUMENT_FIXES if k in text]
-        for k in fixed:
-            text = text.replace(k, INSTRUMENT_FIXES[k])
-        dest.write_text(text)
+        shutil.copyfile(REPO / run["sdrf"], dest)
         rows.append({"dataset": ds, "diann_version": ver, "file_type": "EXPERIMENTAL_DESIGN", "upload_name": dest.name,
                      "source_url": str(dest), "size_bytes": dest.stat().st_size,
-                     "note": "as-run SDRF" + ("; instrument accession corrected" if fixed else "")})
+                     "note": "as-run SDRF"})
         mdir = META / ds / ver
         on_ftp = str(run.get("params_source", "")).startswith("FTP")
         for f in ("params.json", "launch.txt") if not on_ftp else ():
