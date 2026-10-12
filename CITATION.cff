@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the Zenodo record."
+title: "quantmsdiann-paper: analysis code and figure data for the quantmsdiann manuscript"
+type: software
+authors:
+  - family-names: Yue
+    given-names: Qi-Xuan
+    affiliation: "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+  - family-names: Shen
+    given-names: Yufei
+    affiliation: "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+  - family-names: Dai
+    given-names: Chengxin
+    affiliation: "State Key Laboratory of Proteomics, Beijing Proteome Research Center, Beijing, China"
+  - family-names: Larrea-Sebal
+    given-names: Asier
+    affiliation: "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+  - family-names: Webel
+    given-names: Henry
+    affiliation: "Novo Nordisk Foundation Center for Protein Research, University of Copenhagen, Copenhagen, Denmark"
+  - family-names: Nimo
+    given-names: Jose
+    affiliation: "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+  - family-names: Coscia
+    given-names: Fabian
+    affiliation: "Max-Delbrück-Center for Molecular Medicine in the Helmholtz Association (MDC), Berlin, Germany"
+  - family-names: Kok
+    given-names: Orhun
+    affiliation: "Northeastern University, Boston, Massachusetts, USA"
+  - family-names: Slavov
+    given-names: Nikolai
+    affiliation: "Northeastern University, Boston, Massachusetts, USA"
+  - family-names: Vizcaíno
+    given-names: Juan Antonio
+    affiliation: "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+  - family-names: Sachsenberg
+    given-names: Timo
+    affiliation: "University of Tübingen, Tübingen, Germany"
+  - family-names: Bai
+    given-names: Mingze
+    affiliation: "Chongqing Key Laboratory of Big Data for Bio Intelligence, Chongqing University of Posts and Telecommunications, Chongqing, China"
+  - family-names: Demichev
+    given-names: Vadim
+    affiliation: "Charité – Universitätsmedizin Berlin, Berlin, Germany"
+  - family-names: Perez-Riverol
+    given-names: Yasset
+    affiliation: "European Molecular Biology Laboratory, European Bioinformatics Institute (EMBL-EBI), Hinxton, UK"
+doi: 10.5281/zenodo.23322362
+url: https://zenodo.org/records/23322362
+license: MIT
