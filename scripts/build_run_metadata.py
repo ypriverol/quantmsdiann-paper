@@ -240,6 +240,8 @@ def main() -> None:
 
     shutil.copy2(CL / "quantms-datasets/scripts/extra.config", SDRF_DIR / "extra.config")
     df = pd.DataFrame(rows)
+    # FASTAs are stored once, gzipped, in sdrf/fasta/ (checksums in SHA256SUMS.txt).
+    df.insert(df.columns.get_loc("database") + 1, "fasta", "sdrf/fasta/" + df["database"] + ".gz")
     df.to_csv(SDRF_DIR / "runs.tsv", sep="\t", index=False)
     table_s6(df)
     print(f"\n{len(df)} runs; {len(seen)} distinct SDRFs; missing SDRF: {df.sdrf.isna().sum()}; "
