@@ -9,7 +9,7 @@ PXD046357	Orbitrap Astral	Single-cell	12	10.7	0.38	1.9	28.2
 PXD064049	timsTOF SCP	Spatial DVP	12	26.8	2.04	10.2	13.2
 MSV000093870	Q Exactive	plexDIA	38	60.6	1.22	1.92	49.9
 PXD041421	timsTOF Pro	Bulk cell-line	48	400.9	2.2	2.75	182.2
-PXD034623	Orbitrap Exploris 480	Phosphoproteomics	63	197.5	1.19	1.14	165.4
+PXD034623	Orbitrap Exploris 480	Bulk proteome (primary cells)	63	197.5	1.19	1.14	165.4
 PXD017199	Q Exactive	Bulk cell-line	206	772.5	11.4	3.32	67.8
 PXD004701	TripleTOF 5600	Bulk cell-line	300	434.7	2.32	0.46	187.0
 PXD071075	Orbitrap Eclipse	Single-cell	2310	277.1	2.43	0.06	114.1
