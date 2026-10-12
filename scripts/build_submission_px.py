@@ -26,10 +26,12 @@ from pathlib import Path
 
 import pandas as pd
 
+from scripts.build_run_metadata import run_dir
+
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
 REVIEW = REPO / "data/proteobench-review-experiments/x"
-META = REPO / "run_metadata"
+SDRF_DIR = REPO / "sdrf"
 
 # Wrong PSI-MS accessions found in as-run SDRFs (checked against OLS, 2026-10-11). Applied only to the
 # instrument list in submission.px; the uploaded SDRFs stay as run.
@@ -124,7 +126,7 @@ def main() -> None:
     sdrf_dir = OUT / "sdrf"
     shutil.rmtree(sdrf_dir, ignore_errors=True)
     sdrf_dir.mkdir()
-    runs = pd.read_csv(META / "runs.tsv", sep="\t", dtype=str)
+    runs = pd.read_csv(SDRF_DIR / "runs.tsv", sep="\t", dtype=str)
     # PXD071075: the paper uses the v2.5.0 node-count sweep (Fig. 2a), not the 2.5.1-enterprise FTP run.
     rows = [r for r in d.to_dict("records") if r["file_type"] != "EXPERIMENTAL_DESIGN" and r["dataset"] != "PXD071075"]
     for _, run in runs.iterrows():
@@ -137,7 +139,7 @@ def main() -> None:
         rows.append({"dataset": ds, "diann_version": ver, "file_type": "EXPERIMENTAL_DESIGN", "upload_name": dest.name,
                      "source_url": str(dest), "size_bytes": dest.stat().st_size,
                      "note": "as-run SDRF"})
-        mdir = META / ds / ver
+        mdir = run_dir(ds, ver)
         on_ftp = str(run.get("params_source", "")).startswith("FTP")
         for f in ("params.json", "launch.txt") if not on_ftp else ():
             if (mdir / f).exists():
@@ -151,7 +153,7 @@ def main() -> None:
                 rows.append({"dataset": ds, "diann_version": ver, "file_type": "OTHER",
                              "upload_name": f"{tag}_nextflow_trace.txt", "source_url": str(trace),
                              "size_bytes": trace.stat().st_size, "note": "Fig. 2a node-count sweep trace"})
-    for f in (META / "runs.tsv", META / "common/extra.config",
+    for f in (SDRF_DIR / "runs.tsv", SDRF_DIR / "extra.config",
               REPO / "analysis/figures/review/supplementary_revision/TableS6_run_parameters.tsv"):
         rows.append({"dataset": "all", "diann_version": "", "file_type": "OTHER", "upload_name": f.name,
                      "source_url": str(f), "size_bytes": f.stat().st_size, "note": "run parameters for all runs"})
