@@ -50,9 +50,6 @@ RUN_DIRS = [
       for d in ("PXD049412", "PXD062685", "PXD070049", "ProteoBench_Module_7")
       for v in ("v1_8_1", "v2_5_1", "v2_5_1_enterprise")],
     "quantmsdiann-benchmarks/single-cell/MSV000093870_plexDIA/v2_5_0",
-    *[f"quantmsdiann-benchmarks/single-cell/{d}/{v}"
-      for d in ("PXD044991_mouse-zygote", "PXD044991_one-tip")
-      for v in ("v1_8_1", "v2_5_1", "v2_5_1_enterprise")],
     "quantmsdiann-benchmarks/single-cell/PXD046357/v1_8_1",
     "quantmsdiann-benchmarks/single-cell/PXD046357/v2_5_1_enterprise",
     "quantmsdiann-benchmarks/single-cell/PXD049412/v1_8_1",

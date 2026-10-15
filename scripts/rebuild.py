@@ -5221,7 +5221,7 @@ def figure_performance_trace_main() -> int:
 DATASET_TYPE = {
     'ProteoBench_Module_7': 'Benchmark (ProteoBench)', 'PXD049412': 'Benchmark (ProteoBench)',
     'PXD062685': 'Benchmark (ProteoBench)', 'PXD070049': 'Benchmark (ProteoBench)',
-    'PXD046357': 'Single-cell', 'PXD071075': 'Single-cell', 'PXD044991': 'Single-cell',
+    'PXD046357': 'Single-cell', 'PXD071075': 'Single-cell',
     'MSV000093870': 'plexDIA',
     'PXD003539': 'Bulk cell-line', 'PXD004701': 'Bulk cell-line', 'PXD030304': 'Bulk cell-line',
     'PXD017199': 'Bulk cell-line', 'PXD041421': 'Bulk cell-line',

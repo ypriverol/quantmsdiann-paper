@@ -29,8 +29,7 @@ FTP = "https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes"
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
 
-# (dataset label, version label, FTP run directory). Only runs used in the paper;
-# PXD044991 is excluded (not used in any figure or text).
+# (dataset label, version label, FTP run directory). Only runs used in the paper.
 RUNS = [
     *[(f"ProteoBench-{d}", v, f"quantmsdiann-benchmarks/proteobench/{d}/{v}")
       for d in ("PXD049412", "PXD062685", "PXD070049", "ProteoBench_Module_7")
