@@ -196,15 +196,10 @@ def pride_raw_files(acc: str, wanted: set[str]) -> dict[str, list[dict]]:
                                            "checksum": ""})
                     break
             print(f"  {acc}: listed {a['file_name']}", file=sys.stderr)
-    # ProCan names its per-day archives after the run date prefix (181231.zip holds
-    # 181231_* runs). If such an archive is unreadable, list the expected members.
+    # Runs inside an unreadable archive (PXD030304 181231.zip is a 4 KB stub on the PRIDE
+    # FTP) are not listed; they end up in raw_files_unmatched.tsv.
     for a in unreadable:
-        prefix = stem(a["file_name"]) + "_"
-        for s in sorted(w for w in wanted - set(by_stem) if w.startswith(prefix)):
-            for ext in (".wiff", ".wiff.scan"):
-                by_stem[s].append({"file_name": s + ext, "url": a["url"], "archive_member": s + ext,
-                                   "size_bytes": "", "checksum": "",
-                                   "note": "member not verified: archive unreadable on PRIDE FTP"})
+        print(f"  {acc}: skipped unreadable archive {a['file_name']}", file=sys.stderr)
     return by_stem
 
 
