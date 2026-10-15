@@ -9,8 +9,8 @@ the manuscript), classifies every file into a PRIDE file type, gets exact sizes
 
 Each file is renamed <dataset>_<diann-version>_<file> so files from different
 runs do not collide in PRIDE's flat file list. MSstats input CSVs, QPX
-exports, spectral libraries and per-run .quant files are left out: they are
-regenerable and dominate the size.
+exports (added as zips by scripts.build_submission_px), spectral libraries and
+per-run .quant files are left out here: they are regenerable and dominate the size.
 
 Usage:
     python -m scripts.build_submission_manifest
@@ -29,8 +29,7 @@ FTP = "https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes"
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
 
-# (dataset label, version label, FTP run directory). Only runs used in the paper;
-# PXD044991 is excluded (not used in any figure or text).
+# (dataset label, version label, FTP run directory). Only runs used in the paper.
 RUNS = [
     *[(f"ProteoBench-{d}", v, f"quantmsdiann-benchmarks/proteobench/{d}/{v}")
       for d in ("PXD049412", "PXD062685", "PXD070049", "ProteoBench_Module_7")
