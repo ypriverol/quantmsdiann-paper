@@ -9,8 +9,8 @@ the manuscript), classifies every file into a PRIDE file type, gets exact sizes
 
 Each file is renamed <dataset>_<diann-version>_<file> so files from different
 runs do not collide in PRIDE's flat file list. MSstats input CSVs, QPX
-exports, spectral libraries and per-run .quant files are left out: they are
-regenerable and dominate the size.
+exports (added as zips by scripts.build_submission_px), spectral libraries and
+per-run .quant files are left out here: they are regenerable and dominate the size.
 
 Usage:
     python -m scripts.build_submission_manifest

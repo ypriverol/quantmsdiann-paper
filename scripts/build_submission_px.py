@@ -7,6 +7,9 @@ and writes, under pride_submission/:
                              snapshot in this repo (sdrf/)
   submission_files_final.tsv every file to upload (FTP URL or local path), with
                              its PRIDE type and whether it also goes to Zenodo
+  raw_files.raw.zip          raw_files.txt zipped, uploaded as the RAW-type file
+                             (plus one <PXD>.qpx.zip row per run with a qpx/ export on the FTP;
+                             the zip is built by scripts.stage_pride_submission)
   submission.px              PRIDE submission summary (metadata + file mapping)
   zenodo_files.tsv           the Zenodo subset
 
@@ -22,11 +25,13 @@ from __future__ import annotations
 import io
 import re
 import shutil
+import zipfile
 from pathlib import Path
 
 import pandas as pd
 
 from scripts.build_run_metadata import run_dir
+from scripts.build_submission_manifest import head_size, listing
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
@@ -59,8 +64,8 @@ DESCRIPTION = (
     "2.5.1-enterprise; single-cell (PXD046357, PXD049412, MSV000093870), spatial (PXD064049), "
     "phosphoproteomics (PXD034128, PXD034623, PXD049692) and bulk cell-line (PXD003539, PXD004701, PXD030304, "
     "PXD017199, PXD041421) reanalyses; the PXD071075 scalability run; and paired standalone DIA-NN versus "
-    "quantmsdiann runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.tsv lists every raw "
-    "file processed with its URL in the original deposit. Analysis code: https://github.com/ypriverol/quantmsdiann-paper."
+    "quantmsdiann runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.raw.zip (raw_files.txt) and "
+    "raw_files.tsv list every raw file processed with its URL in the original deposit. Analysis code: https://github.com/ypriverol/quantmsdiann-paper."
 )
 SAMPLE_PROTOCOL = "See the original submissions listed as reanalysed datasets; no new samples were prepared."
 DATA_PROTOCOL = (
@@ -121,6 +126,27 @@ def review_files() -> list[dict]:
     return rows
 
 
+def qpx_files(rows: list[dict]) -> list[dict]:
+    """One <PXD>.qpx.zip per run that has a qpx/ export on the FTP; zipped by stage_pride_submission.
+
+    A project with qpx in more than one run gets the version in the name: <PXD>_<version>.qpx.zip.
+    """
+    found = []
+    for (ds, ver), base in sorted({(r["dataset"], r["diann_version"]): r["source_url"].split("/quant_tables/")[0]
+                                   for r in rows if "/quant_tables/" in str(r["source_url"])}.items()):
+        try:
+            names = [n for n in listing(f"{base}/qpx/", tries=2) if not n.endswith("/")]
+        except Exception:  # no qpx/ for this run
+            continue
+        acc = re.search(r"(PXD\d+|MSV\d+)", ds).group(1)
+        found.append((acc, ds, ver, f"{base}/qpx/", sum(head_size(f"{base}/qpx/{n}") for n in names)))
+    per_acc = pd.Series([f[0] for f in found]).value_counts()
+    return [{"dataset": ds, "diann_version": ver, "file_type": "RESULT",
+             "upload_name": f"{acc}.qpx.zip" if per_acc[acc] == 1 else f"{acc}_{ver}.qpx.zip",
+             "source_url": url, "size_bytes": size, "note": "qpx export (zipped at staging; size = sum of members)"}
+            for acc, ds, ver, url, size in found]
+
+
 def main() -> None:
     d = pd.read_csv(OUT / "submission_files.tsv", sep="\t")
     sdrf_dir = OUT / "sdrf"
@@ -158,13 +184,20 @@ def main() -> None:
         rows.append({"dataset": "all", "diann_version": "", "file_type": "OTHER", "upload_name": f.name,
                      "source_url": str(f), "size_bytes": f.stat().st_size, "note": "run parameters for all runs"})
     rows += review_files()
-    for name in ("raw_files.tsv", "raw_files.txt"):
-        p = OUT / name
-        rows.append({"dataset": "all", "diann_version": "", "file_type": "OTHER", "upload_name": name,
+    rows += qpx_files(d.to_dict("records"))
+    # PRIDE needs at least one RAW-type file: the raw file list goes in as raw_files.raw.zip.
+    raw_zip = OUT / "raw_files.raw.zip"
+    with zipfile.ZipFile(raw_zip, "w", zipfile.ZIP_DEFLATED) as z:
+        info = zipfile.ZipInfo("raw_files.txt", date_time=(2026, 1, 1, 0, 0, 0))  # fixed date: same bytes on rebuild
+        info.compress_type = zipfile.ZIP_DEFLATED
+        z.writestr(info, (OUT / "raw_files.txt").read_bytes())
+    for ftype, p in (("RAW", raw_zip), ("OTHER", OUT / "raw_files.tsv")):
+        rows.append({"dataset": "all", "diann_version": "", "file_type": ftype, "upload_name": p.name,
                      "source_url": str(p), "size_bytes": p.stat().st_size, "note": "raw files used, with original URLs"})
     for r in rows:
         r.setdefault("note", "")
-        r["zenodo"] = "no" if r["upload_name"] in ZENODO_EXCLUDE else "yes"
+        # qpx zips are built at PRIDE staging; zenodo_upload streams single FTP files, so PRIDE only.
+        r["zenodo"] = "no" if r["upload_name"] in ZENODO_EXCLUDE or r["upload_name"].endswith(".qpx.zip") else "yes"
     df = pd.DataFrame(rows)
     assert not df.upload_name.duplicated().any(), df[df.upload_name.duplicated()]
     df.to_csv(OUT / "submission_files_final.tsv", sep="\t", index=False)
