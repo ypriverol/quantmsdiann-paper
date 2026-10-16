@@ -21,7 +21,8 @@ logs) are on the PRIDE FTP under
 `https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/`
 (and `quantms-collections/` for three cell-line cohorts), one folder per dataset and DIA-NN
 version; they are also deposited as a PRIDE reanalysis dataset and on Zenodo (see the paper's
-Data Availability). The original deposits we compare against are on PRIDE / MassIVE; the
+Data Availability). The PRIDE dataset is available at
+<https://www.ebi.ac.uk/pride/archive/projects/PXD085732>. The original deposits we compare against are on PRIDE / MassIVE; the
 accessions are listed in [`sdrf/README.md`](sdrf/README.md). Large inputs are never committed:
 each stage downloads what it needs into `data/` (git-ignored) on first use.
 

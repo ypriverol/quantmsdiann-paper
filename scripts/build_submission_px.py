@@ -49,6 +49,7 @@ INSTRUMENT_FIXES = {
     "AC=MS:1003005;NT=timsTOF SCP": "AC=MS:1003231;NT=timsTOF SCP",
     "NT=Q Exactive Plus;AC=MS:1001911": "NT=Q Exactive Plus;AC=MS:1002634",
 }
+ZENODO_CODE = "10.5281/zenodo.23322361"  # concept DOI of the code repository's Zenodo record (latest version)
 # Zenodo gets everything except the single 44 GB ProCan report (in PRIDE only).
 ZENODO_EXCLUDE = {"PXD030304_v2_5_1_diann_report.parquet"}
 
@@ -67,8 +68,12 @@ DESCRIPTION = (
     "2.5.1-enterprise; single-cell (PXD046357, PXD049412, MSV000093870), spatial (PXD064049), "
     "phosphoproteomics (PXD034128, PXD034623, PXD049692) and bulk cell-line (PXD003539, PXD004701, PXD030304, "
     "PXD017199, PXD041421) reanalyses; the PXD071075 scalability run; and paired standalone DIA-NN versus "
-    "quantmsdiann runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.raw.zip (raw_files.txt) and "
-    "raw_files.tsv list every raw file processed with its URL in the original deposit. Analysis code: https://github.com/ypriverol/quantmsdiann-paper."
+    "quantmsdiann runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.raw.zip "
+    "(raw_files.txt, raw_files.tsv) lists every raw file processed with its URL in the original deposit. Each "
+    "<dataset>_<version>.zip holds one run (DIA-NN report and matrices, pipeline_info, configs, pmultiqc). "
+    "Analysis code, SDRFs, FASTA databases and the parameters of every run (runs.tsv, extra.config, "
+    "Supplementary Table S6): https://github.com/ypriverol/quantmsdiann-paper, archived at "
+    f"https://doi.org/{ZENODO_CODE}."
 )
 SAMPLE_PROTOCOL = "See the original submissions listed as reanalysed datasets; no new samples were prepared."
 DATA_PROTOCOL = (
@@ -144,7 +149,8 @@ def qpx_files(rows: list[dict]) -> list[dict]:
         acc = re.search(r"(PXD\d+|MSV\d+)", ds).group(1)
         found.append((acc, ds, ver, f"{base}/qpx/", sum(head_size(f"{base}/qpx/{n}") for n in names)))
     per_acc = pd.Series([f[0] for f in found]).value_counts()
-    return [{"dataset": ds, "diann_version": ver, "file_type": "RESULT",
+    # PRIDE RESULT is only for standard formats (mzIdentML, mzTab); qpx goes in as OTHER.
+    return [{"dataset": ds, "diann_version": ver, "file_type": "OTHER",
              "upload_name": f"{acc}.qpx.zip" if per_acc[acc] == 1 else f"{acc}_{ver}.qpx.zip",
              "source_url": url, "size_bytes": size, "note": "qpx export (zipped at staging; size = sum of members)"}
             for acc, ds, ver, url, size in found]
@@ -156,7 +162,7 @@ def bundle_runs(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     For a run published on the FTP the zip holds the whole run folder (quant_tables/, pipeline_info/,
     sdrf/, pmultiqc/, run_metadata.json, nextflow.log), minus SKIP (MSstats input, spectral library,
     .quant, work/) and qpx/ (its own zip). Local extras (recovered params, sweep traces, paired runs)
-    go in as well. SDRFs, qpx zips and the global files stay separate. Returns (rows, zip members).
+    go in as well. SDRFs, qpx zips and raw_files.raw.zip stay separate. Returns (rows, zip members).
     """
     def run_key(r):
         return (r["dataset"], r["diann_version"])
@@ -241,6 +247,9 @@ def main() -> None:
         info = zipfile.ZipInfo("raw_files.txt", date_time=(2026, 1, 1, 0, 0, 0))  # fixed date: same bytes on rebuild
         info.compress_type = zipfile.ZIP_DEFLATED
         z.writestr(info, (OUT / "raw_files.txt").read_bytes())
+        info = zipfile.ZipInfo("raw_files.tsv", date_time=(2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        z.writestr(info, (OUT / "raw_files.tsv").read_bytes())
     for ftype, p in (("RAW", raw_zip), ("OTHER", OUT / "raw_files.tsv")):
         rows.append({"dataset": "all", "diann_version": "", "file_type": ftype, "upload_name": p.name,
                      "source_url": str(p), "size_bytes": p.stat().st_size, "note": "raw files used, with original URLs"})
@@ -252,6 +261,9 @@ def main() -> None:
     assert not flat.upload_name.duplicated().any(), flat[flat.upload_name.duplicated()]
     # Zenodo keeps the flat files (zenodo_upload streams single files); PRIDE gets one zip per run.
     flat[flat.zenodo == "yes"].to_csv(OUT / "zenodo_files.tsv", sep="\t", index=False)
+    # runs.tsv, extra.config and Table S6 are in the code repository's Zenodo record (ZENODO_CODE);
+    # raw_files.tsv is inside raw_files.raw.zip. None of them is uploaded to PRIDE on its own.
+    rows = [r for r in rows if not (r["dataset"] == "all" and r["file_type"] == "OTHER")]
     rows, members = bundle_runs(rows)
     for r in rows:
         r.setdefault("zenodo", "no")
