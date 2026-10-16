@@ -10,6 +10,8 @@ and writes, under pride_submission/:
   raw_files.raw.zip          raw_files.txt zipped, uploaded as the RAW-type file
                              (plus one <PXD>.qpx.zip row per run with a qpx/ export on the FTP;
                              the zip is built by scripts.stage_pride_submission)
+  zip_members.tsv            what goes into each <dataset>_<version>.zip run bundle (one per
+                             run: the run folder from the FTP, built by stage_pride_submission)
   submission.px              PRIDE submission summary (metadata + file mapping)
   zenodo_files.tsv           the Zenodo subset
 
@@ -26,12 +28,13 @@ import io
 import re
 import shutil
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
 
 from scripts.build_run_metadata import run_dir
-from scripts.build_submission_manifest import head_size, listing
+from scripts.build_submission_manifest import SKIP, crawl, head_size, listing
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
@@ -147,6 +150,53 @@ def qpx_files(rows: list[dict]) -> list[dict]:
             for acc, ds, ver, url, size in found]
 
 
+def bundle_runs(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Replace each run's SEARCH/RESULT/OTHER files with one <dataset>_<version>.zip for PRIDE.
+
+    For a run published on the FTP the zip holds the whole run folder (quant_tables/, pipeline_info/,
+    sdrf/, pmultiqc/, run_metadata.json, nextflow.log), minus SKIP (MSstats input, spectral library,
+    .quant, work/) and qpx/ (its own zip). Local extras (recovered params, sweep traces, paired runs)
+    go in as well. SDRFs, qpx zips and the global files stay separate. Returns (rows, zip members).
+    """
+    def run_key(r):
+        return (r["dataset"], r["diann_version"])
+    per_run = [r for r in rows if r["dataset"] != "all" and r["file_type"] in ("SEARCH", "RESULT", "OTHER")
+               and not r["upload_name"].endswith(".qpx.zip")]
+    keep = [r for r in rows if r not in per_run]
+    bases = {run_key(r): r["source_url"].split("/quant_tables/")[0]
+             for r in per_run if str(r["source_url"]).startswith("http") and "/quant_tables/" in r["source_url"]}
+    old_name = {r["source_url"]: r["upload_name"] for r in per_run}
+    members = []
+    for key in sorted({run_key(r) for r in per_run}):
+        zname = f"{key[0]}_{key[1]}.zip"
+        mine = [r for r in per_run if run_key(r) == key]
+        prefix = f"{key[0]}_{key[1]}_"
+        if key in bases:
+            base = bases[key]
+            rels = [rel for rel in crawl(base) if not SKIP.search("/" + rel)]
+            with ThreadPoolExecutor(8) as ex:
+                sizes = list(ex.map(lambda rel: head_size(f"{base}/{rel}"), rels))
+            for rel, size in zip(rels, sizes):
+                url = f"{base}/{rel}"
+                members.append({"zip": zname, "member": rel, "source": url, "size_bytes": size,
+                                "old_upload_name": old_name.get(url, "")})
+            local = [r for r in mine if not str(r["source_url"]).startswith("http")]
+            for r in local:
+                members.append({"zip": zname, "member": "recovered/" + r["upload_name"].removeprefix(prefix),
+                                "source": r["source_url"], "size_bytes": r["size_bytes"],
+                                "old_upload_name": r["upload_name"]})
+        else:
+            for r in mine:
+                members.append({"zip": zname, "member": r["upload_name"].removeprefix(prefix),
+                                "source": r["source_url"], "size_bytes": r["size_bytes"],
+                                "old_upload_name": r["upload_name"]})
+        ftype = "SEARCH" if any(r["file_type"] == "SEARCH" for r in mine) else "OTHER"
+        keep.append({"dataset": key[0], "diann_version": key[1], "file_type": ftype, "upload_name": zname,
+                     "source_url": f"zip:{zname}", "size_bytes": sum(m["size_bytes"] for m in members if m["zip"] == zname),
+                     "note": "run bundle (zipped at staging; size = sum of members)"})
+    return keep, members
+
+
 def main() -> None:
     d = pd.read_csv(OUT / "submission_files.tsv", sep="\t")
     sdrf_dir = OUT / "sdrf"
@@ -198,10 +248,17 @@ def main() -> None:
         r.setdefault("note", "")
         # qpx zips are built at PRIDE staging; zenodo_upload streams single FTP files, so PRIDE only.
         r["zenodo"] = "no" if r["upload_name"] in ZENODO_EXCLUDE or r["upload_name"].endswith(".qpx.zip") else "yes"
+    flat = pd.DataFrame(rows)
+    assert not flat.upload_name.duplicated().any(), flat[flat.upload_name.duplicated()]
+    # Zenodo keeps the flat files (zenodo_upload streams single files); PRIDE gets one zip per run.
+    flat[flat.zenodo == "yes"].to_csv(OUT / "zenodo_files.tsv", sep="\t", index=False)
+    rows, members = bundle_runs(rows)
+    for r in rows:
+        r.setdefault("zenodo", "no")
     df = pd.DataFrame(rows)
     assert not df.upload_name.duplicated().any(), df[df.upload_name.duplicated()]
     df.to_csv(OUT / "submission_files_final.tsv", sep="\t", index=False)
-    df[df.zenodo == "yes"].to_csv(OUT / "zenodo_files.tsv", sep="\t", index=False)
+    pd.DataFrame(members).to_csv(OUT / "zip_members.tsv", sep="\t", index=False)
 
     inst = instruments(sdrf_dir)
     lines = [f"MTD\t{k}\t{v}" for k, v in SUBMITTER.items()]
@@ -219,8 +276,9 @@ def main() -> None:
     (OUT / "submission.px").write_text("\n".join(lines) + "\n")
 
     tot = df.size_bytes.sum() / 1e9
-    z = df.loc[df.zenodo == "yes", "size_bytes"].sum() / 1e9
-    print(f"PRIDE: {len(df)} files, {tot:.1f} GB | Zenodo: {(df.zenodo == 'yes').sum()} files, {z:.1f} GB")
+    zen = flat[flat.zenodo == "yes"]
+    print(f"PRIDE: {len(df)} files, {tot:.1f} GB ({len(members)} files inside {len(df[df.source_url.str.startswith('zip:')])} "
+          f"run zips) | Zenodo: {len(zen)} files, {zen.size_bytes.sum() / 1e9:.1f} GB")
     print("instruments:", inst)
     print(df.note.value_counts().to_string())
 

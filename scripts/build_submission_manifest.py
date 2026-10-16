@@ -99,7 +99,11 @@ def head_size(url: str, tries: int = 5) -> int:
         try:
             req = urllib.request.Request(url, method="HEAD")
             with urllib.request.urlopen(req, timeout=120) as r:
-                return int(r.headers["Content-Length"])
+                if r.headers["Content-Length"] is not None:
+                    return int(r.headers["Content-Length"])
+            # Some files come back without a Content-Length: count the bytes instead.
+            with urllib.request.urlopen(url, timeout=300) as r:
+                return sum(len(chunk) for chunk in iter(lambda: r.read(1 << 20), b""))
         except Exception:
             if i == tries - 1:
                 raise
