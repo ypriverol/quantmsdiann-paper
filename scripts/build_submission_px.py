@@ -156,11 +156,13 @@ def bundle_runs(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     For a run published on the FTP the zip holds the whole run folder (quant_tables/, pipeline_info/,
     sdrf/, pmultiqc/, run_metadata.json, nextflow.log), minus SKIP (MSstats input, spectral library,
     .quant, work/) and qpx/ (its own zip). Local extras (recovered params, sweep traces, paired runs)
-    go in as well. SDRFs, qpx zips and the global files stay separate. Returns (rows, zip members).
+    go in as well. The global files (runs.tsv, extra.config, Table S6, raw_files.tsv) go into
+    run_metadata.zip. SDRFs, qpx zips and raw_files.raw.zip stay separate. Returns (rows, zip members).
     """
     def run_key(r):
         return (r["dataset"], r["diann_version"])
-    per_run = [r for r in rows if r["dataset"] != "all" and r["file_type"] in ("SEARCH", "RESULT", "OTHER")
+    # The global OTHER files (runs.tsv, extra.config, Table S6, raw_files.tsv) form one more bundle.
+    per_run = [r for r in rows if r["file_type"] in ("SEARCH", "RESULT", "OTHER")
                and not r["upload_name"].endswith(".qpx.zip")]
     keep = [r for r in rows if r not in per_run]
     bases = {run_key(r): r["source_url"].split("/quant_tables/")[0]
@@ -168,9 +170,9 @@ def bundle_runs(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     old_name = {r["source_url"]: r["upload_name"] for r in per_run}
     members = []
     for key in sorted({run_key(r) for r in per_run}):
-        zname = f"{key[0]}_{key[1]}.zip"
+        zname = "run_metadata.zip" if key[0] == "all" else f"{key[0]}_{key[1]}.zip"
         mine = [r for r in per_run if run_key(r) == key]
-        prefix = f"{key[0]}_{key[1]}_"
+        prefix = "" if key[0] == "all" else f"{key[0]}_{key[1]}_"
         if key in bases:
             base = bases[key]
             rels = [rel for rel in crawl(base) if not SKIP.search("/" + rel)]
