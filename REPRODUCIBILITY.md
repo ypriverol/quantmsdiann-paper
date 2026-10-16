@@ -75,9 +75,10 @@ Recomputed from the public deposits, not transcribed from the papers:
 1. `python -m scripts.build_pride_raw_list` writes `pride_submission/raw_files.{tsv,txt}`.
 2. `python -m scripts.build_submission_manifest` crawls the run folders on the FTP.
 3. `python -m scripts.build_submission_px` writes the SDRF copies (identical to `sdrf/`), `raw_files.raw.zip` (the raw list, uploaded as the RAW-type file),
-   `submission_files_final.tsv`, `zenodo_files.tsv` and `submission.px`.
+   `submission_files_final.tsv`, `zip_members.tsv` (contents of each `<dataset>_<version>.zip` run
+   bundle), `zenodo_files.tsv` and `submission.px`.
 4. PRIDE: on the EBI cluster, `python -m scripts.stage_pride_submission --dest <dir>`
-   (~83 GB, including the per-project `<PXD>.qpx.zip`), then upload `<dir>` with `submission.px`.
+   (92 files, ~89 GB: one zip per run, the SDRFs, the `<PXD>.qpx.zip` files and the raw list), then upload `<dir>` with `submission.px`.
 5. Zenodo: `ZENODO_TOKEN=... python -m scripts.zenodo_upload` creates a draft (~20 GB, streamed
    from the FTP; everything but the 44 GB ProCan report), with metadata from
    `docs/zenodo_data_metadata.json`.
