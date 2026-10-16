@@ -149,7 +149,8 @@ def qpx_files(rows: list[dict]) -> list[dict]:
         acc = re.search(r"(PXD\d+|MSV\d+)", ds).group(1)
         found.append((acc, ds, ver, f"{base}/qpx/", sum(head_size(f"{base}/qpx/{n}") for n in names)))
     per_acc = pd.Series([f[0] for f in found]).value_counts()
-    return [{"dataset": ds, "diann_version": ver, "file_type": "RESULT",
+    # PRIDE RESULT is only for standard formats (mzIdentML, mzTab); qpx goes in as OTHER.
+    return [{"dataset": ds, "diann_version": ver, "file_type": "OTHER",
              "upload_name": f"{acc}.qpx.zip" if per_acc[acc] == 1 else f"{acc}_{ver}.qpx.zip",
              "source_url": url, "size_bytes": size, "note": "qpx export (zipped at staging; size = sum of members)"}
             for acc, ds, ver, url, size in found]
