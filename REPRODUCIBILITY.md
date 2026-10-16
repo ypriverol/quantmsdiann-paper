@@ -78,7 +78,7 @@ Recomputed from the public deposits, not transcribed from the papers:
    `submission_files_final.tsv`, `zip_members.tsv` (contents of each `<dataset>_<version>.zip` run
    bundle), `zenodo_files.tsv` and `submission.px`.
 4. PRIDE: on the EBI cluster, `python -m scripts.stage_pride_submission --dest <dir>`
-   (89 files, ~89 GB: one zip per run, `run_metadata.zip` with the global tables, the SDRFs, the `<PXD>.qpx.zip` files and `raw_files.raw.zip`), then upload `<dir>` with `submission.px`.
+   (88 files, ~89 GB: one zip per run, the SDRFs, the `<PXD>.qpx.zip` files and `raw_files.raw.zip` with `raw_files.txt` and `raw_files.tsv`; `runs.tsv`, `extra.config` and Table S6 are not uploaded because they are in the code repository's Zenodo record, linked from the dataset description), then upload `<dir>` with `submission.px`.
 5. Zenodo: `ZENODO_TOKEN=... python -m scripts.zenodo_upload` creates a draft (~20 GB, streamed
    from the FTP; everything but the 44 GB ProCan report), with metadata from
    `docs/zenodo_data_metadata.json`.
