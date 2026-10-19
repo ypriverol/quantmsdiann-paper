@@ -6750,7 +6750,8 @@ _figure_reanalysis_improvement__REPO = Path(__file__).resolve().parents[1]
 _figure_reanalysis_improvement__DATA = _figure_reanalysis_improvement__REPO / 'analysis' / 'figures' / 'reanalysis' / 'data' / 'reanalysis_improvement.tsv'
 _figure_reanalysis_improvement__OUT = _figure_reanalysis_improvement__REPO / 'analysis' / 'figures' / 'manuscript' / 'fig_reanalysis_improvement.svg'
 _figure_reanalysis_improvement__ORIG_COLOUR = '#9e9e9e'
-VERSION_COLOUR = {'2.5.0': '#90caf9', '2.5.1': '#1976d2', '2.5.1-enterprise': '#ff8f00'}
+# Same DIA-NN version colours as every other manuscript figure (house style, Okabe-Ito).
+VERSION_COLOUR = {'2.5.0': OKABE_ITO['bluish_green'], '2.5.1': fs.VERSION_COLORS['2_5_1'], '2.5.1-enterprise': fs.VERSION_COLORS['2_5_1_enterprise']}
 
 def _panel(ax, df, orig_col, new_col, xlabel):
     """Paired horizontal bars (grey original / version-coloured reanalysis),
@@ -6795,8 +6796,8 @@ def _figure_reanalysis_improvement__render(out: Path) -> Path:
     for v, c in VERSION_COLOUR.items():
         if (df['diann_version'] == v).any():
             handles.append(Patch(facecolor=c, edgecolor='#37474f', label=f'quantmsdiann (DIA-NN {v})'))
-    ax_pg.legend(handles=handles, loc='lower right', frameon=False, fontsize=8, title='reanalysis', title_fontsize=8.5)
-    fig.tight_layout()
+    fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)
     plt.close(fig)
@@ -7006,7 +7007,17 @@ VLAB = {'1_8_1': '1.8.1', '2_5_1_enterprise': '2.5.1-enterprise'}
 _figure_single_cell_combined__VCOL = {v: fs.VERSION_COLORS[v] for v in VERS}
 _figure_single_cell_combined__ACC = {'HeLa Astral SC': 'PXD046357', 'A549/H460 SC': 'PXD049412'}
 ACC_SHORT = {'Astral': 'PXD046357', 'A549/H460': 'PXD049412'}
-DS_STYLE = {'HeLa Astral SC': '-', 'A549/H460 SC': '--'}
+DS_STYLE = {'HeLa Astral SC': '-', 'A549/H460 SC': (0, (5, 2.5))}
+# Cohort is shown by line style and by shade (R1.25): HeLa full colour, A549/H460 a lighter tint.
+DS_TINT = {'HeLa Astral SC': 0.0, 'A549/H460 SC': 0.45}
+
+def _tint(colour, frac):
+    """Blend `colour` towards white by `frac` (0 = unchanged)."""
+    r, g, b = matplotlib.colors.to_rgb(colour)
+    return (r + (1 - r) * frac, g + (1 - g) * frac, b + (1 - b) * frac)
+
+def _ds_colour(ds, v):
+    return _tint(_figure_single_cell_combined__VCOL[v], DS_TINT.get(ds, 0.0))
 _figure_single_cell_combined__FLAG = 'HeLa Astral SC'
 
 def _completeness(ax):
@@ -7018,7 +7029,14 @@ def _completeness(ax):
             s = df[(df['dataset'] == ds) & (df['version'] == v)].sort_values('min_cells')
             if not len(s):
                 continue
-            ax.plot(s['min_cells'], s['n_proteins'], linestyle=DS_STYLE.get(ds, '-'), marker='o', ms=3.0, lw=1.6, color=_figure_single_cell_combined__VCOL[v])
+            ax.plot(s['min_cells'], s['n_proteins'], linestyle=DS_STYLE.get(ds, '-'), lw=2.4, color=_ds_colour(ds, v))
+            if v == VERS[-1]:  # one direct label per cohort: HeLa at its curve end, A549/H460 above its curve
+                if ds == 'HeLa Astral SC':
+                    pt, off, va = s.iloc[-1], (8, -4), 'top'
+                else:
+                    pt, off, va = s.iloc[(s['min_cells'] - 100).abs().argmin()], (0, 10), 'bottom'
+                ax.annotate({'HeLa Astral SC': 'HeLa', 'A549/H460 SC': 'A549/H460'}[ds], (pt['min_cells'], pt['n_proteins']),
+                            xytext=off, textcoords='offset points', fontsize=12, color='#333333', va=va)
     ax.set_xlabel('quantified in ≥ N cells')
     ax.set_ylabel('protein groups')
     ax.set_ylim(bottom=0)
@@ -7038,7 +7056,7 @@ def _cv(ax):
             # comparable across cohorts.
             cv = df[(df['dataset'] == ds) & (df['version'] == v)]['cv']
             cv = cv[(cv >= 0) & (cv <= 1.5)]
-            ax.hist(cv, bins=bins, density=True, histtype='step', linewidth=1.5, color=_figure_single_cell_combined__VCOL[v], linestyle=DS_STYLE.get(ds, '-'))
+            ax.hist(cv, bins=bins, density=True, histtype='step', linewidth=1.9, color=_ds_colour(ds, v), linestyle=DS_STYLE.get(ds, '-'))
     ax.set_xlabel('CV across cells')
     ax.set_ylabel('density')
     ax.set_xlim(0, 1.5)
@@ -7127,7 +7145,7 @@ def _figure_single_cell_combined__render(out: Path) -> Path:
     _completeness(ax_comp)
     _cv(ax_cv)
     handles = [Line2D([0], [0], color=_figure_single_cell_combined__VCOL[v], marker='o', linewidth=2, markersize=8, label=f'DIA-NN {VLAB[v]}') for v in VERS]
-    handles += [Line2D([0], [0], color='#555555', linestyle='-', linewidth=2, label='PXD046357 (HeLa Astral)'), Line2D([0], [0], color='#555555', linestyle='--', linewidth=2, label='PXD049412 (A549/H460)')]
+    handles += [Line2D([0], [0], color='#444444', linestyle=DS_STYLE['HeLa Astral SC'], linewidth=2.4, label='PXD046357 (HeLa Astral)'), Line2D([0], [0], color=_tint('#444444', DS_TINT['A549/H460 SC']), linestyle=DS_STYLE['A549/H460 SC'], linewidth=2.4, label='PXD049412 (A549/H460)')]
     fig.legend(handles=handles, loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.01), fontsize=11)
     for a, lab in zip([ax_merged, ax_comp, ax_cv], 'ABC'):
         a.text(-0.06, 1.05, lab, transform=a.transAxes, fontsize=17, fontweight='bold', va='bottom', ha='right')
