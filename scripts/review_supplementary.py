@@ -88,9 +88,28 @@ def desktop() -> pd.DataFrame:
                 rows.append({"Dataset": ds, "Metric": f"{sp.capitalize()}: median |log2 A/B - expected|",
                              "DIA-NN standalone": v(ds, m, "desktop"), "quantmsdiann": v(ds, m, "quantmsdiann"),
                              "Difference": ""})
-        rows.append({"Dataset": ds, "Metric": "Wall-clock, same workstation (min)",
-                     "DIA-NN standalone": v(ds, "wall-clock minutes", "desktop"),
-                     "quantmsdiann": v(ds, "wall-clock minutes", "quantmsdiann"), "Difference": ""})
+        rows.append({"Dataset": ds, "Metric": "Report rows (run x precursor)",
+                     "DIA-NN standalone": int(v(ds, "report rows", "desktop")),
+                     "quantmsdiann": int(v(ds, "report rows", "quantmsdiann")),
+                     "Difference": f"{int(v(ds, 'report rows in one workflow only', 'both'))} rows in one workflow only"})
+        rows.append({"Dataset": ds, "Metric": "Protein groups, Global.PG.Q.Value <= 1%",
+                     "DIA-NN standalone": int(v(ds, "protein groups Global.PG.Q.Value <= 0.01", "desktop")),
+                     "quantmsdiann": int(v(ds, "protein groups Global.PG.Q.Value <= 0.01", "quantmsdiann")), "Difference": ""})
+        only_d = int(v(ds, "pg_matrix protein groups in this workflow only", "desktop"))
+        only_q = int(v(ds, "pg_matrix protein groups in this workflow only", "quantmsdiann"))
+        n_d = int(v(ds, "pg_matrix protein groups", "desktop"))
+        rows.append({"Dataset": ds, "Metric": "pg_matrix protein groups",
+                     "DIA-NN standalone": n_d, "quantmsdiann": int(v(ds, "pg_matrix protein groups", "quantmsdiann")),
+                     "Difference": f"{only_d} standalone only, {only_q} quantmsdiann only "
+                                   f"({(only_d + only_q) / (n_d + only_q) * 100:.1f}%, all near the 1% threshold); "
+                                   f"{int(v(ds, 'pg_matrix shared quantities differing', 'both'))} differing quantities in shared groups"})
+        differing = s[(s.dataset == ds) & s.metric.str.startswith("rows differing: ")]
+        rows.append({"Dataset": ds, "Metric": "Report columns with any differing value",
+                     "DIA-NN standalone": "", "quantmsdiann": "",
+                     "Difference": "; ".join(
+                         f"{r.metric.removeprefix('rows differing: ')} ({int(r.value):,} rows, max "
+                         f"{v(ds, 'max abs difference: ' + r.metric.removeprefix('rows differing: '), 'both'):.4f})"
+                         for r in differing.itertuples()) or "none"})
     tab = pd.DataFrame(rows)
     tab.loc[tab.Metric.str.contains("overlap"), ["DIA-NN standalone", "quantmsdiann"]] = \
         tab.loc[tab.Metric.str.contains("overlap"), ["DIA-NN standalone", "quantmsdiann"]].map(lambda x: f"{x:,} only")

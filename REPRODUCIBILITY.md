@@ -58,8 +58,9 @@ python -m scripts.review_supplementary             # Figs. S7-S8, Tables S3-S5
 ```
 
 The paired standalone/quantmsdiann runs (Fig. S6) are read from
-`data/proteobench-review-experiments/x/`; their reports, matrices and launch scripts are part
-of the PRIDE / Zenodo deposit.
+`data/proteobench-review-experiments/codon/` (DIA-NN 2.5.0 standalone and quantmsdiann v2.3.0,
+same cluster, same predicted library, files in name order); their reports, matrices and launch
+scripts (`sdrf/Paired_standalone_vs_quantmsdiann/`) are part of the PRIDE / Zenodo deposit.
 
 ## Original (baseline) counts in Fig. 4
 

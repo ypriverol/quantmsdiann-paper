@@ -11,7 +11,7 @@ repo; each <PXD>.qpx.zip is built from that run's qpx/ folder on the FTP, and ea
 --reuse <dir> takes files from an earlier staging folder instead of downloading
 them again (hard links when possible).
 Run it from a checkout that has pride_submission/ and
-data/proteobench-review-experiments/x/ (or rsync those two folders first).
+data/proteobench-review-experiments/codon/ (or rsync those two folders first).
 submission.px is copied last. Upload the folder with the PRIDE submission tool
 or Aspera, pointing it at submission.px.
 """

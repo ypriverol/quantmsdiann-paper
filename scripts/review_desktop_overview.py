@@ -31,7 +31,7 @@ from scripts.review_desktop_vs_quantmsdiann import DATASETS, OUT, WORKFLOWS, loa
 
 Q = 0.01
 COLOR = {"desktop": rb.OKABE_ITO["grey"], "quantmsdiann": rb.OKABE_ITO["blue"]}
-LABEL = {"desktop": "DIA-NN 2.5.1 standalone", "quantmsdiann": "quantmsdiann (DIA-NN 2.5.1)"}
+LABEL = {"desktop": "DIA-NN 2.5.0 standalone", "quantmsdiann": "quantmsdiann (DIA-NN 2.5.0)"}
 
 
 def _lens_area(r1: float, r2: float, d: float) -> float:
@@ -76,7 +76,9 @@ def cumulative(ax, dfs: dict, qcol: str, idcol: str, ylabel: str, title: str) ->
     for wf in WORKFLOWS:
         best = dfs[wf].groupby(idcol)[qcol].min().sort_values()
         best = best[best <= 0.05]
-        ax.step(best.values, np.arange(1, len(best) + 1), where="post", color=COLOR[wf], lw=2.2)
+        # quantmsdiann dashed on top, so identical curves stay visible
+        ax.step(best.values, np.arange(1, len(best) + 1), where="post", color=COLOR[wf],
+                lw=2.2 if wf == "desktop" else 1.6, ls="-" if wf == "desktop" else (0, (4, 3)))
         n1 = int((best <= Q).sum())
         ax.text(0.97, 0.08 if wf == "desktop" else 0.18, f"{n1:,} at 1% FDR", transform=ax.transAxes,
                 ha="right", fontsize=13, color="#444444" if wf == "desktop" else COLOR[wf])

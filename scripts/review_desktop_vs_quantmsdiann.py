@@ -1,9 +1,11 @@
 """Reviewer response (R1 Q1.1, Q1.7, Q1.18): desktop DIA-NN vs quantmsdiann.
 
-Same raw files, same DIA-NN 2.5.1 container, same FASTA and search settings:
-one run as a single standalone DIA-NN command (`run_diann_v2_5_1.sh`), one
-through quantmsdiann (`run_quantmsdiann.config`). Datasets: ProteoBench
-Module 9 (PXD049412, single-cell Astral) and Module 10 (PXD070049, ZenoTOF).
+Same raw files, same DIA-NN 2.5.0 container, same FASTA, predicted library and
+search settings, on the same cluster: one run as a single standalone DIA-NN
+command (`standalone_sorted.sh`, files passed with --f in name order, as
+quantmsdiann orders them), one through quantmsdiann v2.3.0 (`quantmsdiann_dq.sh`).
+Datasets: ProteoBench Module 9 (PXD049412, single-cell Astral) and Module 10
+(PXD070049, ZenoTOF 8600).
 
 Extends the overlap/scatter/cumulative-ID plots already made for the response
 with what Reviewer 1 asked for and those plots do not show: per-run depth,
@@ -14,9 +16,10 @@ bias (Bland-Altman), precision (CV) and accuracy (species log2 A/B vs expected).
 Counting follows methods.md section 1: per-run Q.Value / PG.Q.Value <= 0.01,
 global Lib.Q.Value / Lib.PG.Q.Value <= 0.01, decoys dropped, nothing else.
 
-Inputs (git-ignored, extracted from the review-experiment zips):
-    data/proteobench-review-experiments/x/<PXD>/diann/diann_report.parquet
-    data/proteobench-review-experiments/x/<PXD>/quantmsdiann/results_<PXD>/quant_tables/diann_report.parquet
+Inputs (git-ignored, copied from the Codon iteration
+2026-10-28_01_run_paired-standalone-vs-quantmsdiann; launch scripts in scripts/):
+    data/proteobench-review-experiments/codon/<PXD>/standalone/diann_report.parquet
+    data/proteobench-review-experiments/codon/<PXD>/quantmsdiann/results/quant_tables/diann_report.parquet
 
 Usage:
     python -m scripts.review_desktop_vs_quantmsdiann
@@ -39,7 +42,7 @@ from matplotlib.patches import Patch
 from scripts import rebuild as rb
 
 REPO = Path(__file__).resolve().parents[1]
-X = REPO / "data/proteobench-review-experiments/x"
+X = REPO / "data/proteobench-review-experiments/codon"
 OUT = REPO / "analysis/figures/review/desktop_vs_quantmsdiann"
 Q = 0.01
 
@@ -66,8 +69,8 @@ COLS = ["Run", "Precursor.Id", "Modified.Sequence", "Stripped.Sequence", "Protei
 
 def report_path(ds: str, wf: str) -> Path:
     if wf == "desktop":
-        return X / ds / "diann/diann_report.parquet"
-    return X / ds / f"quantmsdiann/results_{ds}/quant_tables/diann_report.parquet"
+        return X / ds / "standalone/diann_report.parquet"
+    return X / ds / "quantmsdiann/results/quant_tables/diann_report.parquet"
 
 
 def load(ds: str, wf: str) -> pd.DataFrame:
@@ -304,24 +307,38 @@ def draw(ds: str, data: dict, axes) -> list[dict]:
     return stats_rows
 
 
-def runtime_rows(ds: str) -> list[dict]:
-    """Wall-clock on the same workstation. The standalone `/usr/bin/time` wraps the
-    docker client, so only its elapsed time is meaningful (not RSS/CPU)."""
-    rows = []
-    res = (X / ds / "diann/diann_native_resources.log").read_text()
-    h, m, sec = (["0"] + re.search(r"Elapsed.*?: ([\d:]+)", res).group(1).split(":"))[-3:]
-    rows.append({"dataset": ds, "metric": "wall-clock minutes", "workflow": "desktop",
-                 "value": round(int(h) * 60 + int(m) + int(sec) / 60, 1)})
-    log = (X / ds / "quantmsdiann/.nextflow.log").read_text()
-    stamps = re.findall(r"^(\w{3}-\d{2} \d{2}:\d{2}:\d{2})", log, flags=re.M)
-    t0, t1 = (pd.to_datetime("2026-" + t, format="%Y-%b-%d %H:%M:%S") for t in (stamps[0], stamps[-1]))
-    stats = re.search(r"peakRunning=(\d+); peakCpus=(\d+); peakMemory=([\d.]+ \w+)", log)
-    rows += [
-        {"dataset": ds, "metric": "wall-clock minutes", "workflow": "quantmsdiann",
-         "value": round((t1 - t0).total_seconds() / 60, 1)},
-        {"dataset": ds, "metric": "peak concurrent tasks (single workstation)", "workflow": "quantmsdiann",
-         "value": int(stats.group(1))},
-    ]
+def identity_rows(ds: str) -> list[dict]:
+    """Full-report comparison: rows matched on Run + Precursor.Id, every column compared."""
+    a, b = (pd.read_parquet(report_path(ds, wf)) for wf in WORKFLOWS)
+    m = a.merge(b, on=["Run", "Precursor.Id"], how="outer", suffixes=("_a", "_b"), indicator=True)
+    rows = [{"dataset": ds, "metric": "report rows", "workflow": wf, "value": len(d)} for wf, d in zip(WORKFLOWS, (a, b))]
+    rows.append({"dataset": ds, "metric": "report rows in one workflow only", "workflow": "both",
+                 "value": int((m["_merge"] != "both").sum())})
+    m = m[m["_merge"] == "both"]
+    for c in (c for c in a.columns if c not in ("Run", "Precursor.Id")):
+        x, y = m[f"{c}_a"], m[f"{c}_b"]
+        diff = ~((x == y) | (x.isna() & y.isna()))
+        if diff.any():
+            rows.append({"dataset": ds, "metric": f"rows differing: {c}", "workflow": "both", "value": int(diff.sum())})
+            rows.append({"dataset": ds, "metric": f"max abs difference: {c}", "workflow": "both",
+                         "value": float((x[diff] - y[diff]).abs().max())})
+    # Protein groups at Global.PG.Q.Value <= 1%, and the protein matrix (borderline groups move with PG q-values)
+    for wf, d in zip(WORKFLOWS, (a, b)):
+        rows.append({"dataset": ds, "metric": "protein groups Global.PG.Q.Value <= 0.01", "workflow": wf,
+                     "value": d.loc[(d["Decoy"] == 0) & (d["Global.PG.Q.Value"] <= Q), "Protein.Group"].nunique()})
+    pg = {wf: pd.read_csv(report_path(ds, wf).with_name("diann_report.pg_matrix.tsv"), sep="\t") for wf in WORKFLOWS}
+    ids = {wf: set(m["Protein.Group"]) for wf, m in pg.items()}
+    for wf, other in zip(WORKFLOWS, WORKFLOWS[::-1]):
+        rows.append({"dataset": ds, "metric": "pg_matrix protein groups", "workflow": wf, "value": len(ids[wf])})
+        rows.append({"dataset": ds, "metric": "pg_matrix protein groups in this workflow only", "workflow": wf,
+                     "value": len(ids[wf] - ids[other])})
+    run = lambda col: col.split("/")[-1].rsplit(".", 1)[0]
+    qa, qb = (m.set_index("Protein.Group").rename(columns=run).iloc[:, 5:] for m in (pg["desktop"], pg["quantmsdiann"]))
+    shared = sorted(ids["desktop"] & ids["quantmsdiann"])
+    va, vb = qa.loc[shared, qb.columns].to_numpy(), qb.loc[shared].to_numpy()
+    both = ~np.isnan(va) & ~np.isnan(vb)
+    rows.append({"dataset": ds, "metric": "pg_matrix shared quantities differing", "workflow": "both",
+                 "value": int((va[both] != vb[both]).sum())})
     return rows
 
 
@@ -349,7 +366,7 @@ def main() -> None:
             data["counts"][wf].assign(dataset=ds, workflow=wf).to_csv(
                 OUT / "data" / f"{ds}_{wf}_per_run_counts.tsv", sep="\t")
         rows += draw(ds, data, axes[r])
-        rows += runtime_rows(ds)
+        rows += identity_rows(ds)
         axes[r][0].annotate(DATASETS[ds]["label"], xy=(0, 1.2), xycoords="axes fraction",
                             fontsize=19, fontweight="bold", ha="left")
     titles = ["Per-run depth (1% run FDR)", "Global overlap by level", "Workflow-specific precursors",

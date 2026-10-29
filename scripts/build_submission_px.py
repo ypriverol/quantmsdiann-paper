@@ -16,7 +16,7 @@ and writes, under pride_submission/:
   zenodo_files.tsv           the Zenodo subset
 
 Local additions: the paired standalone DIA-NN vs quantmsdiann runs (PXD049412,
-PXD070049; Supplementary Note 8), from data/proteobench-review-experiments/x/.
+PXD070049; Supplementary Note 8), from data/proteobench-review-experiments/codon/.
 
 Usage:
     python -m scripts.build_submission_px
@@ -38,7 +38,7 @@ from scripts.build_submission_manifest import SKIP, crawl, head_size, listing
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "pride_submission"
-REVIEW = REPO / "data/proteobench-review-experiments/x"
+REVIEW = REPO / "data/proteobench-review-experiments/codon"
 SDRF_DIR = REPO / "sdrf"
 
 # Wrong PSI-MS accessions found in as-run SDRFs (checked against OLS, 2026-10-11). Applied only to the
@@ -67,8 +67,8 @@ DESCRIPTION = (
     "parallel. Includes ProteoBench DIA benchmarks (modules 5, 7, 9, 10) with DIA-NN 1.8.1, 2.5.1 and "
     "2.5.1-enterprise; single-cell (PXD046357, PXD049412, MSV000093870), spatial (PXD064049), "
     "phosphoproteomics (PXD034128, PXD034623, PXD049692) and bulk cell-line (PXD003539, PXD004701, PXD030304, "
-    "PXD017199, PXD041421) reanalyses; the PXD071075 scalability run; and paired standalone DIA-NN versus "
-    "quantmsdiann runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.raw.zip "
+    "PXD017199, PXD041421) reanalyses; the PXD071075 scalability run; and paired standalone DIA-NN 2.5.0 versus "
+    "quantmsdiann v2.3.0 runs (PXD049412, PXD070049). Raw files are not re-uploaded: raw_files.raw.zip "
     "(raw_files.txt, raw_files.tsv) lists every raw file processed with its URL in the original deposit. Each "
     "<dataset>_<version>.zip holds one run (DIA-NN report and matrices, pipeline_info, configs, pmultiqc). "
     "Analysis code, SDRFs, FASTA databases and the parameters of every run (runs.tsv, extra.config, "
@@ -79,7 +79,8 @@ SAMPLE_PROTOCOL = "See the original submissions listed as reanalysed datasets; n
 DATA_PROTOCOL = (
     "Each dataset was analysed in a separate quantmsdiann run (v2.2.0) from its SDRF, library-free (DIA-NN "
     "in-silico library predicted from the FASTA), with DIA-NN 1.8.1, 2.5.0, 2.5.1 or 2.5.1-enterprise as "
-    "indicated in each file name (<dataset>_<version>_<file>). Per-run parameters are in the diann_config.cfg, "
+    "indicated in each file name (<dataset>_<version>_<file>). The paired runs (Paired-*) used quantmsdiann "
+    "v2.3.0 and standalone DIA-NN 2.5.0 with a shared predicted library on the same cluster. Per-run parameters are in the diann_config.cfg, "
     "params_*.json and diannsummary.log files. Identification counts in the manuscript use Lib.Q.Value <= 0.01 "
     "(precursors) and Lib.PG.Q.Value <= 0.01 (protein groups) for global counts, Q.Value / PG.Q.Value <= 0.01 per run."
 )
@@ -108,28 +109,31 @@ def instruments(sdrf_dir: Path) -> dict[str, str]:
 
 
 def review_files() -> list[dict]:
+    """Paired standalone DIA-NN 2.5.0 vs quantmsdiann v2.3.0 runs (Codon, Supplementary Note 8)."""
     rows = []
     for ds in ("PXD049412", "PXD070049"):
-        sa = REVIEW / ds / "diann"
-        qm = REVIEW / ds / f"quantmsdiann/results_{ds}"
+        sa = REVIEW / ds / "standalone"
+        qm = REVIEW / ds / "quantmsdiann/results"
+        par = SDRF_DIR / "Paired_standalone_vs_quantmsdiann" / ds
         picks = [("standalone", "SEARCH", sa / "diann_report.parquet")]
         picks += [("standalone", "RESULT", sa / f) for f in ("diann_report.pg_matrix.tsv", "diann_report.pr_matrix.tsv",
                                                             "diann_report.stats.tsv")]
-        picks += [("standalone", "OTHER", sa / f) for f in ("diann_report.log.txt", "run_diann_v2_5_1.sh",
-                                                           "diann_native_execution.log")]
+        picks += [("standalone", "OTHER", p) for p in (sa / "diann_report.log.txt", par / "standalone_sorted.sh",
+                                                      par / "env.sh")]
         picks += [("quantmsdiann", "SEARCH", qm / "quant_tables/diann_report.parquet")]
         picks += [("quantmsdiann", "RESULT", qm / f"quant_tables/{f}") for f in
                   ("diann_report.pg_matrix.tsv", "diann_report.pr_matrix.tsv", "diann_report.stats.tsv")]
-        picks += [("quantmsdiann", "OTHER", qm / "quant_tables/diannsummary.log"),
-                  ("quantmsdiann", "OTHER", REVIEW / ds / "quantmsdiann/run_quantmsdiann.config")]
+        picks += [("quantmsdiann", "OTHER", p) for p in (qm / "quant_tables/diannsummary.log",
+                                                        par / "quantmsdiann_run.config", par / "quantmsdiann_dq.sh",
+                                                        par / "as_run.sdrf.tsv", qm / "sdrf/diann_config.cfg")]
         picks += [("quantmsdiann", "OTHER", p) for p in sorted((qm / "pipeline_info").glob("params_*.json"))[-1:]]
-        picks += [("quantmsdiann", "EXPERIMENTAL_DESIGN", p) for p in sorted((qm / "sdrf").glob("*.sdrf.tsv"))]
+        picks += [("quantmsdiann", "EXPERIMENTAL_DESIGN", SDRF_DIR / f"Paired_standalone_vs_quantmsdiann/{ds}_local.sdrf.tsv")]
         for wf, ftype, p in picks:
             if not p.exists():
                 print(f"WARNING missing local file {p}")
                 continue
-            rows.append({"dataset": f"Paired-{wf}-{ds}", "diann_version": "v2_5_1", "file_type": ftype,
-                         "upload_name": f"Paired-{wf}-{ds}_v2_5_1_{p.name}", "source_url": str(p),
+            rows.append({"dataset": f"Paired-{wf}-{ds}", "diann_version": "v2_5_0", "file_type": ftype,
+                         "upload_name": f"Paired-{wf}-{ds}_v2_5_0_{p.name}", "source_url": str(p),
                          "size_bytes": p.stat().st_size})
     return rows
 
