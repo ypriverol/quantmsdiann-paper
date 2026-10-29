@@ -110,7 +110,7 @@ OKABE_ITO = {'black': '#000000', 'orange': '#E69F00', 'sky_blue': '#56B4E9', 'bl
 VERSION_COLORS = {'v1_8_1': OKABE_ITO['sky_blue'], '1_8_1': OKABE_ITO['sky_blue'], 'v2_5_1': OKABE_ITO['blue'], '2_5_1': OKABE_ITO['blue'], 'v2_5_1_enterprise': OKABE_ITO['vermillion'], '2_5_1_enterprise': OKABE_ITO['vermillion']}
 COMPARISON = {'original': OKABE_ITO['grey'], 'quantmsdiann': OKABE_ITO['blue']}
 CATEGORICAL_CYCLE = [OKABE_ITO['blue'], OKABE_ITO['vermillion'], OKABE_ITO['bluish_green'], OKABE_ITO['orange'], OKABE_ITO['sky_blue'], OKABE_ITO['reddish_purple'], '#882255', '#117733', '#888888', '#332288', '#999933', '#44AA99']
-INSTRUMENT_COLORS = {'Orbitrap Astral': OKABE_ITO['blue'], 'Orbitrap Eclipse': '#332288', 'Orbitrap Exploris 480': OKABE_ITO['sky_blue'], 'Q Exactive': '#44AA99', 'TripleTOF 5600': OKABE_ITO['orange'], 'TripleTOF 6600': OKABE_ITO['vermillion'], 'ZenoTOF 7600': OKABE_ITO['bluish_green'], 'timsTOF SCP': OKABE_ITO['reddish_purple'], 'timsTOF Pro': '#882255', 'timsTOF HT': '#999933', 'unknown': OKABE_ITO['grey']}
+INSTRUMENT_COLORS = {'Orbitrap Astral': OKABE_ITO['blue'], 'Orbitrap Eclipse': '#332288', 'Orbitrap Exploris 480': OKABE_ITO['sky_blue'], 'Q Exactive': '#44AA99', 'TripleTOF 5600': OKABE_ITO['orange'], 'TripleTOF 6600': OKABE_ITO['vermillion'], 'ZenoTOF 8600': OKABE_ITO['bluish_green'], 'timsTOF SCP': OKABE_ITO['reddish_purple'], 'timsTOF Pro': '#882255', 'timsTOF HT': '#999933', 'unknown': OKABE_ITO['grey']}
 
 def categorical_colors(n):
     """Return *n* colours from the colour-blind-leaning categorical cycle."""
@@ -4097,7 +4097,7 @@ For each analysis we plot:
   size = number of MS runs (count of `--f` arguments in the DIA-NN command
       line; matches SDRF row count for cell-line datasets)
   color = MS instrument family (TripleTOF 5600 / 6600, timsTOF SCP,
-      Orbitrap Astral, ZenoTOF 7600)
+      Orbitrap Astral, ZenoTOF 8600)
 
 Paper-ready output (no title, no footer) is written to
   analysis/figures/performance/runtime_vs_threads.{pdf,png,svg}
@@ -4129,7 +4129,7 @@ BENCHMARK_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/prot
 CELL_LINE_DATASETS = ('PXD003539', 'PXD004701', 'PXD030304')
 BENCHMARK_DATASETS = ('PXD049412', 'PXD062685', 'PXD070049', 'ProteoBench_Module_7')
 _figure_performance_runtime__DIANN_VERSIONS = ('v1_8_1', 'v2_1_0', 'v2_2_0', 'v2_3_2', 'v2_5_0')
-BENCHMARK_INSTRUMENT = {'PXD049412': 'Orbitrap Astral', 'PXD062685': 'timsTOF SCP', 'PXD070049': 'ZenoTOF 7600', 'ProteoBench_Module_7': 'Orbitrap Astral'}
+BENCHMARK_INSTRUMENT = {'PXD049412': 'Orbitrap Astral', 'PXD062685': 'timsTOF SCP', 'PXD070049': 'ZenoTOF 8600', 'ProteoBench_Module_7': 'Orbitrap Astral'}
 _DURATION_PART_RE = re.compile('(?P<value>\\d+(?:\\.\\d+)?)\\s*(?P<unit>h|m|s|ms)\\b')
 _PIPELINE_DURATION_RE = re.compile('duration:\\s*([0-9hms\\.\\sM]+?)\\s*\\)')
 _THREADS_RE = re.compile('--threads\\s+(\\d+)\\b')
@@ -4233,7 +4233,7 @@ def infer_instrument_from_runs(run_names: Iterable[str]) -> str | None:
     if 'timstof' in sample or 'ttscp' in sample or sample.endswith('.d'):
         return 'timsTOF SCP'
     if 'zenotof' in sample or 'zeno' in sample:
-        return 'ZenoTOF 7600'
+        return 'ZenoTOF 8600'
     if 'astral' in sample:
         return 'Orbitrap Astral'
     return None
@@ -4737,7 +4737,7 @@ def count_ms_runs(dataset_id: str, sdrf_path, log_path) -> int:
     return n_files
 CELL_LINE_ANALYSES: dict[str, dict[str, str]] = {'PXD003539': {'instrument': 'TripleTOF 5600', 'version': 'v2_5_0'}, 'PXD030304': {'instrument': 'TripleTOF 6600', 'version': 'v2_5_0'}, 'PXD004701': {'instrument': 'TripleTOF 5600', 'version': 'v2_5_0'}}
 PERF_TRACE_DIR = _figure_performance_trace__DATA_DIR / 'perf_traces'
-PERF_DATASETS: tuple[tuple[str, str, int], ...] = (('PXD049412', 'Orbitrap Astral', 6), ('PXD062685', 'timsTOF SCP', 6), ('PXD070049', 'ZenoTOF 7600', 6), ('ProteoBench_Module_7', 'Orbitrap Astral', 6), ('PXD003539', 'TripleTOF 5600', 120), ('PXD004701', 'TripleTOF 5600', 300), ('PXD030304', 'TripleTOF 6600', 5798), ('MSV000093870', 'Q Exactive', 38), ('PXD034128', 'timsTOF Pro', 7), ('PXD034623', 'Orbitrap Exploris 480', 63), ('PXD064049', 'timsTOF SCP', 12), ('PXD049692', 'timsTOF HT', 10), ('PXD046357', 'Orbitrap Astral', 12), ('PXD017199', 'Q Exactive', 206), ('PXD041421', 'timsTOF Pro', 48))
+PERF_DATASETS: tuple[tuple[str, str, int], ...] = (('PXD049412', 'Orbitrap Astral', 6), ('PXD062685', 'timsTOF SCP', 6), ('PXD070049', 'ZenoTOF 8600', 6), ('ProteoBench_Module_7', 'Orbitrap Astral', 6), ('PXD003539', 'TripleTOF 5600', 120), ('PXD004701', 'TripleTOF 5600', 300), ('PXD030304', 'TripleTOF 6600', 5798), ('MSV000093870', 'Q Exactive', 38), ('PXD034128', 'timsTOF Pro', 7), ('PXD034623', 'Orbitrap Exploris 480', 63), ('PXD064049', 'timsTOF SCP', 12), ('PXD049692', 'timsTOF HT', 10), ('PXD046357', 'Orbitrap Astral', 12), ('PXD017199', 'Q Exactive', 206), ('PXD041421', 'timsTOF Pro', 48))
 
 def iter_perf_trace_paths() -> Iterable[Path]:
     """Yield the staged per-dataset `nextflow_trace.txt` paths under
@@ -6769,7 +6769,8 @@ def _panel(ax, df, orig_col, new_col, xlabel):
         ax.text(row[new_col] + xmax * 0.008, i - bar_h / 2 - 0.02, f'{int(row[new_col]):,}', va='center', ha='left', fontsize=9, fontweight='bold', color='#222222')
         ax.text(xmax * 1.17, i, f"+{row['gain'] * 100:.0f}%", va='center', ha='right', fontsize=10, fontweight='bold', color=vcol)
     ax.set_yticks(range(len(df)))
-    ax.set_yticklabels([f"{r['dataset']} ({r['label']})\n{r['original_engine']} $\\rightarrow$ DIA-NN {r['diann_version']}" for _, r in df.iterrows()], fontsize=9.0)
+    # Rows counted under the original studies' >=2-peptide criterion are marked (R1.10).
+    ax.set_yticklabels([f"{r['dataset']} ({r['label']}{', ≥2 peptides' if '>=2' in str(r.get('metric', '')) and orig_col == 'original' else ''})\n{r['original_engine']} $\\rightarrow$ DIA-NN {r['diann_version']}" for _, r in df.iterrows()], fontsize=9.0)
     ax.set_xlabel(xlabel, fontsize=10)
     ax.set_xlim(0, xmax * 1.2)
     ax.set_ylim(-0.7, len(df) - 0.3)
@@ -6911,7 +6912,7 @@ def generate_reanalysis_improvement_tsv() -> int:
     procan_orig = procan_original_proteins_min2pep(fallback=PROCAN_PROTEINS_STRINGENT)
     with open(_figure_pxd030304_procan_vs_quantmsdiann__DATA_DIR / 'diann_report_protein_counts.json') as fh:
         procan = json.load(fh)
-    rows.append(('PXD030304', 'ProCan', procan_orig, 'DIA-NN 1.7',
+    rows.append(('PXD030304', 'ProCan', procan_orig, 'DIA-NN 1.8',
                  int(procan['prot_2pep']), '2.5.1', 'protein groups (>=2 peptides)', '', ''))
 
     # --- PXD004701 Sun: deposited OpenSWATH original vs §1 reanalysis ---
