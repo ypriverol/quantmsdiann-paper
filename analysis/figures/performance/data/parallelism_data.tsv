@@ -12,7 +12,7 @@ PXD049412	v2_5_1	Orbitrap Astral	6	19	1	1538.0	2368.0	830.0	True	True	data/perf_
 PXD049692	v2_5_1	timsTOF HT	10	28	1	28935.0	32844.0	3909.0	True	True	data/perf_traces/PXD049692/nextflow_trace.txt
 PXD062685	v2_5_1	timsTOF SCP	6	19	1	4823.0	6278.0	1455.0	True	True	data/perf_traces/PXD062685/nextflow_trace.txt
 PXD064049	v2_5_1	timsTOF SCP	12	32	1	7343.0	8428.0	1085.0	True	True	data/perf_traces/PXD064049/nextflow_trace.txt
-PXD070049	v2_5_1	ZenoTOF 7600	6	25	1	3858.0	5503.0	1645.0	True	True	data/perf_traces/PXD070049/nextflow_trace.txt
+PXD070049	v2_5_1	ZenoTOF 8600	6	25	1	3858.0	5503.0	1645.0	True	True	data/perf_traces/PXD070049/nextflow_trace.txt
 PXD071075	v2_5_0_q010	Orbitrap Eclipse	2310	4627	1	135663.245				True	data/queue_size_sweep/q010/nextflow_trace.txt
 PXD071075	v2_5_0_q050	Orbitrap Eclipse	2310	4627	1	29225.398				True	data/queue_size_sweep/q050/nextflow_trace.txt
 PXD071075	v2_5_0_q100	Orbitrap Eclipse	2310	4627	1	17349.964				True	data/queue_size_sweep/q100/nextflow_trace.txt
