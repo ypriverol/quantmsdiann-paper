@@ -4866,8 +4866,9 @@ def collect_pxd071075_sweep_rows() -> pd.DataFrame:
         if df_trace.empty:
             continue
         wallclock = trace_wallclock_seconds(df_trace)
+        lib_s = insilico_seconds(df_trace)  # net of library prediction, like the other cohorts
         n_tasks = int(len(df_trace))
-        rows.append({'dataset': 'PXD071075', 'version': f'v2_5_0_q{q:03d}', 'instrument': 'Orbitrap Eclipse', 'n_runs': n_runs, 'n_tasks_observed': n_tasks, 'n_invocations': 1, 'wallclock_seconds': float(wallclock), 'trace_complete': n_tasks >= MIN_ROWS_COMPLETE, 'source_file': str(trace_path.relative_to(_figure_performance_trace__REPO_ROOT)), 'queue_size': q})
+        rows.append({'dataset': 'PXD071075', 'version': f'v2_5_0_q{q:03d}', 'instrument': 'Orbitrap Eclipse', 'n_runs': n_runs, 'n_tasks_observed': n_tasks, 'n_invocations': 1, 'wallclock_seconds': max(0.0, float(wallclock) - float(lib_s)), 'wallclock_with_lib_seconds': float(wallclock), 'insilico_lib_seconds': float(lib_s), 'insilico_separable': True, 'trace_complete': n_tasks >= MIN_ROWS_COMPLETE, 'source_file': str(trace_path.relative_to(_figure_performance_trace__REPO_ROOT)), 'queue_size': q})
     return pd.DataFrame(rows)
 
 def collect_step_runtime_rows(*, fetch: bool=True) -> tuple[dict[str, list[float]], pd.DataFrame]:
@@ -4908,6 +4909,9 @@ def render_parallelism_scatter(df: pd.DataFrame, svg_path: Path | None=None, *, 
     for _ds, g in plot_df.groupby('dataset'):
         if 'version' in g.columns and (g['version'] == 'v2_5_0').any():
             r = g[g['version'] == 'v2_5_0'].iloc[0]
+        elif 'version' in g.columns and g['version'].astype(str).str.contains(r'_q\d+$').any():
+            q = g['version'].astype(str).str.extract(r'_q(\d+)$')[0].astype(float)
+            r = g.loc[q.idxmax()]  # node sweep: the 300-node run, as in panel (a)
         else:
             gs = g.sort_values('wallclock_seconds')
             r = gs.iloc[len(gs) // 2]
