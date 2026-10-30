@@ -1,0 +1,31 @@
+section	accession	version	precursors	peptides
+ProteoBench	PXD049412 (Module 9)	1.8.1	46205	43478
+ProteoBench	PXD049412 (Module 9)	2.5.1	48223	45601
+ProteoBench	PXD049412 (Module 9)	2.5.1 (enterprise)	50373	47468
+ProteoBench	PXD062685 (Module 5)	1.8.1	102528	92328
+ProteoBench	PXD062685 (Module 5)	2.5.1	121275	110280
+ProteoBench	PXD062685 (Module 5)	2.5.1 (enterprise)	124756	113236
+ProteoBench	PXD070049 (Module 10)	1.8.1	96513	79985
+ProteoBench	PXD070049 (Module 10)	2.5.1	107530	91344
+ProteoBench	PXD070049 (Module 10)	2.5.1 (enterprise)	111237	93777
+ProteoBench	Module 7	1.8.1	126866	113274
+ProteoBench	Module 7	2.5.1	134222	121781
+ProteoBench	Module 7	2.5.1 (enterprise)	139361	125801
+Bulk cell-line	PXD003539	2.5.1	124652	101602
+Bulk cell-line	PXD030304	2.5.1	169677	143246
+Bulk cell-line	PXD004701	2.5.1	107783	88579
+Bulk cell-line	PXD041421	2.5.1	158273	133460
+Bulk cell-line	PXD017199	2.5.1	206987	164470
+Single-cell	PXD046357	1.8.1	22631	21967
+Single-cell	PXD046357	2.5.1 (enterprise)	26238	25425
+Single-cell	PXD049412	1.8.1	61439	53082
+Single-cell	PXD049412	2.5.1 (enterprise)	72031	62385
+Single-cell	MSV000093870	2.5.1	29433	21071
+Phosphoproteomics	PXD034128 (biological study)	2.5.1	45168	33900
+Phosphoproteomics	PXD034128 (biological study)	2.5.1 (enterprise)	48150	35601
+Phosphoproteomics	PXD034128 (high-speed DIA)	2.5.1	22363	17636
+Phosphoproteomics	PXD034128 (high-speed DIA)	2.5.1 (enterprise)	23876	18575
+Phosphoproteomics	PXD034623	2.5.1	86486	69925
+Phosphoproteomics	PXD034623	2.5.1 (enterprise)	88631	71325
+Phosphoproteomics	PXD049692	2.5.1	9513	8112
+Phosphoproteomics	PXD049692	2.5.1 (enterprise)	9513	8112
