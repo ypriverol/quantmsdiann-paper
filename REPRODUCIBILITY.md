@@ -34,7 +34,7 @@ from the report, never from the `*_matrix.tsv` files.
 | Fig. 2 runtime scaling + ProteoBench accuracy | `manuscript/fig2_validation.svg` | `R queue_sweep benchmarks proteobench_accuracy performance_trace fig2_validation` |
 | Fig. 3 single-cell | `manuscript/fig3_single_cell_combined.svg` | `R single_cell_tables single_cell_combined` |
 | Fig. 4 reanalysis vs original | `manuscript/fig_reanalysis_improvement.svg` | `R reanalysis_pg_counts reanalysis_improvement_data reanalysis_improvement` |
-| Fig. S1 per-step runtime | `performance/runtime_per_step.svg`, `performance/mdc_cluster_runtime.svg` | `R performance_trace mdc_cluster_runtime` |
+| Fig. S1 per-step runtime | `performance/FigS1_runtime_per_step.png` (panels `runtime_per_step.svg`, `mdc_cluster_runtime.svg`) | `R performance_trace mdc_cluster_runtime && python -m scripts.compose_figs1` |
 | Fig. S2 memory / CPU per step | `performance/resources_per_step.svg` | `R performance_trace` |
 | Fig. S3, Table S3 wall-clock vs number of files | `review/supplementary_revision/FigS7_runtime_vs_files.svg`, `TableS4_runtime_vs_scale.tsv` | see below |
 | Fig. S4 peptides per protein (PXD003539) | `PXD003539/supp_peptides_per_protein.svg` | `R pxd003539` |

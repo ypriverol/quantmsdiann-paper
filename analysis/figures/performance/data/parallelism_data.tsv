@@ -1,12 +1,12 @@
 dataset	version	instrument	n_runs	n_tasks_observed	n_invocations	wallclock_seconds	wallclock_with_lib_seconds	insilico_lib_seconds	insilico_separable	trace_complete	source_file
 MSV000093870	v2_5_1	Q Exactive	38	83	1	4375.0	5980.0	1605.0	True	True	data/perf_traces/MSV000093870/nextflow_trace.txt
-PXD003539	v2_5_1	TripleTOF 5600	120	2	1	12398.0	12398.0	0.0	False	False	data/perf_traces/PXD003539/nextflow_trace.txt
-PXD004701	v2_5_1	TripleTOF 5600	300	908	1	8368.0	9908.0	1540.0	True	True	data/perf_traces/PXD004701/nextflow_trace.txt
+PXD003539	v2_5_1	TripleTOF 5600	120	368	1	8163.790999999999	8778.791	615.0	True	True	data/perf_traces/PXD003539/nextflow_trace.txt
+PXD004701	v2_5_1	TripleTOF 5600	300	908	1	10628.0	11348.0	720.0	True	True	data/perf_traces/PXD004701/nextflow_trace.txt
 PXD017199	v2_5_1	Q Exactive Plus	206	421	1	41035.579	42045.579	1010.0	True	True	data/perf_traces/PXD017199/nextflow_trace.txt
-PXD030304	v2_5_1	TripleTOF 6600	5798	17414	1	22229.0	23763.0	1534.0	True	True	data/perf_traces/PXD030304/nextflow_trace.txt
+PXD030304	v2_5_1	TripleTOF 6600	5798	17414	1	24684.0	25289.0	605.0	True	True	data/perf_traces/PXD030304/nextflow_trace.txt
 PXD034128	v2_5_1	timsTOF Pro	7	5	1	18003.0	20163.0	2160.0	True	True	data/perf_traces/PXD034128/nextflow_trace.txt
 PXD034623	v2_5_1	Orbitrap Exploris 480	63	134	1	4299.0	8193.0	3894.0	True	True	data/perf_traces/PXD034623/nextflow_trace.txt
-PXD041421	v2_5_1	timsTOF Pro	48	104	1	7923.281999999999	8568.282	645.0	True	True	data/perf_traces/PXD041421/nextflow_trace.txt
+PXD041421	v2_5_1	timsTOF Pro	48	104	1	7933.0	8578.0	645.0	True	True	data/perf_traces/PXD041421/nextflow_trace.txt
 PXD046357	v2_5_1	Orbitrap Astral	12	32	1	1367.34	1947.34	580.0	True	True	data/perf_traces/PXD046357/nextflow_trace.txt
 PXD049412	v2_5_1	Orbitrap Astral	6	19	1	1538.0	2368.0	830.0	True	True	data/perf_traces/PXD049412/nextflow_trace.txt
 PXD049692	v2_5_1	timsTOF HT	10	28	1	28935.0	32844.0	3909.0	True	True	data/perf_traces/PXD049692/nextflow_trace.txt
