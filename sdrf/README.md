@@ -58,11 +58,10 @@ the two paired standalone/quantmsdiann runs (Supplementary Note 8; checked
 
 | File | Runs |
 |---|---|
-| https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 17 |
+| https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 19 |
 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz | 10 |
 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/UP000005640_9606.fasta.gz | 5 |
 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_DDAQuantification_noecoli.fasta.gz | 4 |
-| https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-entrap-contaminants-202605.fasta.gz | 2 |
 
 ## Supplementary Table 1: datasets, search settings and SDRFs
 
@@ -77,11 +76,11 @@ and peptide length. Values from `runs.tsv`; full parameters per run in Supplemen
 | PXD070049 (Module 10) | 1.8.1, 2.5.1, 2.5.1 (Enterprise) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/ProteoBench/PXD070049.sdrf.tsv |
 | Module 7 | 1.8.1, 2.5.1, 2.5.1 (Enterprise) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/ProteoBench/ProteoBench_Module_7.sdrf.tsv |
 | **Bulk cell-line panel** | | | | |
-| PXD003539 | 2.5.1 (Enterprise) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD003539/PXD003539.sdrf.tsv |
+| PXD003539 | 2.5.1 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD003539/PXD003539.sdrf.tsv |
 | PXD030304 | 2.5.1 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD030304/PXD030304.sdrf.tsv |
 | PXD004701 | 2.5.1 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD004701/PXD004701.sdrf.tsv |
-| PXD041421 | 2.5.0 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-entrap-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD041421/PXD041421.sdrf.tsv |
-| PXD017199 | 2.5.0 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-entrap-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD017199/PXD017199.sdrf.tsv |
+| PXD041421 | 2.5.1 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD041421/PXD041421.sdrf.tsv |
+| PXD017199 | 2.5.1 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD017199/PXD017199.sdrf.tsv |
 | **Single-cell proteomics** | | | | |
 | PXD046357 | 1.8.1, 2.5.1 (Enterprise) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD046357/PXD046357.sdrf.tsv |
 | PXD049412 | 1.8.1, 2.5.1 (Enterprise) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/Homo-sapiens-uniprot-reviewed-contaminants-202605.fasta.gz | 7-40 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD049412/PXD049412.sdrf.tsv |

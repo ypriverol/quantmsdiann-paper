@@ -37,11 +37,11 @@ RUNS = [
     *[(d, v, f"quantmsdiann-benchmarks/single-cell/{d}/{v}")
       for d in ("PXD046357", "PXD049412") for v in ("v1_8_1", "v2_5_1_enterprise")],
     ("MSV000093870", "v2_5_0", "quantmsdiann-benchmarks/single-cell/MSV000093870_plexDIA/v2_5_0"),
-    ("PXD003539", "v2_5_1_enterprise", "quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1_enterprise"),
+    ("PXD003539", "v2_5_1", "quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1"),
     ("PXD004701", "v2_5_1", "quantmsdiann-benchmarks/cell-lines/PXD004701/v2_5_1"),
     ("PXD030304", "v2_5_1", "quantmsdiann-benchmarks/cell-lines/PXD030304/v2_5_1"),
-    ("PXD017199", "atlas", "quantms-collections/absolute-expression-2.0/cell-lines/PXD017199"),
-    ("PXD041421", "atlas", "quantms-collections/absolute-expression-2.0/cell-lines/PXD041421"),
+    ("PXD017199", "atlas", "quantmsdiann-benchmarks/cell-lines/PXD017199/v2_5_1"),  # label kept: PRIDE file names
+    ("PXD041421", "atlas", "quantmsdiann-benchmarks/cell-lines/PXD041421/v2_5_1"),  # label kept: PRIDE file names
     *[(d.replace("-", "_"), v, f"quantmsdiann-benchmarks/phospho/{d}/{v}")
       for d in ("PXD034128-biological-study", "PXD034128-highspeed-DIA", "PXD034623", "PXD049692")
       for v in ("v2_5_1", "v2_5_1_enterprise")],

@@ -40,7 +40,7 @@ REPO = Path(__file__).resolve().parents[1]
 RUN_DIRS = [
     "quantms-collections/absolute-expression-2.0/cell-lines/PXD003539",
     "quantmsdiann-benchmarks/PXD071075-2.5.1-ent",
-    "quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1_enterprise",
+    "quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1",
     "quantmsdiann-benchmarks/cell-lines/PXD004701/v2_5_1",
     "quantmsdiann-benchmarks/cell-lines/PXD030304/v2_5_1",
     *[f"quantmsdiann-benchmarks/phospho/{d}/{v}"
