@@ -110,7 +110,7 @@ OKABE_ITO = {'black': '#000000', 'orange': '#E69F00', 'sky_blue': '#56B4E9', 'bl
 VERSION_COLORS = {'v1_8_1': OKABE_ITO['sky_blue'], '1_8_1': OKABE_ITO['sky_blue'], 'v2_5_1': OKABE_ITO['blue'], '2_5_1': OKABE_ITO['blue'], 'v2_5_1_enterprise': OKABE_ITO['vermillion'], '2_5_1_enterprise': OKABE_ITO['vermillion']}
 COMPARISON = {'original': OKABE_ITO['grey'], 'quantmsdiann': OKABE_ITO['blue']}
 CATEGORICAL_CYCLE = [OKABE_ITO['blue'], OKABE_ITO['vermillion'], OKABE_ITO['bluish_green'], OKABE_ITO['orange'], OKABE_ITO['sky_blue'], OKABE_ITO['reddish_purple'], '#882255', '#117733', '#888888', '#332288', '#999933', '#44AA99']
-INSTRUMENT_COLORS = {'Orbitrap Astral': OKABE_ITO['blue'], 'Orbitrap Eclipse': '#332288', 'Orbitrap Exploris 480': OKABE_ITO['sky_blue'], 'Q Exactive': '#44AA99', 'TripleTOF 5600': OKABE_ITO['orange'], 'TripleTOF 6600': OKABE_ITO['vermillion'], 'ZenoTOF 8600': OKABE_ITO['bluish_green'], 'timsTOF SCP': OKABE_ITO['reddish_purple'], 'timsTOF Pro': '#882255', 'timsTOF HT': '#999933', 'unknown': OKABE_ITO['grey']}
+INSTRUMENT_COLORS = {'Orbitrap Astral': OKABE_ITO['blue'], 'Orbitrap Eclipse': '#332288', 'Orbitrap Exploris 480': OKABE_ITO['sky_blue'], 'Q Exactive': '#44AA99', 'Q Exactive Plus': '#117733', 'TripleTOF 5600': OKABE_ITO['orange'], 'TripleTOF 6600': OKABE_ITO['vermillion'], 'ZenoTOF 8600': OKABE_ITO['bluish_green'], 'timsTOF SCP': OKABE_ITO['reddish_purple'], 'timsTOF Pro': '#882255', 'timsTOF HT': '#999933', 'unknown': OKABE_ITO['grey']}
 
 def categorical_colors(n):
     """Return *n* colours from the colour-blind-leaning categorical cycle."""
@@ -4731,7 +4731,7 @@ def count_ms_runs(dataset_id: str, sdrf_path, log_path) -> int:
     return n_files
 CELL_LINE_ANALYSES: dict[str, dict[str, str]] = {'PXD003539': {'instrument': 'TripleTOF 5600', 'version': 'v2_5_0'}, 'PXD030304': {'instrument': 'TripleTOF 6600', 'version': 'v2_5_0'}, 'PXD004701': {'instrument': 'TripleTOF 5600', 'version': 'v2_5_0'}}
 PERF_TRACE_DIR = _figure_performance_trace__DATA_DIR / 'perf_traces'
-PERF_DATASETS: tuple[tuple[str, str, int], ...] = (('PXD049412', 'Orbitrap Astral', 6), ('PXD062685', 'timsTOF SCP', 6), ('PXD070049', 'ZenoTOF 8600', 6), ('ProteoBench_Module_7', 'Orbitrap Astral', 6), ('PXD003539', 'TripleTOF 5600', 120), ('PXD004701', 'TripleTOF 5600', 300), ('PXD030304', 'TripleTOF 6600', 5798), ('MSV000093870', 'Q Exactive', 38), ('PXD034128', 'timsTOF Pro', 7), ('PXD034623', 'Orbitrap Exploris 480', 63), ('PXD064049', 'timsTOF SCP', 12), ('PXD049692', 'timsTOF HT', 10), ('PXD046357', 'Orbitrap Astral', 12), ('PXD017199', 'Q Exactive', 206), ('PXD041421', 'timsTOF Pro', 48))
+PERF_DATASETS: tuple[tuple[str, str, int], ...] = (('PXD049412', 'Orbitrap Astral', 6), ('PXD062685', 'timsTOF SCP', 6), ('PXD070049', 'ZenoTOF 8600', 6), ('ProteoBench_Module_7', 'Orbitrap Astral', 6), ('PXD003539', 'TripleTOF 5600', 120), ('PXD004701', 'TripleTOF 5600', 300), ('PXD030304', 'TripleTOF 6600', 5798), ('MSV000093870', 'Q Exactive', 38), ('PXD034128', 'timsTOF Pro', 7), ('PXD034623', 'Orbitrap Exploris 480', 63), ('PXD064049', 'timsTOF SCP', 12), ('PXD049692', 'timsTOF HT', 10), ('PXD046357', 'Orbitrap Astral', 12), ('PXD017199', 'Q Exactive Plus', 206), ('PXD041421', 'timsTOF Pro', 48))
 
 def iter_perf_trace_paths() -> Iterable[Path]:
     """Yield the staged per-dataset `nextflow_trace.txt` paths under
