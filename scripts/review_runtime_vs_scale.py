@@ -64,7 +64,7 @@ CATEGORY = {
     "PXD070049": "Benchmark (ProteoBench)", "ProteoBench_Module_7": "Benchmark (ProteoBench)",
     "PXD004701": "Bulk cell-line", "PXD030304": "Bulk cell-line", "PXD017199": "Bulk cell-line",
     "PXD041421": "Bulk cell-line", "MSV000093870": "plexDIA", "PXD046357": "Single-cell",
-    "PXD071075": "Single-cell", "PXD034128": "Phosphoproteomics", "PXD034623": "Bulk proteome (primary cells)",
+    "PXD071075": "Single-cell", "PXD034128": "Phosphoproteomics", "PXD034623": "Phosphoproteomics",
     "PXD049692": "Phosphoproteomics", "PXD064049": "Spatial DVP",
 }
 # Label offsets (points) where default placement collides, per panel x column.
@@ -75,7 +75,7 @@ OFFSETS = {
                "PXD004701": (7, 8, "left"), "PXD041421": (7, -12, "left"), "PXD049412": (-8, 8, "right")},
 }
 MARKER = {"Benchmark (ProteoBench)": "o", "Bulk cell-line": "s", "plexDIA": "P", "Single-cell": "D",
-          "Phosphoproteomics": "^", "Spatial DVP": "v", "Bulk proteome (primary cells)": "X"}
+          "Phosphoproteomics": "^", "Spatial DVP": "v"}
 
 
 def head_size(url: str) -> int:
