@@ -668,7 +668,9 @@ DATA_ROOT = _figure_combined_cell_lines_atlas__REPO_ROOT / 'data'
 _figure_combined_cell_lines_atlas__FIGURES_DIR = _figure_combined_cell_lines_atlas__REPO_ROOT / 'analysis' / 'figures' / 'combined'
 PXD003539_SDRF = DATA_ROOT / 'PXD003539' / 'PXD003539.sdrf.tsv'
 PXD003539_PR_MATRIX = DATA_ROOT / 'PXD003539' / 'diann_report.pr_matrix.tsv'
-PXD003539_REPORT_PARQUET = DATA_ROOT / 'PXD003539' / 'diann_report.parquet'
+# Harmonised cell-line reports live under data/cell-lines-v2_5_1/<PXD>/ (scripts.cellline_reports),
+# which purge_raw_downloads leaves alone.
+PXD003539_REPORT_PARQUET = DATA_ROOT / 'cell-lines-v2_5_1' / 'PXD003539' / 'diann_report.parquet'
 PXD003539_COUNTS_TSV = _figure_combined_cell_lines_atlas__REPO_ROOT / 'analysis' / 'figures' / 'PXD003539' / 'data' / 'counts.tsv'
 PXD030304_SDRF = DATA_ROOT / 'PXD030304' / 'PXD030304.sdrf.tsv'
 PXD030304_TISSUE_MAPPING = DATA_ROOT / 'PXD030304' / 'mapping_file_averaged.txt'
@@ -689,20 +691,18 @@ PXD041421_PG_MATRIX = DATA_ROOT / 'PXD041421' / 'diann_report.pg_matrix.tsv'
 E_PROT_73_TSV = DATA_ROOT / 'E-PROT-73-query-results.tsv'
 
 # Public-FTP sources for the bulk cell-line DIA-NN count matrices the reanalysis,
-# venn and atlas figures read. Three live under quantmsdiann-benchmarks/cell-lines
-# (with a version dir), two under the absolute-expression-2.0 collection (no
-# version dir). ensure_cell_line_matrices() auto-fetches any that are missing so
+# venn and atlas figures read. All five cohorts are the harmonised DIA-NN 2.5.1 runs
+# (same pipeline, FASTA and parameters; scripts/cellline_reports.py) under
+# quantmsdiann-benchmarks/cell-lines/<PXD>/v2_5_1. ensure_cell_line_matrices() auto-fetches any that are missing so
 # the rebuild is self-sufficient (no manual staging).
 _BENCH_CL_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/cell-lines'
 _ABSEXP_CL_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantms-collections/absolute-expression-2.0/cell-lines'
-# Per-cohort quant_tables base URLs (three on quantmsdiann-benchmarks with a
-# version dir; two on the absolute-expression-2.0 collection, no version dir).
 _CELL_LINE_QT_BASE: dict[str, str] = {
-    'PXD003539': f'{_BENCH_CL_BASE}/PXD003539/v2_5_1_enterprise/quant_tables',
+    'PXD003539': f'{_BENCH_CL_BASE}/PXD003539/v2_5_1/quant_tables',
     'PXD030304': f'{_BENCH_CL_BASE}/PXD030304/v2_5_1/quant_tables',
     'PXD004701': f'{_BENCH_CL_BASE}/PXD004701/v2_5_1/quant_tables',
-    'PXD017199': f'{_ABSEXP_CL_BASE}/PXD017199/quant_tables',
-    'PXD041421': f'{_ABSEXP_CL_BASE}/PXD041421/quant_tables',
+    'PXD017199': f'{_BENCH_CL_BASE}/PXD017199/v2_5_1/quant_tables',
+    'PXD041421': f'{_BENCH_CL_BASE}/PXD041421/v2_5_1/quant_tables',
 }
 # DIA-NN count matrices each cohort's figures actually read (shared across
 # stages, NOT purged). Per-cohort to avoid fetching the unused 2 GB ProCan
@@ -2096,8 +2096,7 @@ def figure_combined_cell_lines_atlas_main() -> int:
     # PXD003539 with its report parquet so refresh_dataset_headlines() actually
     # recomputes the headline from the FTP instead of falling back to the
     # precomputed constant; 017199/041421 need only their pr/pg matrices.
-    ensure_cell_line_matrices('PXD003539', with_report=True)
-    ensure_cell_line_matrices('PXD017199', 'PXD041421')
+    ensure_cell_line_matrices('PXD003539', 'PXD017199', 'PXD041421')  # SDRFs
     missing = check_prerequisites()
     if missing:
         print('Combined atlas requires the per-dataset scripts to run first.', file=sys.stderr)
@@ -2129,34 +2128,27 @@ def figure_combined_cell_lines_atlas_main() -> int:
         seg = ', '.join((f'{ds}:{by_ds.get(ds, 0)}' for ds in ('PXD003539', 'PXD030304', 'PXD004701', 'PXD017199', 'PXD041421')))
         print(f'    {tissue:<32s} total={total:>4d}  ({seg})')
     print('Loading per-group accession sets (for Panels E and F)...')
-    per_cl_3539 = pxd003539_accessions_per_cell_line(PXD003539_PR_MATRIX, PXD003539_SDRF)
-    per_tissue_30304 = pxd030304_accessions_per_tissue(PXD030304_PROTEIN_JSON)
-    per_subtype_4701 = pxd004701_accessions_per_subtype(PXD004701_PROTEIN_JSON)
-    per_cl_17199 = pxd017199_accessions_per_cell_line(PXD017199_PR_MATRIX, PXD017199_SDRF)
-    per_cl_41421 = pxd041421_accessions_per_cell_line(PXD041421_PR_MATRIX, PXD041421_SDRF)
+    # All five cohorts: harmonised DIA-NN 2.5.1 runs, one rule (scripts.cellline_accessions):
+    # protein groups at Lib.PG.Q.Value <= 0.01, per run from the pg_matrix.
+    from scripts import cellline_accessions as ca
+    per_cl_3539 = ca.accessions_per_cell_line('PXD003539', PXD003539_SDRF, normalize_cell_line)
+    per_cl_30304 = ca.accessions_per_cell_line('PXD030304', PXD030304_SDRF, normalize_cell_line)
+    per_tissue_30304: dict[str, set[str]] = {}
+    for cl, accs in per_cl_30304.items():
+        if cl in cl_tissue_30304:
+            per_tissue_30304.setdefault(cl_tissue_30304[cl], set()).update(accs)
+    per_cl_17199 = ca.accessions_per_cell_line('PXD017199', PXD017199_SDRF, normalize_cell_line)
+    per_cl_41421 = ca.accessions_per_cell_line('PXD041421', PXD041421_SDRF, normalize_cell_line)
     print(f'  PXD003539 per-cell-line groups: {len(per_cl_3539)}')
     print(f'  PXD030304 per-tissue groups: {len(per_tissue_30304)}')
-    print(f'  PXD004701 per-subtype groups: {len(per_subtype_4701)}')
     print(f'  PXD017199 per-cell-line groups: {len(per_cl_17199)}')
     print(f'  PXD041421 per-cell-line groups: {len(per_cl_41421)}')
     print('Loading protein-accession sets...')
-    acc_3539: set[str] = set()
-    for s in per_cl_3539.values():
-        acc_3539.update(s)
-    if not acc_3539:
-        acc_3539 = pxd003539_protein_accessions(PXD003539_PR_MATRIX)
-    acc_30304 = pxd030304_protein_accessions(PXD030304_PROTEIN_JSON)
-    acc_4701 = pxd004701_protein_accessions(PXD004701_PROTEIN_JSON)
-    acc_17199: set[str] = set()
-    for s in per_cl_17199.values():
-        acc_17199.update(s)
-    if not acc_17199:
-        acc_17199 = pxd017199_protein_accessions(PXD017199_PR_MATRIX)
-    acc_41421: set[str] = set()
-    for s in per_cl_41421.values():
-        acc_41421.update(s)
-    if not acc_41421:
-        acc_41421 = pxd041421_protein_accessions(PXD041421_PR_MATRIX)
+    acc_3539 = ca.cohort_accessions('PXD003539')
+    acc_30304 = ca.cohort_accessions('PXD030304')
+    acc_4701 = ca.cohort_accessions('PXD004701')
+    acc_17199 = ca.cohort_accessions('PXD017199')
+    acc_41421 = ca.cohort_accessions('PXD041421')
     accession_sets = {'PXD003539': acc_3539, 'PXD030304': acc_30304, 'PXD004701': acc_4701, 'PXD017199': acc_17199, 'PXD041421': acc_41421}
     for d, s in accession_sets.items():
         print(f'  {d}: {len(s):,} accessions')
@@ -2170,23 +2162,23 @@ def figure_combined_cell_lines_atlas_main() -> int:
         print(f'  {ds}: {runs_per_cohort.get(ds, 0):,} runs')
     print('Rendering main pan-cohort figure (ProCan per-tissue + pan-cohort per-tissue panels)...')
     main_svg = _figure_combined_cell_lines_atlas__FIGURES_DIR / 'atlas_main.svg'
-    # Panel a: ProCan deposited vs quantmsdiann protein groups per tissue
-    # (absorbs the former standalone supp figure). The quantmsdiann side reuses
-    # the per-tissue accession sets already loaded above; the ProCan side is
-    # streamed from the deposited replicate matrix when it is available locally.
-    procan_matrix = DATA_ROOT / 'PXD030304' / 'protein_matrix_8498_replicates.txt'
-    procan_mapping = DATA_ROOT / 'PXD030304' / 'mapping_file_replicates.txt'
-    if procan_matrix.exists() and procan_mapping.exists():
-        print('  computing ProCan per-tissue protein sets (deposited replicate matrix)...')
-        procan_per_tissue = proteins_per_tissue_procan(procan_matrix, procan_mapping)
-    else:
-        print('  ProCan replicate matrix not cached; panel a will note unavailability', file=sys.stderr)
-        procan_per_tissue = {}
+    # Panel a: ProCan deposited vs quantmsdiann protein groups per tissue. Both sides use
+    # the ProCan study criterion (proteotypic peptides, per-tissue union): the deposited
+    # replicate matrix (figshare) and the quantmsdiann report under the same criterion
+    # (diann_per_tissue_procan_filter.json). Panel b uses the pan-cohort rule above.
+    procan_files = {}
+    for name in ('protein_matrix_8498_replicates.txt', 'mapping_file_replicates.txt'):
+        procan_files[name] = DATA_ROOT / 'PXD030304' / name
+        download_if_missing(f'{FIGSHARE_BASE}/{FIGSHARE_FILES[name]}', procan_files[name])
+    print('  computing ProCan per-tissue protein sets (deposited replicate matrix)...')
+    procan_per_tissue = proteins_per_tissue_procan(procan_files['protein_matrix_8498_replicates.txt'],
+                                                   procan_files['mapping_file_replicates.txt'])
+    diann_per_tissue_procan = pxd030304_accessions_per_tissue(PXD030304_PROTEIN_JSON)
     TOP_TISSUES = 12
     tissue_rows_top = tissue_rows[:TOP_TISSUES]
     _top_set = {t for t, _ in tissue_rows_top}
     tissue_protein_rows_top = [(t, d) for t, d in tissue_protein_rows if t in _top_set]
-    render_atlas_main(tissue_rows_top, main_svg, tissue_protein_rows=tissue_protein_rows_top, procan_per_tissue=procan_per_tissue, diann_per_tissue=per_tissue_30304)
+    render_atlas_main(tissue_rows_top, main_svg, tissue_protein_rows=tissue_protein_rows_top, procan_per_tissue=procan_per_tissue, diann_per_tissue=diann_per_tissue_procan)
     print(f'  saved: {main_svg}')
     import shutil
     manuscript_svg = _figure_combined_cell_lines_atlas__REPO_ROOT / 'analysis' / 'figures' / 'manuscript' / 'fig4_cellline_atlas.svg'
@@ -3196,7 +3188,7 @@ import requests
 _figure_original_vs_quantmsdiann__REPO_ROOT = Path(__file__).resolve().parent.parent
 _figure_original_vs_quantmsdiann__DATA_DIR = _figure_original_vs_quantmsdiann__REPO_ROOT / 'data' / 'PXD003539'
 _figure_original_vs_quantmsdiann__FIGURES_DIR = _figure_original_vs_quantmsdiann__REPO_ROOT / 'analysis' / 'figures' / 'PXD003539'
-_figure_original_vs_quantmsdiann__PRIDE_QUANT_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1_enterprise/quant_tables'
+_figure_original_vs_quantmsdiann__PRIDE_QUANT_BASE = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/cell-lines/PXD003539/v2_5_1/quant_tables'
 PRIDE_SUBMISSION_BASE = 'https://ftp.pride.ebi.ac.uk/pride/data/archive/2020/06/PXD003539'
 PR_MATRIX_URL = f'{_figure_original_vs_quantmsdiann__PRIDE_QUANT_BASE}/diann_report.pr_matrix.tsv'
 SUMMARY_LOG_URL = f'{_figure_original_vs_quantmsdiann__PRIDE_QUANT_BASE}/diannsummary.log'
@@ -3296,6 +3288,8 @@ def purge_raw_downloads() -> int:
             continue
         for pat in _RAW_DOWNLOAD_GLOBS:
             for p in root.rglob(pat):
+                if 'cell-lines-v2_5_1' in p.parts:
+                    continue  # harmonised cell-line reports: inputs, not downloads
                 try:
                     p.unlink()
                     n += 1
@@ -3982,7 +3976,7 @@ def figure_original_vs_quantmsdiann_main() -> int:
     pr_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'diann_report.pr_matrix.tsv'
     log_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'diannsummary.log'
     opensw_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'feature_alignment_requant_matrix.tsv'
-    parquet_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'diann_report.parquet'
+    parquet_path = PXD003539_REPORT_PARQUET
     diann_genes_path = _figure_original_vs_quantmsdiann__DATA_DIR / 'diann_report.unique_genes_matrix.tsv'
     print('Resolving inputs (filesystem; external baselines cached)...')
     download_if_missing(OPENSWATH_MATRIX_URL, opensw_path)
@@ -6904,7 +6898,7 @@ def generate_reanalysis_improvement_tsv() -> int:
     download_if_missing(DIANN_REPORT_PARQUET_URL, PXD003539_REPORT_PARQUET)
     nci_rean = int(report_global_counts_diann(PXD003539_REPORT_PARQUET)['prot_2pep'])
     rows.append(('PXD003539', 'NCI-60', nci_orig, 'OpenSWATH', nci_rean,
-                 '2.5.1-enterprise', 'protein groups (>=2 peptides)', '', ''))
+                 '2.5.1', 'protein groups (>=2 peptides)', '', ''))
 
     # --- PXD030304 ProCan: figshare original >=2-peptide vs §1 reanalysis ---
     # Original recomputed from the public ProCan figshare peptide-count matrix;

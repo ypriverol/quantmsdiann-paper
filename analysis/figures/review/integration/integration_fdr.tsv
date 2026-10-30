@@ -1,17 +1,15 @@
-rule	set	proteins	entrapment	entrapment_fdp
-1pct_protein_fdr	PXD003539	7506	0	
-1pct_protein_fdr	PXD004701	8224	0	
-1pct_protein_fdr	PXD030304	9918	0	
-1pct_protein_fdr	PXD017199	10608	125	0.0234
-1pct_protein_fdr	PXD041421	9275	184	0.0394
-1pct_protein_fdr	merged	12949	284	0.0494
-1pct_protein_fdr	decoy_1pct	12361	150	0.0268
-1pct_protein_fdr	decoy_and_entrapment_1pct (q<=0.00080)	11893	54	0.0099
->=2_unique_peptides	PXD003539	6627	0	
->=2_unique_peptides	PXD004701	7138	0	
->=2_unique_peptides	PXD030304	8688	0	
->=2_unique_peptides	PXD017199	9709	29	0.0059
->=2_unique_peptides	PXD041421	8445	49	0.0115
->=2_unique_peptides	merged	11475	73	0.014
->=2_unique_peptides	decoy_1pct	11384	55	0.0106
->=2_unique_peptides	decoy_and_entrapment_1pct (q<=0.00269)	11375	51	0.0098
+rule	set	proteins
+1pct_protein_fdr	PXD003539	7379
+1pct_protein_fdr	PXD004701	8224
+1pct_protein_fdr	PXD030304	9918
+1pct_protein_fdr	PXD017199	10860
+1pct_protein_fdr	PXD041421	9370
+1pct_protein_fdr	merged	12953
+1pct_protein_fdr	decoy_1pct	12477
+>=2_unique_peptides	PXD003539	6577
+>=2_unique_peptides	PXD004701	7138
+>=2_unique_peptides	PXD030304	8688
+>=2_unique_peptides	PXD017199	9993
+>=2_unique_peptides	PXD041421	8611
+>=2_unique_peptides	merged	11654
+>=2_unique_peptides	decoy_1pct	11546

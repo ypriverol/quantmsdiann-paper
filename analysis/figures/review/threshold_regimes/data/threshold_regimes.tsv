@@ -1,0 +1,63 @@
+dataset	side	rule	metric	value
+PXD003539	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 1 peptides	6556.0
+PXD003539	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 2 peptides	4154.0
+PXD003539	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 3 peptides	3313.0
+PXD003539	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 5 peptides	2312.0
+PXD003539	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 1 peptides	7431.0
+PXD003539	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 2 peptides	6762.0
+PXD003539	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 3 peptides	6031.0
+PXD003539	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 5 peptides	5036.0
+PXD003539	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 1 peptides	7311.0
+PXD003539	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 2 peptides	6636.0
+PXD003539	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 3 peptides	5888.0
+PXD003539	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 5 peptides	4884.0
+PXD003539	original	OpenSWATH: distinct precursors per protein (Fig. 4 baseline)	proteins >= 1 peptides	6556.0
+PXD003539	original	OpenSWATH: distinct precursors per protein (Fig. 4 baseline)	proteins >= 2 peptides	4284.0
+PXD003539	original	OpenSWATH: distinct precursors per protein (Fig. 4 baseline)	proteins >= 3 peptides	3443.0
+PXD003539	original	OpenSWATH: distinct precursors per protein (Fig. 4 baseline)	proteins >= 5 peptides	2444.0
+PXD003539	original	OpenSWATH: proteotypic stripped peptides, score <= 0.01 (removed Fig. S3)	proteins >= 1 peptides	5094.0
+PXD003539	original	OpenSWATH: proteotypic stripped peptides, score <= 0.01 (removed Fig. S3)	proteins >= 2 peptides	3644.0
+PXD003539	original	OpenSWATH: proteotypic stripped peptides, score <= 0.01 (removed Fig. S3)	proteins >= 3 peptides	3031.0
+PXD003539	original	OpenSWATH: proteotypic stripped peptides, score <= 0.01 (removed Fig. S3)	proteins >= 5 peptides	2175.0
+PXD003539	original	global 1% (deposit's own FDR for originals)	precursors	48374.0
+PXD003539	original	global 1% (deposit's own FDR for originals)	peptides	40592.0
+PXD003539	original		median peptides per protein	3.0
+PXD003539	quantmsdiann	global 1% (deposit's own FDR for originals)	precursors	124652.0
+PXD003539	quantmsdiann	global 1% (deposit's own FDR for originals)	peptides	101602.0
+PXD003539	quantmsdiann		median peptides per protein	8.0
+PXD004701	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 1 peptides	6183.0
+PXD004701	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 2 peptides	4475.0
+PXD004701	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 3 peptides	3615.0
+PXD004701	original	OpenSWATH (deposited): distinct peptide sequences per protein	proteins >= 5 peptides	2532.0
+PXD004701	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 1 peptides	8304.0
+PXD004701	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 2 peptides	7381.0
+PXD004701	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 3 peptides	6575.0
+PXD004701	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 5 peptides	5233.0
+PXD004701	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 1 peptides	8147.0
+PXD004701	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 2 peptides	7218.0
+PXD004701	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 3 peptides	6384.0
+PXD004701	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 5 peptides	5020.0
+PXD004701	original	global 1% (deposit's own FDR for originals)	precursors	52507.0
+PXD004701	original	global 1% (deposit's own FDR for originals)	peptides	45027.0
+PXD004701	original		median peptides per protein	3.0
+PXD004701	quantmsdiann	global 1% (deposit's own FDR for originals)	precursors	107783.0
+PXD004701	quantmsdiann	global 1% (deposit's own FDR for originals)	peptides	88579.0
+PXD004701	quantmsdiann		median peptides per protein	7.0
+PXD030304	original	DIA-NN 1.8 (figshare): distinct peptide sequences per protein	proteins >= 1 peptides	8498.0
+PXD030304	original	DIA-NN 1.8 (figshare): distinct peptide sequences per protein	proteins >= 2 peptides	6698.0
+PXD030304	original	DIA-NN 1.8 (figshare): distinct peptide sequences per protein	proteins >= 3 peptides	5727.0
+PXD030304	original	DIA-NN 1.8 (figshare): distinct peptide sequences per protein	proteins >= 5 peptides	4488.0
+PXD030304	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 1 peptides	10027.0
+PXD030304	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 2 peptides	8993.0
+PXD030304	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 3 peptides	8044.0
+PXD030304	quantmsdiann	DIA-NN report: Lib.PG.Q <= 1% groups, distinct Lib.Q <= 1% peptides	proteins >= 5 peptides	6670.0
+PXD030304	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 1 peptides	9835.0
+PXD030304	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 2 peptides	8793.0
+PXD030304	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 3 peptides	7811.0
+PXD030304	quantmsdiann	DIA-NN report: proteotypic peptides only	proteins >= 5 peptides	6421.0
+PXD030304	original	global 1% (deposit's own FDR for originals)	precursors	
+PXD030304	original	global 1% (deposit's own FDR for originals)	peptides	
+PXD030304	original		median peptides per protein	5.0
+PXD030304	quantmsdiann	global 1% (deposit's own FDR for originals)	precursors	169677.0
+PXD030304	quantmsdiann	global 1% (deposit's own FDR for originals)	peptides	143246.0
+PXD030304	quantmsdiann		median peptides per protein	8.0
