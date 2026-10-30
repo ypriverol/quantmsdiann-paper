@@ -50,7 +50,7 @@ COHORTS = {
                   "report": rb.DIANN_REPORT_PARQUET_URL},
     "PXD004701": {"label": "Breast cancer lines (Sun 2023)", "original": "OpenSWATH (deposited)",
                   "report": f"{FTP}/cell-lines/PXD004701/v2_5_1/quant_tables/diann_report.parquet"},
-    "PXD030304": {"label": "ProCan-DepMapSanger", "original": "DIA-NN 1.7 (figshare)",
+    "PXD030304": {"label": "ProCan-DepMapSanger", "original": "DIA-NN 1.8 (figshare)",
                   "report": f"{FTP}/cell-lines/PXD030304/v2_5_1/quant_tables/diann_report.parquet"},
 }
 OPENSWATH_ID = re.compile(r"^\d+_(?P<modseq>.+)_(?P<charge>\d+)_run\d+$")
