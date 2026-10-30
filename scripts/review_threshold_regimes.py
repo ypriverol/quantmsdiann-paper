@@ -16,7 +16,7 @@ while the removed Fig. S3 counted proteotypic stripped peptides at score <= 0.01
 Original-side sources are the same deposited files Fig. 4 uses. quantmsdiann
 side: the DIA-NN report parquets used by Fig. 4, counted under methods.md
 section 1 (Lib.Q.Value / Lib.PG.Q.Value <= 0.01, decoys dropped, nothing
-else). Reports are streamed from the PRIDE FTP and never written to disk.
+else). Reports are read through scripts.cellline_reports (harmonised DIA-NN 2.5.1 runs).
 
 Usage:
     python -m scripts.review_threshold_regimes
@@ -37,21 +37,21 @@ import pandas as pd
 from matplotlib.patches import Patch
 
 from scripts import rebuild as rb
+from scripts.cellline_reports import open_report
 
 REPO = Path(__file__).resolve().parents[1]
 DATA = REPO / "data"
 OUT = REPO / "analysis/figures/review/threshold_regimes"
-FTP = "https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks"
 THRESHOLDS = (1, 2, 3, 5)
 PR_META = {"Protein.Group", "Protein.Ids", "Protein.Names", "Genes", "First.Protein.Description",
            "Proteotypic", "Stripped.Sequence", "Modified.Sequence", "Precursor.Charge", "Precursor.Id"}
 COHORTS = {
     "PXD003539": {"label": "NCI-60 (Guo 2019)", "original": "OpenSWATH (deposited)",
-                  "report": rb.DIANN_REPORT_PARQUET_URL},
+                  "report": "PXD003539"},
     "PXD004701": {"label": "Breast cancer lines (Sun 2023)", "original": "OpenSWATH (deposited)",
-                  "report": f"{FTP}/cell-lines/PXD004701/v2_5_1/quant_tables/diann_report.parquet"},
+                  "report": "PXD004701"},
     "PXD030304": {"label": "ProCan-DepMapSanger", "original": "DIA-NN 1.8 (figshare)",
-                  "report": f"{FTP}/cell-lines/PXD030304/v2_5_1/quant_tables/diann_report.parquet"},
+                  "report": "PXD030304"},
 }
 OPENSWATH_ID = re.compile(r"^\d+_(?P<modseq>.+)_(?P<charge>\d+)_run\d+$")
 UNIMOD = re.compile(r"\(UniMod:\d+\)")
@@ -137,17 +137,16 @@ def procan_original() -> dict:
 
 # ---------------------------------------------------------------- quantmsdiann
 
-def quantmsdiann_side(url: str) -> dict:
+def quantmsdiann_side(ds: str) -> dict:
     """Stream the DIA-NN report (same file as Fig. 4) under methods.md section 1:
     precursors / peptides at Lib.Q.Value <= 0.01; protein groups at
     Lib.PG.Q.Value <= 0.01, each supported by its Lib.Q.Value <= 0.01 peptides
     (the rule behind Fig. 4's prot_2pep). Decoys dropped, nothing else."""
-    import fsspec
     import pyarrow.parquet as pq
     cols = ["Protein.Group", "Proteotypic", "Stripped.Sequence", "Precursor.Id", "Lib.Q.Value", "Lib.PG.Q.Value", "Decoy"]
     pep_per_pg, pep_per_pg_pt = defaultdict(set), defaultdict(set)
     pgs, precursors, peptides = set(), set(), set()
-    with fsspec.filesystem("https").open(url, "rb", block_size=64 * 2**20) as fh:
+    with open_report(ds) as fh:
         pf = pq.ParquetFile(fh)
         for batch in pf.iter_batches(batch_size=2_000_000, columns=cols):
             d = batch.to_pandas()

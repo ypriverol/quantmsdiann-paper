@@ -1,6 +1,6 @@
-rule	cohort	proteins	removed_decoy	removed_entrapment	removed_total	removed_only_in_this_cohort	kept	entrapment_in	entrapment_kept
-1pct_protein_fdr	PXD003539	7506	29	25	54	31	7452	0	0
-1pct_protein_fdr	PXD004701	8224	63	35	98	77	8126	0	0
-1pct_protein_fdr	PXD017199	10608	157	163	320	245	10288	125	38
-1pct_protein_fdr	PXD030304	9918	201	160	361	321	9557	0	0
-1pct_protein_fdr	PXD041421	9275	167	171	338	281	8937	184	30
+rule	cohort	proteins	removed	removed_only_in_this_cohort	kept
+1pct_protein_fdr	PXD003539	7379	28	23	7351
+1pct_protein_fdr	PXD004701	8224	58	48	8166
+1pct_protein_fdr	PXD017199	10860	143	122	10717
+1pct_protein_fdr	PXD030304	9918	187	177	9731
+1pct_protein_fdr	PXD041421	9370	91	77	9279

@@ -1,6 +1,6 @@
-rule	cohort	proteins	removed_decoy	removed_entrapment	removed_total	removed_only_in_this_cohort	kept	entrapment_in	entrapment_kept
->=2_unique_peptides	PXD003539	6627	4	1	5	5	6622	0	0
->=2_unique_peptides	PXD004701	7138	9	1	10	10	7128	0	0
->=2_unique_peptides	PXD017199	9709	29	5	34	34	9675	29	22
->=2_unique_peptides	PXD030304	8688	27	0	27	27	8661	0	0
->=2_unique_peptides	PXD041421	8445	22	2	24	24	8421	49	34
+rule	cohort	proteins	removed	removed_only_in_this_cohort	kept
+>=2_unique_peptides	PXD003539	6577	6	6	6571
+>=2_unique_peptides	PXD004701	7138	8	6	7130
+>=2_unique_peptides	PXD017199	9993	47	44	9946
+>=2_unique_peptides	PXD030304	8688	26	26	8662
+>=2_unique_peptides	PXD041421	8611	24	23	8587

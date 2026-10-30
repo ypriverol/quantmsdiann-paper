@@ -2,8 +2,8 @@
 cohort integration with the quantms criteria (not part of the paper or the
 supplementary material).
 
-Reads analysis/figures/review/entrapment/data/integration_fdr.tsv, written by
-scripts.review_integration_fdr. The quantms 2024 cell-line numbers (Dai et al.
+Reads integration_fdr.tsv, written by scripts.review_integration_fdr (harmonised
+DIA-NN 2.5.1 runs of the five cell-line cohorts). The quantms 2024 cell-line numbers (Dai et al.
 2024, Nat Methods) are given for comparison.
 
 Usage: python -m scripts.review_integration_figure
@@ -18,7 +18,7 @@ import pandas as pd
 
 from scripts.review_integration_fdr import OUT as DATA_TSV
 
-OUT = DATA_TSV.parents[2] / "integration"
+from scripts.review_integration_fdr import TRACKED as OUT
 QUANTMS_2024 = (11403, 11374)  # cell lines: merged, after 1% adjusted FDR
 COHORT, MERGED, KEPT, INK, MUTED = "#9aa5b1", "#4c6a92", "#1f3a5f", "#222222", "#666666"
 
@@ -33,16 +33,13 @@ def main() -> int:
 
     labels = list(cohorts.index) + ["Merged", "Adjusted q < 0.01"]
     values = list(cohorts.proteins) + [before.proteins, after.proteins]
-    entrap = list(cohorts.entrapment) + [before.entrapment, after.entrapment]
     colors = [COHORT] * 5 + [MERGED, KEPT]
     y = range(len(labels))[::-1]
     a.barh(list(y), values, color=colors, height=0.7, edgecolor="white", linewidth=2)
-    searched = [e > 0 for e in cohorts.entrapment] + [True, True]
-    for yi, v, e, s in zip(y, values, entrap, searched):
-        note = f"  ({e} entrapment)" if s else "  (no entrapment search)"
+    for yi, v in zip(y, values):
+        note = ""
         if v == after.proteins:
-            n_rm, n_e = before.proteins - after.proteins, before.entrapment - after.entrapment
-            note = f"  ({n_rm} removed: {n_rm - n_e} target, {n_e} entrapment)"
+            note = f"  ({before.proteins - after.proteins} removed)"
         a.text(v + 150, yi, f"{v:,}", va="center", fontsize=8, color=INK)
         a.text(v + 150 + 330 * len(f"{v:,}"), yi, note, va="center", fontsize=7, color=MUTED)
     a.set_yticks(list(y), labels, fontsize=8)
@@ -57,9 +54,6 @@ def main() -> int:
         b.bar(i - w / 2, n0, w, color=MERGED, edgecolor="white", linewidth=2, label="Merged" if i == 0 else None)
         b.bar(i + w / 2, n1, w, color=KEPT, edgecolor="white", linewidth=2, label="Adjusted q < 0.01" if i == 0 else None)
         b.text(i, max(n0, n1) + 250, f"−{n0 - n1} ({(n0 - n1) / n0:.1%})", ha="center", fontsize=8, color=INK)
-        if g == "quantmsdiann":
-            n_e = before.entrapment - after.entrapment
-            b.text(i, max(n0, n1) + 1100, f"{n0 - n1 - n_e} target + {n_e} entrapment", ha="center", fontsize=7, color=MUTED)
     b.set_xticks(range(2), groups, fontsize=8)
     b.set_ylim(0, 14500)
     b.set_ylabel("Proteins", fontsize=8)

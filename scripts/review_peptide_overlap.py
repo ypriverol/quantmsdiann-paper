@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fsspec
 import pandas as pd
 import pyarrow.parquet as pq
 
 from scripts import rebuild as rb
+from scripts.cellline_reports import open_report
 from scripts.review_threshold_regimes import COHORTS, DATA, OPENSWATH_ID, strip
 
 OUT = Path(__file__).resolve().parents[1] / "analysis/figures/review/threshold_regimes/data/peptide_overlap.tsv"
@@ -45,9 +45,9 @@ def sun_peptides() -> set:
     return peps
 
 
-def report_peptides(url: str) -> set:
+def report_peptides(ds: str) -> set:
     peps = set()
-    with fsspec.filesystem("https").open(url, "rb", block_size=64 * 2**20) as fh:
+    with open_report(ds) as fh:
         for b in pq.ParquetFile(fh).iter_batches(batch_size=2_000_000, columns=["Stripped.Sequence", "Lib.Q.Value", "Decoy"]):
             d = b.to_pandas()
             peps.update(d.loc[(d["Decoy"] == 0) & (d["Lib.Q.Value"] <= 0.01), "Stripped.Sequence"])
