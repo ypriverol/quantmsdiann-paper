@@ -22,6 +22,9 @@ import io
 import json
 import re
 import sys
+import http.client
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from collections import defaultdict
@@ -132,8 +135,15 @@ class HttpRangeFile(io.RawIOBase):
         if end <= self.pos:
             return b""
         req = urllib.request.Request(self.url, headers={"Range": f"bytes={self.pos}-{end - 1}"})
-        with urllib.request.urlopen(req, timeout=120) as r:
-            data = r.read()
+        for attempt in range(5):  # the PRIDE FTP drops range requests now and then
+            try:
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    data = r.read()
+                break
+            except (http.client.IncompleteRead, urllib.error.URLError):
+                if attempt == 4:
+                    raise
+                time.sleep(5 * (attempt + 1))
         self.pos += len(data)
         return data
 

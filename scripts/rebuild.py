@@ -2232,7 +2232,6 @@ def _figure_fig2_validation__render(out: Path) -> Path:
     from matplotlib.patches import Patch
     dq = pd.read_csv(PERF / 'queue_size_sweep.tsv', sep='\t')
     dp = pd.read_csv(PERF / 'parallelism_data.tsv', sep='\t')
-    dp = dp[dp['dataset'] != 'PXD003539'].copy()  # excluded from Fig 2b: sub-0.4 h, incomplete trace
     fig, axes = plt.subplots(2, 2, figsize=(10.5, 8.4))
     ax0, ax1, ax2, ax3 = axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]
     render_queue_size_sweep(dq, ax=ax0, composite=True)
@@ -4733,11 +4732,37 @@ CELL_LINE_ANALYSES: dict[str, dict[str, str]] = {'PXD003539': {'instrument': 'Tr
 PERF_TRACE_DIR = _figure_performance_trace__DATA_DIR / 'perf_traces'
 PERF_DATASETS: tuple[tuple[str, str, int], ...] = (('PXD049412', 'Orbitrap Astral', 6), ('PXD062685', 'timsTOF SCP', 6), ('PXD070049', 'ZenoTOF 8600', 6), ('ProteoBench_Module_7', 'Orbitrap Astral', 6), ('PXD003539', 'TripleTOF 5600', 120), ('PXD004701', 'TripleTOF 5600', 300), ('PXD030304', 'TripleTOF 6600', 5798), ('MSV000093870', 'Q Exactive', 38), ('PXD034128', 'timsTOF Pro', 7), ('PXD034623', 'Orbitrap Exploris 480', 63), ('PXD064049', 'timsTOF SCP', 12), ('PXD049692', 'timsTOF HT', 10), ('PXD046357', 'Orbitrap Astral', 12), ('PXD017199', 'Q Exactive Plus', 206), ('PXD041421', 'timsTOF Pro', 48))
 
+CELL_LINE_PERF_FTP = 'https://ftp.pride.ebi.ac.uk/pub/databases/pride/resources/proteomes/quantmsdiann-benchmarks/cell-lines'
+CELL_LINE_PERF_DATASETS = ('PXD003539', 'PXD004701', 'PXD030304', 'PXD017199', 'PXD041421')
+
+def stage_cell_line_perf_traces() -> None:
+    """Stage the trace (and pipeline_report.txt, where deposited) of the harmonised
+    cell-line runs from cell-lines/<PXD>/v2_5_1/pipeline_info/ on the FTP into
+    data/perf_traces/<PXD>/, so the runtime bars come from the deposited runs.
+    A `.source` file records the origin; copies from any other run are replaced."""
+    for dataset in CELL_LINE_PERF_DATASETS:
+        tdir = PERF_TRACE_DIR / dataset
+        base = f'{CELL_LINE_PERF_FTP}/{dataset}/v2_5_1/pipeline_info'
+        marker = tdir / '.source'
+        if marker.exists() and marker.read_text().strip() == base:
+            continue
+        tdir.mkdir(parents=True, exist_ok=True)
+        for name in ('nextflow_trace.txt', 'pipeline_report.txt'):
+            (tdir / name).unlink(missing_ok=True)
+            try:
+                download_if_missing(f'{base}/{name}', tdir / name)
+            except Exception:
+                if name == 'nextflow_trace.txt':
+                    raise
+                (tdir / name).unlink(missing_ok=True)  # no report deposited: busy span is used
+        marker.write_text(base + '\n')
+
 def iter_perf_trace_paths() -> Iterable[Path]:
     """Yield the staged per-dataset `nextflow_trace.txt` paths under
     data/perf_traces/ (one representative fresh run per dataset). Filesystem
     only — these are staged from the cluster, never fetched from FTP. Missing
     datasets are skipped."""
+    stage_cell_line_perf_traces()
     for dataset, *_ in PERF_DATASETS:
         trace = PERF_TRACE_DIR / dataset / 'nextflow_trace.txt'
         if trace.exists():
@@ -4766,6 +4791,7 @@ def collect_parallelism_rows(*, fetch: bool=True) -> pd.DataFrame:
     keeps the raw value for the audit TSV. `fetch` is accepted for API
     compatibility but unused — the traces are staged locally.
     """
+    stage_cell_line_perf_traces()
     rows: list[dict] = []
     for dataset, instrument, fallback_runs in PERF_DATASETS:
         tdir = PERF_TRACE_DIR / dataset
@@ -5363,7 +5389,7 @@ def draw(ax, threshold: int=3, *, with_legend: bool=True, compact: bool=False, s
     if with_legend:
         handles = [Line2D([0], [0], linestyle='--', color='#444444', label='Y = X'), Line2D([0], [0], marker='o', linestyle='none', ms=7, markerfacecolor=GREY, markeredgecolor='none', label='standalone DIA-NN')]
         for ver in VERSIONS:
-            handles.append(Line2D([0], [0], marker='o', linestyle='none', ms=7, markerfacecolor=_VERSION_COLORS.get(ver, '#d62728'), markeredgecolor='white', label=f'quantms-diann {_VERSION_LABELS.get(ver, ver)}'))
+            handles.append(Line2D([0], [0], marker='o', linestyle='none', ms=7, markerfacecolor=_VERSION_COLORS.get(ver, '#d62728'), markeredgecolor='white', label=f'quantmsdiann {_VERSION_LABELS.get(ver, ver)}'))
         ax.legend(handles=handles, loc='upper left', fontsize=6.5 if compact else 8, frameon=False, handletextpad=0.3, borderaxespad=0.2, labelspacing=0.3)
 SHAPE_BY_VERSION = {'v1_8_1': 'o', 'v2_5_1_enterprise': '^'}
 
@@ -5414,7 +5440,7 @@ def draw_strip(ax, threshold: int=3, *, compact: bool=False, dataset_colors: dic
     fs.despine(ax)
     handles = [Line2D([0], [0], linestyle='--', color='#444444', label='ProteoBench expected'), Line2D([0], [0], marker='o', linestyle='none', ms=7, markerfacecolor=GREY, markeredgecolor='white', label='standalone DIA-NN')]
     for ver in VERSIONS:
-        handles.append(Line2D([0], [0], marker=SHAPE_BY_VERSION.get(ver, 'o'), linestyle='none', ms=7, markerfacecolor='#666666', markeredgecolor='black', label=f'quantms-diann {_VERSION_LABELS.get(ver, ver)}'))
+        handles.append(Line2D([0], [0], marker=SHAPE_BY_VERSION.get(ver, 'o'), linestyle='none', ms=7, markerfacecolor='#666666', markeredgecolor='black', label=f'quantmsdiann {_VERSION_LABELS.get(ver, ver)}'))
     ax.legend(handles=handles, loc='upper left', fontsize=6.5 if compact else 8, frameon=False, handletextpad=0.3, labelspacing=0.3, ncol=1)
 
 def render(out: Path, threshold: int=3) -> Path:
