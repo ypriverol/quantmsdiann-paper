@@ -50,9 +50,11 @@ EMBL-EBI cluster; paths in `CLUSTER_RUNS`).
 `fasta/` holds the five protein databases used by the 38 runs, gzipped, each
 stored once; column `fasta` in `runs.tsv` gives the file for every run.
 `fasta/SHA256SUMS.txt` lists the checksums of the uncompressed files, identical
-to the files the 36 cluster runs read (checked 2026-10-12). The two paired
-standalone/quantmsdiann runs (Supplementary Note 8) were run on a local machine
-with the same-named ProteoBench FASTAs; those copies were not checksummed.
+to the files the 36 cluster runs read (checked 2026-10-12) and to the FASTAs of
+the two paired standalone/quantmsdiann runs (Supplementary Note 8; checked
+2026-10-28). Each paired run folder holds the launch scripts (`standalone_sorted.sh`,
+`quantmsdiann_dq.sh`, `env.sh`), the quantmsdiann `params.json`, `run.config` and
+`diann_config.cfg`, and the pipeline-input SDRF (`as_run.sdrf.tsv`, cluster paths).
 
 | File | Runs |
 |---|---|
@@ -94,8 +96,8 @@ and peptide length. Values from `runs.tsv`; full parameters per run in Supplemen
 | **Scalability (Fig. 2a node-count sweep)** | | | | |
 | PXD071075 | 2.5.0 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/UP000005640_9606.fasta.gz | 6-40 (pipeline default) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/PXD071075/PXD071075.sdrf.tsv |
 | **Standalone DIA-NN vs quantmsdiann (Supplementary Note 8)** | | | | |
-| PXD049412 | 2.5.1 (standalone and quantmsdiann) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_DDAQuantification_noecoli.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/Paired_standalone_vs_quantmsdiann/PXD049412_local.sdrf.tsv |
-| PXD070049 | 2.5.1 (standalone and quantmsdiann) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/Paired_standalone_vs_quantmsdiann/PXD070049_local.sdrf.tsv |
+| PXD049412 | 2.5.0 (standalone and quantmsdiann v2.3.0) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_DDAQuantification_noecoli.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/Paired_standalone_vs_quantmsdiann/PXD049412_local.sdrf.tsv |
+| PXD070049 | 2.5.0 (standalone and quantmsdiann v2.3.0) | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/fasta/ProteoBenchFASTA_MixedSpecies_HYE.fasta.gz | 7-30 | https://github.com/ypriverol/quantmsdiann-paper/blob/main/sdrf/Paired_standalone_vs_quantmsdiann/PXD070049_local.sdrf.tsv |
 
 Sources: the `sdrf/` folder each run published on the PRIDE FTP; for the
 phosphoproteomics runs and the PXD071075 sweep, whose FTP folders have no

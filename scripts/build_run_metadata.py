@@ -37,7 +37,7 @@ from scripts.build_submission_manifest import FTP, RUNS, crawl
 REPO = Path(__file__).resolve().parents[1]
 SDRF_DIR = REPO / "sdrf"
 CL = REPO / "data/_cluster_run_files"
-REVIEW = REPO / "data/proteobench-review-experiments/x"
+REVIEW = REPO / "data/proteobench-review-experiments/codon"
 
 # Runs with no sdrf/ or pipeline_info/ on the FTP: (sdrf, launch log, params) in _cluster/.
 P = "quantms-datasets/projects/phospho-proteomics"
@@ -223,20 +223,24 @@ def main() -> None:
         rows.append(row)
 
     for ds in ("PXD049412", "PXD070049"):  # paired standalone vs quantmsdiann (Supplementary Note 8)
-        qm = REVIEW / ds / f"quantmsdiann/results_{ds}"
+        # Codon iteration 2026-10-28_01_run_paired-standalone-vs-quantmsdiann (DIA-NN 2.5.0, quantmsdiann v2.3.0)
+        qm = REVIEW / ds / "quantmsdiann"
         out = run_dir(f"Paired-{ds}", "")
         out.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(REVIEW / ds / "diann/run_diann_v2_5_1.sh", out / "standalone_run_diann_v2_5_1.sh")
-        shutil.copy2(REVIEW / ds / "quantmsdiann/run_quantmsdiann.config", out / "quantmsdiann_run.config")
-        p = sorted((qm / "pipeline_info").glob("params_*.json"))[-1]
+        for f in ("standalone_sorted.sh", "quantmsdiann_dq.sh", "env.sh"):
+            shutil.copy2(REVIEW / "scripts" / f, out / f)
+        shutil.copy2(qm / "run.config", out / "quantmsdiann_run.config")
+        p = sorted((qm / "results/pipeline_info").glob("params_*.json"))[-1]
         params = json.loads(p.read_text())
         (out / "params.json").write_text(json.dumps(params, indent=2))
-        shutil.copy2(qm / "sdrf/diann_config.cfg", out / "diann_config.cfg")
-        sdrf = sorted((qm / "sdrf").glob("*.sdrf.tsv"))[0]
-        rows.append({"dataset": f"Paired-{ds}", "run": "quantmsdiann v2_5_1 + standalone DIA-NN 2.5.1",
+        shutil.copy2(qm / "results/sdrf/diann_config.cfg", out / "diann_config.cfg")
+        shutil.copy2(qm / f"results/sdrf/{ds}.sdrf.tsv", out / "as_run.sdrf.tsv")
+        # The deposited design is the annotated SDRF; as_run.sdrf.tsv is the pipeline input (cluster paths).
+        sdrf = SDRF_DIR / f"Paired_standalone_vs_quantmsdiann/{ds}_local.sdrf.tsv"
+        rows.append({"dataset": f"Paired-{ds}", "run": "quantmsdiann v2_3_0 + standalone DIA-NN 2.5.0",
                      "ftp_folder": "", "sdrf": store_sdrf(f"Paired-{ds}", sdrf.name, sdrf.read_bytes(), seen),
-                     "sdrf_source": "as-run (results sdrf/)", **key_params(params),
-                     "params_source": f"{p.name}; standalone command in standalone_run_diann_v2_5_1.sh"})
+                     "sdrf_source": "annotated; pipeline input in as_run.sdrf.tsv", **key_params(params),
+                     "params_source": f"{p.name}; standalone command in standalone_sorted.sh"})
 
     shutil.copy2(CL / "quantms-datasets/scripts/extra.config", SDRF_DIR / "extra.config")
     df = pd.DataFrame(rows)
