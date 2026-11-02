@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 830" width="880" height="830">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-50 0 930 830" width="930" height="830">
   <defs>
     <style>
       .station-label { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 500; fill: #333333; }
@@ -14,7 +14,7 @@
   </defs>
 
   <!-- Background -->
-  <rect width="880" height="830" fill="#ffffff"/>
+  <rect x="-50" width="930" height="830" fill="#ffffff"/>
 
   <!-- ===== LEGEND (top right) ===== -->
   <g transform="translate(610, 30)">

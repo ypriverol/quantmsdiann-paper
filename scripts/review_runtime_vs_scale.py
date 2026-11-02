@@ -3,7 +3,7 @@
 Fig. 2b shows per-dataset wall-clock annotated by sample type and instrument.
 The reviewer asked to contextualise it by workload, so this plots the same
 wall-clock values (analysis/figures/performance/data/parallelism_data.tsv, the
-Fig. 2b audit table, with the same PXD003539 exclusion) against the number of
+Fig. 2b audit table) against the number of
 raw files and the total raw-data volume of the files each run processed.
 
 Raw sizes come from pride_submission/raw_files.tsv (built by
@@ -46,6 +46,7 @@ USED_IN = {
     "PXD062685": "proteobench/PXD062685/",
     "PXD070049": "proteobench/PXD070049/",
     "ProteoBench_Module_7": "proteobench/ProteoBench_Module_7/",
+    "PXD003539": "cell-lines/PXD003539/",
     "PXD004701": "cell-lines/PXD004701/",
     "PXD030304": "cell-lines/PXD030304/",
     "MSV000093870": "MSV000093870",
@@ -62,7 +63,7 @@ LABEL = {"ProteoBench_Module_7": "Module 7", "MSV000093870": "MSV000093870"}
 CATEGORY = {
     "PXD049412": "Benchmark (ProteoBench)", "PXD062685": "Benchmark (ProteoBench)",
     "PXD070049": "Benchmark (ProteoBench)", "ProteoBench_Module_7": "Benchmark (ProteoBench)",
-    "PXD004701": "Bulk cell-line", "PXD030304": "Bulk cell-line", "PXD017199": "Bulk cell-line",
+    "PXD003539": "Bulk cell-line", "PXD004701": "Bulk cell-line", "PXD030304": "Bulk cell-line", "PXD017199": "Bulk cell-line",
     "PXD041421": "Bulk cell-line", "MSV000093870": "plexDIA", "PXD046357": "Single-cell",
     "PXD071075": "Single-cell", "PXD034128": "Phosphoproteomics", "PXD034623": "Phosphoproteomics",
     "PXD049692": "Phosphoproteomics", "PXD064049": "Spatial DVP",
@@ -114,7 +115,6 @@ def main() -> None:
     rb.apply_house_style()
     (OUT / "data").mkdir(parents=True, exist_ok=True)
     perf = pd.read_csv(PERF, sep="\t")
-    perf = perf[perf["dataset"] != "PXD003539"].copy()  # same exclusion as Fig. 2b
     # PXD071075 appears once per executor.queueSize sweep point; keep them, tagged.
     perf["queue_size"] = perf["version"].str.extract(r"_q(\d+)$")[0].astype(float)
     raw = fill_sizes(pd.read_csv(RAW, sep="\t", dtype=str))
